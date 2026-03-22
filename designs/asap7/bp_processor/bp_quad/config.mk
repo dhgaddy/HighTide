@@ -9,6 +9,8 @@ export SYNTH_MINIMUM_KEEP_SIZE = 500
 
 -include $(BENCH_DESIGN_HOME)/src/$(DESIGN_NAME)/verilog.mk
 
+export VERILOG_TOP_PARAMS = bp_params_p 11
+
 export ABC_AREA = 1
 
 export SDC_FILE      = $(PLATFORM_DESIGN_DIR)/$(DESIGN_NICKNAME)/constraint.sdc

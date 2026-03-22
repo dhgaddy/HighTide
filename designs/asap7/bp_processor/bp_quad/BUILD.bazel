@@ -14,6 +14,7 @@ hightide_design(
         "ADDITIONAL_LIBS": ["//designs/asap7/bp_processor:sram_libs"],
     },
     arguments = {
+        "VERILOG_TOP_PARAMS": "bp_params_p 11",
         "SYNTH_HIERARCHICAL": "1",
         "SYNTH_MINIMUM_KEEP_SIZE": "500",
         "ABC_AREA": "1",

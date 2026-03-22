@@ -12,9 +12,9 @@ if [ ! -d "$BIN_DIR" ]; then
 fi
 
 # Header
-printf "%-12s %-30s %10s %10s %10s %10s %8s %6s\n" \
-    "Platform" "Design" "Area" "Util%" "WNS" "TNS" "Cells" "DRCs"
-printf "%s\n" "$(printf '=%.0s' {1..100})"
+printf "%-12s %-25s %10s %10s %10s %8s %8s %6s %5s %10s %10s %12s %12s %6s\n" \
+    "Platform" "Design" "Die Area" "Core Area" "Inst Area" "Util%" "Cells" "Macr" "IOs" "WNS" "TNS" "Fmax(GHz)" "Power(mW)" "DRCs"
+printf "%s\n" "$(printf '=%.0s' {1..160})"
 
 # Find all 6_report.json files (indicates a completed final stage)
 # Deduplicate by platform/design since multiple targets may share the same output
@@ -31,11 +31,17 @@ find "$BIN_DIR/designs" -path "*/logs/*/base/6_report.json" -not -path "*.runfil
         grep -o "\"$1\":[^,}]*" "$json" 2>/dev/null | head -1 | sed 's/.*://' | tr -d ' "'
     }
 
-    area=$(get_metric "finish__design__instance__area")
+    die_area=$(get_metric "finish__design__die__area")
+    core_area=$(get_metric "finish__design__core__area")
+    inst_area=$(get_metric "finish__design__instance__area__stdcell")
     util=$(get_metric "finish__design__instance__utilization")
     wns=$(get_metric "finish__timing__setup__ws")
     tns=$(get_metric "finish__timing__setup__tns")
-    cells=$(get_metric "finish__design__instance__count")
+    cells=$(get_metric "finish__design__instance__count__stdcell")
+    macros=$(get_metric "finish__design__instance__count__macros")
+    ios=$(get_metric "finish__design__io")
+    fmax=$(get_metric "finish__timing__fmax")
+    power=$(get_metric "finish__power__total")
     errors=$(get_metric "finish__flow__errors__count")
 
     # Format utilization as percentage
@@ -43,9 +49,15 @@ find "$BIN_DIR/designs" -path "*/logs/*/base/6_report.json" -not -path "*.runfil
         util=$(awk "BEGIN {printf \"%.1f\", $util * 100}")
     fi
 
-    # Format area to 1 decimal
-    if [ -n "$area" ]; then
-        area=$(awk "BEGIN {printf \"%.1f\", $area}")
+    # Format areas to 1 decimal
+    if [ -n "$die_area" ]; then
+        die_area=$(awk "BEGIN {printf \"%.1f\", $die_area}")
+    fi
+    if [ -n "$core_area" ]; then
+        core_area=$(awk "BEGIN {printf \"%.1f\", $core_area}")
+    fi
+    if [ -n "$inst_area" ]; then
+        inst_area=$(awk "BEGIN {printf \"%.1f\", $inst_area}")
     fi
 
     # Format timing to 2 decimals
@@ -56,10 +68,21 @@ find "$BIN_DIR/designs" -path "*/logs/*/base/6_report.json" -not -path "*.runfil
         tns=$(awk "BEGIN {printf \"%.2f\", $tns}")
     fi
 
-    printf "%-12s %-30s %10s %10s %10s %10s %8s %6s\n" \
+    # Format fmax to GHz with 2 decimals
+    if [ -n "$fmax" ]; then
+        fmax=$(awk "BEGIN {printf \"%.2f\", $fmax / 1e9}")
+    fi
+
+    # Format power to mW with 3 decimals
+    if [ -n "$power" ]; then
+        power=$(awk "BEGIN {printf \"%.3f\", $power * 1000}")
+    fi
+
+    printf "%-12s %-25s %10s %10s %10s %8s %8s %6s %5s %10s %10s %12s %12s %6s\n" \
         "${platform:-?}" "${design:-?}" \
-        "${area:--}" "${util:--}" "${wns:--}" "${tns:--}" \
-        "${cells:--}" "${errors:--}"
+        "${die_area:--}" "${core_area:--}" "${inst_area:--}" "${util:--}" \
+        "${cells:--}" "${macros:--}" "${ios:--}" \
+        "${wns:--}" "${tns:--}" "${fmax:--}" "${power:--}" "${errors:--}"
 done
 
 # Show designs that failed (have synth but no final report)

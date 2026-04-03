@@ -12,7 +12,8 @@ python.toolchain(python_version = "3.13", is_default = True)
 git_override(
     module_name = "bazel-orfs",
     remote = "https://github.com/The-OpenROAD-Project/bazel-orfs.git",
-    commit = "012ba0198c9ea177f1544022aec34d81a385c9b1",
+    # Latest commit before bazel-orfs-verilog dependency was added.
+    commit = "2d83bbbc661843c43d8c24cecf19f0c1511d1823",
 )
 
 orfs = use_extension("@bazel-orfs//:extension.bzl", "orfs_repositories")

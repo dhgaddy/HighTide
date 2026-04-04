@@ -23,17 +23,12 @@ spec:
           mountPath: /repo
       containers:
       - name: build
-        image: ubuntu:24.04
+        image: docker.io/openroad/orfs:26Q1-656-g97416b2e4
         command:
         - /bin/bash
         - -c
         - |
           set -euo pipefail
-
-          # Install dependencies
-          apt-get update -qq
-          apt-get install -y -qq --no-install-recommends \
-            curl perl git ca-certificates python3 gcc g++ time >/dev/null 2>&1
 
           # Install bazelisk as bazel
           curl -fsSL -o /usr/local/bin/bazel \

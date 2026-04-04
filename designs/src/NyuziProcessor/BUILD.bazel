@@ -1,0 +1,40 @@
+filegroup(
+    name = "rtl_release",
+    srcs = [
+        "NyuziProcessor.v",
+        "cache_lru.v",
+        "macros.v",
+    ],
+)
+
+# update-rtl mode: init submodule + patch + convert SystemVerilog via sv2v.
+genrule(
+    name = "rtl_dev_gen",
+    srcs = [],
+    outs = ["dev_NyuziProcessor.v"],
+    local = True,
+    cmd = """
+        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
+        cd $$WORKSPACE_ROOT
+        git submodule update --init designs/src/NyuziProcessor/dev/repo >&2
+        REPO_SRC_DIR=designs/src/NyuziProcessor/dev/repo/hardware/core
+        patch -p0 -N --silent --directory=$$REPO_SRC_DIR < designs/src/NyuziProcessor/dev/patch-all.patch > /dev/null 2>&1 || true
+        designs/src/NyuziProcessor/dev/sv2v --top NyuziProcessor -w $$OLDPWD/$(OUTS) \
+            -I $$REPO_SRC_DIR/defines.svh \
+            designs/src/NyuziProcessor/dev/nyuziTop.sv \
+            $$(find $$REPO_SRC_DIR -name '*.sv' \
+                ! -name sram_1r1w.sv \
+                ! -name sram_2r1w.sv \
+                ! -name cache_lru.sv)
+    """,
+    tools = ["//:tools/update_rtl.sh"],
+)
+
+alias(
+    name = "rtl",
+    actual = select({
+        "//:update_rtl": ":rtl_dev_gen",
+        "//conditions:default": ":rtl_release",
+    }),
+    visibility = ["//visibility:public"],
+)

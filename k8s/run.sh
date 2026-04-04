@@ -7,7 +7,10 @@
 #   ./k8s/run.sh --design [design]     # a design across all platforms
 #   ./k8s/run.sh                       # all designs, all platforms
 #   ./k8s/run.sh --status              # show job status
-#   ./k8s/run.sh --delete [pattern]    # delete jobs matching pattern
+#   ./k8s/run.sh --delete              # delete all jobs
+#   ./k8s/run.sh --delete asap7        # delete all asap7 jobs
+#   ./k8s/run.sh --delete asap7 lfsr   # delete a specific job
+#   ./k8s/run.sh --delete --design lfsr # delete lfsr across all platforms
 #
 # Options:
 #   --branch BRANCH   Git branch to build (default: current branch)
@@ -15,7 +18,7 @@
 #   --mem SIZE        Memory request per job (default: 32Gi)
 #   --dry-run         Print generated YAML without submitting
 #   --status          Show status of submitted jobs
-#   --delete PAT      Delete jobs matching pattern (or all if no pattern)
+#   --delete          Delete jobs (filtered by platform/design args)
 
 set -euo pipefail
 
@@ -28,11 +31,10 @@ NAMESPACE="vlsida"
 BRANCH="main"
 CPU_REQUEST="8"
 CPU_LIMIT="16"
-MEM_REQUEST="32Gi"
-MEM_LIMIT="64Gi"
+MEM_REQUEST="64Gi"
+MEM_LIMIT="128Gi"
 DRY_RUN=false
 MODE="submit"
-DELETE_PATTERN=""
 FILTER_PLATFORM=""
 FILTER_DESIGN=""
 
@@ -44,7 +46,7 @@ while [[ $# -gt 0 ]]; do
         --mem)      MEM_REQUEST="$2"; MEM_LIMIT="${2%Gi}"; MEM_LIMIT="$((MEM_LIMIT * 2))Gi"; shift 2 ;;
         --dry-run)  DRY_RUN=true; shift ;;
         --status)   MODE="status"; shift ;;
-        --delete)   MODE="delete"; DELETE_PATTERN="${2:-}"; shift; [[ $# -gt 0 && ! "$1" =~ ^-- ]] && { DELETE_PATTERN="$1"; shift; } ;;
+        --delete)   MODE="delete"; shift ;;
         --design)   FILTER_DESIGN="$2"; shift 2 ;;
         -h|--help)
             sed -n '2,/^$/s/^# //p' "$0"
@@ -79,17 +81,19 @@ if [[ "$MODE" == "status" ]]; then
 fi
 
 if [[ "$MODE" == "delete" ]]; then
-    if [[ -n "$DELETE_PATTERN" ]]; then
-        echo "Deleting jobs matching '$DELETE_PATTERN' in $NAMESPACE..."
-        kubectl delete jobs -n "$NAMESPACE" -l app=hightide \
-            --field-selector "metadata.name=$DELETE_PATTERN" 2>/dev/null \
-            || kubectl get jobs -n "$NAMESPACE" -l app=hightide --no-headers \
-                | awk '{print $1}' | grep "$DELETE_PATTERN" \
-                | xargs -r kubectl delete job -n "$NAMESPACE"
-    else
-        echo "Deleting all hightide jobs in $NAMESPACE..."
-        kubectl delete jobs -n "$NAMESPACE" -l app=hightide
+    LABEL_SELECTOR="app=hightide"
+    DESC="all"
+    if [[ -n "$FILTER_PLATFORM" ]]; then
+        LABEL_SELECTOR="$LABEL_SELECTOR,platform=$FILTER_PLATFORM"
+        DESC="$FILTER_PLATFORM"
     fi
+    if [[ -n "$FILTER_DESIGN" ]]; then
+        design_label=$(echo "$FILTER_DESIGN" | tr '[:upper:]' '[:lower:]')
+        LABEL_SELECTOR="$LABEL_SELECTOR,design=$design_label"
+        DESC="$DESC/$FILTER_DESIGN"
+    fi
+    echo "Deleting $DESC hightide jobs in $NAMESPACE..."
+    kubectl delete jobs -n "$NAMESPACE" -l "$LABEL_SELECTOR"
     exit 0
 fi
 

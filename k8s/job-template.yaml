@@ -33,7 +33,7 @@ spec:
           # Install dependencies
           apt-get update -qq
           apt-get install -y -qq --no-install-recommends \
-            curl perl git ca-certificates python3 gcc g++ >/dev/null 2>&1
+            curl perl git ca-certificates python3 gcc g++ time >/dev/null 2>&1
 
           # Install bazelisk as bazel
           curl -fsSL -o /usr/local/bin/bazel \
@@ -42,12 +42,13 @@ spec:
 
           cd /repo
 
-          # Build the design with remote cache upload enabled
-          bazel build \
-            --remote_cache=https://storage.googleapis.com/hightide-bazel-cache \
-            --remote_upload_local_results=true \
-            --google_credentials=/secrets/gcs/key.json \
-            __BAZEL_TARGET__
+          # Build the design with remote cache (upload if credentials available)
+          CACHE_FLAGS="--remote_cache=https://storage.googleapis.com/hightide-bazel-cache"
+          if [ -f /secrets/gcs/key.json ]; then
+            CACHE_FLAGS="$CACHE_FLAGS --remote_upload_local_results=true --google_credentials=/secrets/gcs/key.json"
+          fi
+
+          bazel build $CACHE_FLAGS __BAZEL_TARGET__
         volumeMounts:
         - name: repo
           mountPath: /repo
@@ -67,4 +68,5 @@ spec:
       - name: gcs-key
         secret:
           secretName: gcs-bazel-cache
+          optional: true
       restartPolicy: Never

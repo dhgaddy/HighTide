@@ -5,5 +5,5 @@ export PLATFORM    = asap7
 
 export SDC_FILE      = $(BENCH_DESIGN_HOME)/$(PLATFORM)/lfsr/constraint.sdc
 
-export CORE_UTILIZATION 	= 40
+export CORE_UTILIZATION 	= 55
 export TNS_END_PERCENT      = 100

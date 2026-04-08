@@ -12,16 +12,7 @@ python.toolchain(python_version = "3.13", is_default = True)
 git_override(
     module_name = "bazel-orfs",
     remote = "https://github.com/The-OpenROAD-Project/bazel-orfs.git",
-    commit = "d998bbff78c455718bd1a0191b4aa89ef9addac1",
-)
-
-bazel_dep(name = "bazel-orfs-verilog")
-
-git_override(
-    module_name = "bazel-orfs-verilog",
-    remote = "https://github.com/The-OpenROAD-Project/bazel-orfs.git",
-    commit = "d998bbff78c455718bd1a0191b4aa89ef9addac1",
-    strip_prefix = "verilog",
+    commit = "845f580208912233af32f5188564cdbf20a58971",
 )
 
 orfs = use_extension("@bazel-orfs//:extension.bzl", "orfs_repositories")

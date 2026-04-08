@@ -1,37 +1,38 @@
-# bp_processor has no pre-generated release RTL.
-# To create release RTL: run update-rtl flow, then copy output here.
+# bp_processor uses yosys-slang for direct SystemVerilog synthesis.
+# BP_SRCS: ordered source files from flist.vcs (passed as VERILOG_FILES)
+# rtl_data: all repo HDL files for sandbox include dir resolution
+#           (via stage_data, NOT in VERILOG_FILES)
+
+load("//designs/src/bp_processor:dev/generated/srcs.bzl", "BP_SRCS")
+
+# Exclude bsg_mem_*_synth modules — macros.v provides FakeRAM replacements
+_EXCLUDED = [
+    "dev/repo/external/basejump_stl/bsg_mem/bsg_mem_1rw_sync_synth.sv",
+    "dev/repo/external/basejump_stl/bsg_mem/bsg_mem_1rw_sync_mask_write_bit_synth.sv",
+]
 
 filegroup(
-    name = "rtl_release",
-    srcs = glob(["bp_processor.v"]),
-)
-
-# update-rtl mode: init submodule + generate Black Parrot RTL via sv2v.
-genrule(
-    name = "rtl_dev_gen",
-    srcs = glob(
-        ["dev/**"],
-        exclude = ["dev/generated/**"],
-    ),
-    outs = ["bp_processor_gen.v"],
-    local = True,
-    cmd = """
-        bash $(location //:tools/update_rtl.sh) \
-            designs/src/bp_processor/dev/repo \
-            $(location dev/setup.sh) && \
-        cp $$(dirname $$(readlink -f $(location dev/setup.sh)))/generated/bp_processor.v $(OUTS)
-    """,
-    tools = [
-        "dev/setup.sh",
-        "//:tools/update_rtl.sh",
-    ],
-)
-
-alias(
     name = "rtl",
-    actual = select({
-        "//:update_rtl": ":rtl_dev_gen",
-        "//conditions:default": ":rtl_release",
-    }),
+    srcs = [f for f in BP_SRCS if f not in _EXCLUDED] + ["stubs.v"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "rtl_data",
+    srcs = glob(
+        [
+            "dev/repo/**/*.sv",
+            "dev/repo/**/*.svh",
+            "dev/repo/**/*.vh",
+            "dev/repo/**/*.vi",
+            "dev/repo/**/*.v",
+        ],
+        exclude = [
+            "dev/repo/**/test/**",
+            "dev/repo/**/testing/**",
+            "dev/repo/**/ARM-VFPv2/**",
+        ],
+        allow_empty = True,
+    ),
     visibility = ["//visibility:public"],
 )

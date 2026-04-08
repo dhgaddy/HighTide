@@ -1,0 +1,26 @@
+load("//:defs.bzl", "hightide_design")
+load("//designs/src/bp_processor:defs.bzl", "BP_COMMON_ARGS")
+
+_ARGS = dict(BP_COMMON_ARGS)
+
+_ARGS.update({
+    "CORE_UTILIZATION": "35",
+    "PLACE_DENSITY_LB_ADDON": "0.10",
+    "MACRO_PLACE_HALO": "40 40",
+})
+
+hightide_design(
+    name = "bp_processor",
+    platform = "nangate45",
+    verilog_files = [
+        "//designs/src/bp_processor:rtl",
+        "//designs/nangate45/bp_processor:macros",
+    ],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": ["//designs/nangate45/bp_processor:sram_lefs"],
+        "ADDITIONAL_LIBS": ["//designs/nangate45/bp_processor:sram_libs"],
+    },
+    arguments = _ARGS,
+    stage_data = {"synth": ["//designs/src/bp_processor:rtl_data"]},
+)

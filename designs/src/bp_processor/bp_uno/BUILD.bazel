@@ -1,0 +1,2 @@
+# bp_uno: unicore Black-Parrot (default bp_params_p).
+# Uses yosys-slang for direct SV synthesis — no release RTL needed.

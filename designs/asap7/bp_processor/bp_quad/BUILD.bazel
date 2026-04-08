@@ -1,4 +1,17 @@
 load("//:defs.bzl", "hightide_design")
+load("//designs/src/bp_processor:defs.bzl", "BP_COMMON_ARGS")
+
+_ARGS = dict(BP_COMMON_ARGS)
+
+_ARGS.update({
+    "VERILOG_TOP_PARAMS": "bp_params_p 11",
+    "DIE_AREA": "0 0 1200 1200",
+    "CORE_AREA": "10 10 1190 1190",
+    "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
+    "MACRO_PLACE_HALO": "6 6",
+    "MACRO_BLOCKAGE_HALO": "0.5",
+    "PLACE_DENSITY_LB_ADDON": "0.10",
+})
 
 hightide_design(
     name = "bp_processor",
@@ -13,18 +26,6 @@ hightide_design(
         "ADDITIONAL_LEFS": ["//designs/asap7/bp_processor:sram_lefs"],
         "ADDITIONAL_LIBS": ["//designs/asap7/bp_processor:sram_libs"],
     },
-    arguments = {
-        "VERILOG_TOP_PARAMS": "bp_params_p 11",
-        "SYNTH_HIERARCHICAL": "1",
-        "SYNTH_MINIMUM_KEEP_SIZE": "500",
-        "ABC_AREA": "1",
-        "SYNTH_MEMORY_MAX_BITS": "65536",
-        "DIE_AREA": "0 0 1200 1200",
-        "CORE_AREA": "10 10 1190 1190",
-        "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
-        "MACRO_PLACE_HALO": "6 6",
-        "MACRO_BLOCKAGE_HALO": "0.5",
-        "PLACE_DENSITY_LB_ADDON": "0.10",
-        "TNS_END_PERCENT": "100",
-    },
+    arguments = _ARGS,
+    stage_data = {"synth": ["//designs/src/bp_processor:rtl_data"]},
 )

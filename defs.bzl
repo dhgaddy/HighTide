@@ -5,7 +5,7 @@ load("@bazel-orfs//:openroad.bzl", "orfs_flow")
 # PDK label mapping per platform
 PDKS = {
     "asap7": "@docker_orfs//:asap7",
-    "nangate45": "//:nangate45",
+    "nangate45": "@docker_orfs//:nangate45",
     "sky130hd": "@docker_orfs//:sky130hd",
 }
 

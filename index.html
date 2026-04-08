@@ -857,13 +857,13 @@
   <section class="ai-skills" id="ai-skills">
     <div class="container">
       <h2 class="section-title">AI-Assisted Suite Management</h2>
-      <p class="section-subtitle">Claude Code skills that automate discovery, integration, and maintenance of benchmark designs.</p>
+      <p class="section-subtitle">Claude Code skills that automate discovery, integration, optimization, and debugging of benchmark designs.</p>
       <p class="skills-intro">
         HighTide includes a set of <a href="https://docs.anthropic.com/en/docs/claude-code" style="color: var(--sea-blue);">Claude Code</a>
         skills&mdash;AI-powered slash commands that automate the complex, multi-step processes involved in managing a
         benchmark suite. These skills handle everything from searching the open-source hardware ecosystem for new
-        candidates to performing full RTL-to-GDSII integration of new designs, reducing what would take hours of
-        manual work to a single command.
+        candidates, to performing full RTL-to-GDSII integration, to debugging flow failures and optimizing PPA&mdash;reducing
+        what would take hours of manual work to a single command.
       </p>
       <div class="skills-grid">
         <div class="skill-card">
@@ -911,6 +911,36 @@
             <li>Regenerates RTL, identifies new memories, and updates FakeRAM</li>
             <li>Tunes flow parameters (utilization, timing, placement) when needed</li>
             <li>Ports existing designs to additional technology platforms</li>
+          </ul>
+        </div>
+        <div class="skill-card">
+          <div class="skill-name">/debug-design</div>
+          <h3>Debug Failing Designs</h3>
+          <p>
+            Analyzes and diagnoses failures at any stage of the RTL-to-GDSII flow, from synthesis
+            errors to routing congestion, with visual layout analysis.
+          </p>
+          <ul>
+            <li>Locates build artifacts and identifies the failed stage automatically</li>
+            <li>Diagnoses synthesis issues, memory inference problems, and macro placement failures</li>
+            <li>Analyzes timing violations with clock skew and IO constraint awareness</li>
+            <li>Generates layout heatmaps (congestion, placement density, RUDY, IR drop)</li>
+            <li>Recommends specific config/constraint fixes without modifying RTL</li>
+          </ul>
+        </div>
+        <div class="skill-card">
+          <div class="skill-name">/optimize-ppa</div>
+          <h3>Optimize Power, Performance, and Area</h3>
+          <p>
+            Iteratively maximizes cell utilization and clock frequency while maintaining
+            a clean flow with zero DRC violations.
+          </p>
+          <ul>
+            <li>Establishes baseline metrics and identifies optimization headroom</li>
+            <li>Incrementally increases utilization with congestion mitigation</li>
+            <li>Binary searches for optimal clock period to maximize Fmax</li>
+            <li>Monitors runtime as an early-warning signal for over-constrained designs</li>
+            <li>Generates before/after comparison tables across all PPA metrics</li>
           </ul>
         </div>
       </div>

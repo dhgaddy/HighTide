@@ -56,7 +56,7 @@ bazel build //designs/asap7/lfsr:lfsr_route
 
 ### RTL Regeneration (Bazel)
 
-By default, designs use pre-generated Verilog. To regenerate RTL from source repositories:
+By default, designs use pre-generated RTL checked into the repository. Some designs use Verilog converted from SystemVerilog via sv2v, while others (e.g., bp_processor) use SystemVerilog directly with the yosys-slang plugin. To regenerate RTL from source repositories:
 
 ```bash
 bazel build --define update_rtl=true //designs/asap7/lfsr:lfsr_final
@@ -83,6 +83,30 @@ Platform     Design                      Die Area  Core Area  Inst Area    Util%
 ================================================================================================================================================================
 asap7        lfsr                   81.7       47.0       21.8     46.4      205      0    13      56.91       0.00         5.78        0.381      0
 ```
+
+## Kubernetes (NRP Nautilus)
+
+Designs can be built at scale on the [NRP Nautilus](https://nationalresearchplatform.org/nautilus/) Kubernetes cluster. See [k8s/README.md](k8s/README.md) for full documentation on submitting jobs, monitoring, and managing builds.
+
+### Fetching Baseline Results
+
+HighTide generates baseline build results for all designs and stores them in a GCS remote cache. Users can fetch these baseline results locally without rebuilding:
+
+```bash
+# Fetch all cached designs
+./tools/fetch_cache.sh
+
+# Fetch all cached asap7 designs
+./tools/fetch_cache.sh asap7
+
+# Fetch a specific design
+./tools/fetch_cache.sh asap7 lfsr
+
+# Fetch only through a specific stage
+./tools/fetch_cache.sh --stage synth asap7
+```
+
+Each design reports whether it was fetched from the remote cache, found locally, or not cached. After fetching, view baseline results with `./tools/summary.sh`.
 
 ## Make Flow (legacy)
 

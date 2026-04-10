@@ -5,8 +5,7 @@ set clk_io_pct 0.2
 
 create_clock -name clk -period $clk_period [get_ports clk]
 
-set non_clock_inputs [remove_from_collection [all_inputs] [get_ports clk]]
-set_input_delay  [expr $clk_period * $clk_io_pct] -clock clk $non_clock_inputs
+set_input_delay  [expr $clk_period * $clk_io_pct] -clock clk [all_inputs -no_clocks]
 set_output_delay [expr $clk_period * $clk_io_pct] -clock clk [all_outputs]
 
 set_false_path -from [get_ports reset]

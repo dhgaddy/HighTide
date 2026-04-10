@@ -1,18 +1,12 @@
 current_design NyuziProcessor
 
-set clk_name  clk
-set clk_port_name clk
 set clk_period 1600
 set clk_io_pct 0.2
 
-set clk_port [get_ports $clk_port_name]
+create_clock -name clk -period $clk_period [get_ports clk]
 
-create_clock -name $clk_name -period $clk_period $clk_port
-
-set_input_delay  [expr $clk_period * $clk_io_pct] -clock $clk_name [lsearch -inline -all -regexp [all_inputs]]
-
-set outputs [lsearch -inline -all-regexp [all_outputs]]
-
-set_output_delay [expr $clk_period * $clk_io_pct] -clock $clk_name [lsearch -inline -all -exact $outputs $clk_name]
+set non_clock_inputs [remove_from_collection [all_inputs] [get_ports clk]]
+set_input_delay  [expr $clk_period * $clk_io_pct] -clock clk $non_clock_inputs
+set_output_delay [expr $clk_period * $clk_io_pct] -clock clk [all_outputs]
 
 set_false_path -from [get_ports reset]

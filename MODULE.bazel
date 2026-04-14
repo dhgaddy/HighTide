@@ -63,7 +63,12 @@ git_override(
     remote = "https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts.git",
 )
 
-# --- yosys (built from source via BCR) ---
+# --- yosys + plugins (slang) extracted from the ORFS Docker image ---
+# The BCR yosys package doesn't ship the slang plugin that bp_processor
+# needs. We re-run the same OCI extraction docker_pkg rule with a
+# custom BUILD file that exposes yosys, yosys-abc, and yosys_share
+# (including plugins/slang.so) from the image. Bazel's repository
+# cache dedupes the layer downloads with @docker_orfs_image.
 bazel_dep(name = "yosys", version = "0.62")
 single_version_override(
     module_name = "yosys",
@@ -71,6 +76,20 @@ single_version_override(
     patches = [
         "//patches:yosys-visibility.patch",
     ],
+)
+
+docker_pkg = use_repo_rule("@bazel-orfs//:docker.bzl", "docker_pkg")
+
+docker_pkg(
+    name = "docker_orfs_yosys",
+    build_file = "//:docker_yosys.BUILD.bazel",
+    image = "docker.io/openroad/orfs:26Q2-32-gca75a11e2",
+    # Delete BUILD files under OpenROAD-flow-scripts so they don't
+    # create subpackages that break the yosys_share glob.
+    patch_cmds = [
+        "find OpenROAD-flow-scripts -name BUILD -delete -o -name BUILD.bazel -delete",
+    ],
+    sha256 = "a50429aaed8cbaf2103b46196507f7c9445c95066d00a91953bd47c27dad6f31",
 )
 
 # --- Python 3.13 toolchain ---
@@ -82,11 +101,14 @@ python.toolchain(
     python_version = "3.13",
 )
 
-# --- ORFS extension: use Docker image OpenROAD binary ---
+# --- ORFS extension: use Docker image OpenROAD + yosys binaries ---
 orfs = use_extension("@bazel-orfs//:extension.bzl", "orfs_repositories")
 orfs.default(
     openroad = "@bazel-orfs//:openroad-latest",
     opensta = "@bazel-orfs//:opensta-latest",
+    yosys = "@docker_orfs_yosys//:yosys",
+    yosys_abc = "@docker_orfs_yosys//:yosys-abc",
+    yosys_share = "@docker_orfs_yosys//:yosys_share",
 )
 use_repo(orfs, "docker_orfs")
 use_repo(orfs, "docker_orfs_image")

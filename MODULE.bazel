@@ -69,6 +69,14 @@ git_override(
 # custom BUILD file that exposes yosys, yosys-abc, and yosys_share
 # (including plugins/slang.so) from the image. Bazel's repository
 # cache dedupes the layer downloads with @docker_orfs_image.
+#
+# TEMPORARY: upstream bazel-orfs (ideas/toolchains.md on main) is
+# retiring @docker_orfs / image extraction in favor of a prebuilt
+# bazel-orfs-yosys toolchain submodule that bundles slang. When that
+# ships, drop docker_yosys.BUILD.bazel and the docker_pkg call below,
+# and replace the yosys/yosys_abc/yosys_share overrides in
+# orfs.default() with the new toolchain extension. See
+# https://github.com/The-OpenROAD-Project/bazel-orfs/blob/main/ideas/toolchains.md
 bazel_dep(name = "yosys", version = "0.62")
 single_version_override(
     module_name = "yosys",

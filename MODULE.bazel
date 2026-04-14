@@ -1,26 +1,92 @@
+"""HighTide2 module — uses bazel-orfs with OpenROAD extracted from the
+ORFS Docker image (zero-source OpenROAD build).
+
+Mirrors the bazel-orfs test/docker/MODULE.bazel pattern.
+"""
+
 module(
     name = "hightide2",
     version = "0.0.1",
 )
 
-bazel_dep(name = "rules_python", version = "1.8.5")
+# --- bazel-orfs ---
+BAZEL_ORFS_COMMIT = "da4ffdf2752f377c6e66aa942fae3e24a36ad99a"
+
+BAZEL_ORFS_REMOTE = "https://github.com/The-OpenROAD-Project/bazel-orfs.git"
+
 bazel_dep(name = "bazel-orfs")
-
-python = use_extension("@rules_python//python/extensions:python.bzl", "python")
-python.toolchain(python_version = "3.13", is_default = True)
-
 git_override(
     module_name = "bazel-orfs",
-    remote = "https://github.com/The-OpenROAD-Project/bazel-orfs.git",
-    commit = "da4ffdf2752f377c6e66aa942fae3e24a36ad99a",
+    commit = BAZEL_ORFS_COMMIT,
+    remote = BAZEL_ORFS_REMOTE,
 )
 
+# bazel-orfs-verilog lives in the verilog/ subdir of the bazel-orfs repo.
+bazel_dep(name = "bazel-orfs-verilog")
+git_override(
+    module_name = "bazel-orfs-verilog",
+    commit = BAZEL_ORFS_COMMIT,
+    remote = BAZEL_ORFS_REMOTE,
+    strip_prefix = "verilog",
+)
+
+# --- Stub overrides for modules we don't build from source ---
+# The OpenROAD binary comes from the Docker image via
+# @bazel-orfs//:openroad-latest, so @openroad and @qt-bazel only need
+# to exist for module-graph resolution. We point them at the stub
+# subdirs inside bazel-orfs itself.
+bazel_dep(name = "openroad")
+git_override(
+    module_name = "openroad",
+    commit = BAZEL_ORFS_COMMIT,
+    remote = BAZEL_ORFS_REMOTE,
+    strip_prefix = "test/docker/stub/openroad",
+)
+
+bazel_dep(name = "qt-bazel")
+git_override(
+    module_name = "qt-bazel",
+    commit = BAZEL_ORFS_COMMIT,
+    remote = BAZEL_ORFS_REMOTE,
+    strip_prefix = "test/docker/stub/qt-bazel",
+)
+
+# --- ORFS flow scripts (Makefile, TCL, PDKs) ---
+bazel_dep(name = "orfs")
+git_override(
+    module_name = "orfs",
+    commit = "d8c6b0cbd54d3a2d6e78671e80b7b479c10af6f6",
+    patch_strip = 1,
+    patches = [
+        "//patches:0035-fix-remove-non-root-overrides-from-MODULE.bazel.patch",
+    ],
+    remote = "https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts.git",
+)
+
+# --- yosys (built from source via BCR) ---
+bazel_dep(name = "yosys", version = "0.62")
+single_version_override(
+    module_name = "yosys",
+    patch_strip = 1,
+    patches = [
+        "//patches:yosys-visibility.patch",
+    ],
+)
+
+# --- Python 3.13 toolchain ---
+bazel_dep(name = "rules_python", version = "1.8.5")
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    is_default = True,
+    python_version = "3.13",
+)
+
+# --- ORFS extension: use Docker image OpenROAD binary ---
 orfs = use_extension("@bazel-orfs//:extension.bzl", "orfs_repositories")
-
-# Docker image must match the bazel-orfs commit and the ORFS submodule.
 orfs.default(
-    image = "docker.io/openroad/orfs:26Q2-32-gca75a11e2",
-    sha256 = "a50429aaed8cbaf2103b46196507f7c9445c95066d00a91953bd47c27dad6f31",
+    openroad = "@bazel-orfs//:openroad-latest",
+    opensta = "@bazel-orfs//:opensta-latest",
 )
-
 use_repo(orfs, "docker_orfs")
+use_repo(orfs, "docker_orfs_image")

@@ -18,6 +18,13 @@ bazel_dep(name = "bazel-orfs")
 git_override(
     module_name = "bazel-orfs",
     commit = BAZEL_ORFS_COMMIT,
+    patch_strip = 1,
+    # Point private _tcl/_opengl/_qt_plugins attr defaults at
+    # @docker_orfs_image so OpenROAD can find its Qt offscreen
+    # plugin at the save_images.tcl finish stage (GUI-0076/0077).
+    patches = [
+        "//patches:bazel-orfs-docker-orfs-image-runtime-deps.patch",
+    ],
     remote = BAZEL_ORFS_REMOTE,
 )
 

@@ -327,96 +327,93 @@
       background: var(--gray-50);
     }
 
-    .workflow-diagram {
-      display: flex;
-      gap: 0;
-      max-width: 900px;
+    .flow-pipeline {
+      max-width: 600px;
       margin: 0 auto;
-      align-items: stretch;
-    }
-
-    .workflow-path {
-      background: var(--white);
-      padding: 1.75rem;
-      border: 2px solid var(--gray-100);
-      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-    }
-
-    .workflow-path.path-update {
-      flex: 0 0 280px;
-      border-radius: 12px 0 0 12px;
-      border-right: none;
-    }
-
-    .workflow-path.path-default {
-      flex: 1;
-      border-radius: 0 12px 12px 0;
-      border-color: var(--navy);
-    }
-
-    .workflow-path h3 {
-      color: var(--navy);
-      font-size: 1.05rem;
-      margin-bottom: 1rem;
-    }
-
-    .flow-steps {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .flow-arrow {
-      text-align: center;
-      color: var(--sea-light);
-      font-size: 1.2rem;
-      padding: 0.15rem 0;
+      align-items: center;
+      gap: 0;
     }
 
     .flow-box {
-      background: var(--gray-50);
-      border-radius: 8px;
-      padding: 0.6rem 1rem;
-      font-size: 0.85rem;
+      width: 100%;
+      background: var(--white);
+      border-radius: 10px;
+      padding: 0.9rem 1.25rem;
+      text-align: center;
+      font-size: 0.9rem;
       color: var(--gray-800);
-      border-left: 3px solid var(--sea-light);
-    }
-
-    .flow-box.flow-cache {
-      border-left-color: var(--yellow);
-      background: var(--yellow-glow);
-    }
-
-    .flow-box.flow-verilog {
-      border-left-color: var(--navy);
-      background: #e8eaf6;
-    }
-
-    .flow-box code {
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 0.8rem;
-      background: rgba(0,0,0,0.05);
-      padding: 0.1rem 0.3rem;
-      border-radius: 3px;
-    }
-
-    .flow-box .flow-label {
-      font-weight: 600;
-      color: var(--navy);
-    }
-
-    .flow-connector {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      border: 2px solid var(--gray-100);
       position: relative;
     }
 
-    .flow-connector-arrow {
-      color: var(--navy);
-      font-size: 1.5rem;
+    .flow-box .flow-label {
       font-weight: 700;
+      color: var(--navy);
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+
+    .flow-box .flow-desc {
+      font-size: 0.8rem;
+      color: var(--gray-600);
+    }
+
+    .flow-box.flow-highlight {
+      border-color: var(--navy);
+      background: #e8eaf6;
+    }
+
+    .flow-box.flow-cache {
+      border-color: var(--yellow);
+      background: var(--yellow-glow);
+    }
+
+    .flow-arrow {
+      color: var(--sea-light);
+      font-size: 1.4rem;
       line-height: 1;
+      padding: 0.3rem 0;
+    }
+
+    .flow-or {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--gray-600);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0.2rem 0;
+    }
+
+    .flow-subflow {
+      width: 100%;
+      border: 2px dashed var(--sea-light);
+      border-radius: 12px;
+      padding: 1rem;
+      background: rgba(129, 186, 221, 0.06);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    .flow-subflow-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--sea-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5rem;
+    }
+
+    .flow-subflow .flow-box {
+      border-color: var(--sea-light);
+    }
+
+    .flow-subflow .flow-arrow {
+      font-size: 1.1rem;
+      padding: 0.2rem 0;
     }
 
     .workflow-note {
@@ -427,13 +424,6 @@
       max-width: 700px;
       margin-left: auto;
       margin-right: auto;
-    }
-
-    @media (max-width: 768px) {
-      .workflow-diagram { flex-direction: column; }
-      .workflow-path.path-update { flex: auto; border-radius: 12px 12px 0 0; border-right: 2px solid var(--gray-100); border-bottom: none; }
-      .workflow-path.path-default { border-radius: 0 0 12px 12px; }
-      .flow-connector-arrow { transform: rotate(90deg); }
     }
 
     /* Designs */
@@ -947,29 +937,43 @@
         Bazel-ORFS partitions the RTL-to-GDSII flow into incremental build targets with remote caching
         for fast rebuilds and reproducible baseline results.
       </p>
-      <div class="workflow-diagram">
-        <div class="workflow-path path-update">
-          <h3>Design Update Path</h3>
-          <div class="flow-steps">
-            <div class="flow-box"><span class="flow-label">Git Submodule</span><br>Pull upstream sources (Chisel, LiteX, SystemVerilog, etc.)</div>
-            <div class="flow-arrow">&#8595;</div>
-            <div class="flow-box"><span class="flow-label">RTL Generation</span><br><code>setup.sh</code> compiles native HDL to Verilog</div>
-            <div class="flow-arrow">&#8595;</div>
-            <div class="flow-box"><span class="flow-label">FakeRAM Update</span><br>Identify new memories, generate black-box macros</div>
-            <div class="flow-arrow flow-connector-arrow">&#10132;</div>
+      <div class="flow-pipeline">
+        <div class="flow-box flow-highlight">
+          <span class="flow-label">Pre-generated Verilog</span>
+          <span class="flow-desc">Release RTL checked into the repo</span>
+        </div>
+        <div class="flow-or">or</div>
+        <div class="flow-subflow">
+          <div class="flow-subflow-title">Design Update (optional)</div>
+          <div class="flow-box">
+            <span class="flow-label">Git Submodule Pull</span>
+            <span class="flow-desc">Fetch upstream sources (Chisel, LiteX, SystemVerilog, etc.)</span>
+          </div>
+          <div class="flow-arrow">&#8595;</div>
+          <div class="flow-box">
+            <span class="flow-label">RTL Generation</span>
+            <span class="flow-desc">setup.sh compiles native HDL to Verilog</span>
+          </div>
+          <div class="flow-arrow">&#8595;</div>
+          <div class="flow-box">
+            <span class="flow-label">FakeRAM Update</span>
+            <span class="flow-desc">Identify new memories, generate black-box macros</span>
           </div>
         </div>
-        <div class="workflow-path path-default">
-          <h3>Default Build Path</h3>
-          <div class="flow-steps">
-            <div class="flow-box flow-verilog"><span class="flow-label">Pre-generated Verilog</span><br>Release RTL checked into the repo</div>
-            <div class="flow-arrow">&#8595;</div>
-            <div class="flow-box"><span class="flow-label">Bazel-ORFS Flow</span><br>Synthesis &#8594; Floorplan &#8594; Place &#8594; CTS &#8594; Route &#8594; Finish</div>
-            <div class="flow-arrow">&#8595;</div>
-            <div class="flow-box flow-cache"><span class="flow-label">Remote Cache</span><br>Per-stage results cached; only re-run stages whose inputs changed</div>
-            <div class="flow-arrow">&#8595;</div>
-            <div class="flow-box"><span class="flow-label">GDSII + QoR Reports</span><br>Final layout, timing, area, power metrics</div>
-          </div>
+        <div class="flow-arrow">&#8595;</div>
+        <div class="flow-box">
+          <span class="flow-label">Bazel-ORFS Flow</span>
+          <span class="flow-desc">Synthesis &#8594; Floorplan &#8594; Place &#8594; CTS &#8594; Route &#8594; Finish</span>
+        </div>
+        <div class="flow-arrow">&#8595;</div>
+        <div class="flow-box flow-cache">
+          <span class="flow-label">Remote Cache</span>
+          <span class="flow-desc">Per-stage results cached and shared; only re-run stages whose inputs changed</span>
+        </div>
+        <div class="flow-arrow">&#8595;</div>
+        <div class="flow-box">
+          <span class="flow-label">GDSII + QoR Reports</span>
+          <span class="flow-desc">Final layout, timing, area, power metrics</span>
         </div>
       </div>
       <p class="workflow-note">

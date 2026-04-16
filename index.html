@@ -329,19 +329,29 @@
 
     .workflow-diagram {
       display: flex;
-      gap: 1.5rem;
+      gap: 0;
       max-width: 900px;
       margin: 0 auto;
       align-items: stretch;
     }
 
     .workflow-path {
-      flex: 1;
       background: var(--white);
-      border-radius: 12px;
       padding: 1.75rem;
       border: 2px solid var(--gray-100);
       box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+
+    .workflow-path.path-update {
+      flex: 0 0 280px;
+      border-radius: 12px 0 0 12px;
+      border-right: none;
+    }
+
+    .workflow-path.path-default {
+      flex: 1;
+      border-radius: 0 12px 12px 0;
+      border-color: var(--navy);
     }
 
     .workflow-path h3 {
@@ -350,28 +360,10 @@
       margin-bottom: 1rem;
     }
 
-    .workflow-path.path-default {
-      border-color: var(--navy);
-      border-width: 2px;
-    }
-
-    .workflow-path.path-default h3::after {
-      content: ' (recommended)';
-      font-weight: 400;
-      font-size: 0.8rem;
-      color: var(--gray-600);
-    }
-
     .flow-steps {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
-    }
-
-    .flow-step {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
     }
 
     .flow-arrow {
@@ -382,7 +374,6 @@
     }
 
     .flow-box {
-      flex: 1;
       background: var(--gray-50);
       border-radius: 8px;
       padding: 0.6rem 1rem;
@@ -394,6 +385,11 @@
     .flow-box.flow-cache {
       border-left-color: var(--yellow);
       background: var(--yellow-glow);
+    }
+
+    .flow-box.flow-verilog {
+      border-left-color: var(--navy);
+      background: #e8eaf6;
     }
 
     .flow-box code {
@@ -409,6 +405,20 @@
       color: var(--navy);
     }
 
+    .flow-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .flow-connector-arrow {
+      color: var(--navy);
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
     .workflow-note {
       text-align: center;
       color: var(--gray-600);
@@ -417,6 +427,13 @@
       max-width: 700px;
       margin-left: auto;
       margin-right: auto;
+    }
+
+    @media (max-width: 768px) {
+      .workflow-diagram { flex-direction: column; }
+      .workflow-path.path-update { flex: auto; border-radius: 12px 12px 0 0; border-right: 2px solid var(--gray-100); border-bottom: none; }
+      .workflow-path.path-default { border-radius: 0 0 12px 12px; }
+      .flow-connector-arrow { transform: rotate(90deg); }
     }
 
     /* Designs */
@@ -931,28 +948,27 @@
         for fast rebuilds and reproducible baseline results.
       </p>
       <div class="workflow-diagram">
-        <div class="workflow-path path-default">
-          <h3>Default Build</h3>
+        <div class="workflow-path path-update">
+          <h3>Design Update Path</h3>
           <div class="flow-steps">
-            <div class="flow-box"><span class="flow-label">Pre-generated Verilog</span> &mdash; release RTL checked into the repo</div>
+            <div class="flow-box"><span class="flow-label">Git Submodule</span><br>Pull upstream sources (Chisel, LiteX, SystemVerilog, etc.)</div>
             <div class="flow-arrow">&#8595;</div>
-            <div class="flow-box"><span class="flow-label">Bazel-ORFS Flow</span> &mdash; synthesis, floorplan, place, CTS, route, finish</div>
+            <div class="flow-box"><span class="flow-label">RTL Generation</span><br><code>setup.sh</code> compiles native HDL to Verilog</div>
             <div class="flow-arrow">&#8595;</div>
-            <div class="flow-box flow-cache"><span class="flow-label">Remote Cache</span> &mdash; per-stage results cached and shared; only re-run stages whose inputs changed</div>
-            <div class="flow-arrow">&#8595;</div>
-            <div class="flow-box"><span class="flow-label">GDSII + QoR Reports</span> &mdash; final layout, timing, area, power metrics</div>
+            <div class="flow-box"><span class="flow-label">FakeRAM Update</span><br>Identify new memories, generate black-box macros</div>
+            <div class="flow-arrow flow-connector-arrow">&#10132;</div>
           </div>
         </div>
-        <div class="workflow-path">
-          <h3>Design Update</h3>
+        <div class="workflow-path path-default">
+          <h3>Default Build Path</h3>
           <div class="flow-steps">
-            <div class="flow-box"><span class="flow-label">Git Submodule</span> &mdash; pull upstream sources (Chisel, LiteX, SystemVerilog, etc.)</div>
+            <div class="flow-box flow-verilog"><span class="flow-label">Pre-generated Verilog</span><br>Release RTL checked into the repo</div>
             <div class="flow-arrow">&#8595;</div>
-            <div class="flow-box"><span class="flow-label">RTL Generation</span> &mdash; <code>setup.sh</code> compiles native HDL to Verilog</div>
+            <div class="flow-box"><span class="flow-label">Bazel-ORFS Flow</span><br>Synthesis &#8594; Floorplan &#8594; Place &#8594; CTS &#8594; Route &#8594; Finish</div>
             <div class="flow-arrow">&#8595;</div>
-            <div class="flow-box"><span class="flow-label">FakeRAM Update</span> &mdash; identify new memories, generate black-box macros</div>
+            <div class="flow-box flow-cache"><span class="flow-label">Remote Cache</span><br>Per-stage results cached; only re-run stages whose inputs changed</div>
             <div class="flow-arrow">&#8595;</div>
-            <div class="flow-box"><span class="flow-label">Incremental Rebuild</span> &mdash; Bazel re-runs only affected stages from cache</div>
+            <div class="flow-box"><span class="flow-label">GDSII + QoR Reports</span><br>Final layout, timing, area, power metrics</div>
           </div>
         </div>
       </div>

@@ -328,12 +328,37 @@
     }
 
     .flow-pipeline {
-      max-width: 600px;
+      max-width: 750px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 0;
+    }
+
+    .flow-choice {
+      display: flex;
+      width: 100%;
+      gap: 1.5rem;
+      align-items: stretch;
+    }
+
+    .flow-choice-option {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .flow-or {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--gray-600);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
     }
 
     .flow-box {
@@ -345,7 +370,6 @@
       font-size: 0.9rem;
       color: var(--gray-800);
       border: 2px solid var(--gray-100);
-      position: relative;
     }
 
     .flow-box .flow-label {
@@ -377,17 +401,9 @@
       padding: 0.3rem 0;
     }
 
-    .flow-or {
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: var(--gray-600);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      padding: 0.2rem 0;
-    }
-
     .flow-subflow {
       width: 100%;
+      flex: 1;
       border: 2px dashed var(--sea-light);
       border-radius: 12px;
       padding: 1rem;
@@ -416,6 +432,11 @@
       padding: 0.2rem 0;
     }
 
+    /* Full-width boxes below the choice */
+    .flow-pipeline > .flow-box {
+      max-width: 500px;
+    }
+
     .workflow-note {
       text-align: center;
       color: var(--gray-600);
@@ -424,6 +445,11 @@
       max-width: 700px;
       margin-left: auto;
       margin-right: auto;
+    }
+
+    @media (max-width: 600px) {
+      .flow-choice { flex-direction: column; gap: 0.5rem; }
+      .flow-or { justify-content: center; }
     }
 
     /* Designs */
@@ -938,26 +964,32 @@
         for fast rebuilds and reproducible baseline results.
       </p>
       <div class="flow-pipeline">
-        <div class="flow-box flow-highlight">
-          <span class="flow-label">Pre-generated Verilog</span>
-          <span class="flow-desc">Release RTL checked into the repo</span>
-        </div>
-        <div class="flow-or">or</div>
-        <div class="flow-subflow">
-          <div class="flow-subflow-title">Design Update (optional)</div>
-          <div class="flow-box">
-            <span class="flow-label">Git Submodule Pull</span>
-            <span class="flow-desc">Fetch upstream sources (Chisel, LiteX, SystemVerilog, etc.)</span>
+        <div class="flow-choice">
+          <div class="flow-choice-option">
+            <div class="flow-box flow-highlight" style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+              <span class="flow-label">Pre-generated Verilog</span>
+              <span class="flow-desc">Release RTL checked into the repo</span>
+            </div>
           </div>
-          <div class="flow-arrow">&#8595;</div>
-          <div class="flow-box">
-            <span class="flow-label">RTL Generation</span>
-            <span class="flow-desc">setup.sh compiles native HDL to Verilog</span>
-          </div>
-          <div class="flow-arrow">&#8595;</div>
-          <div class="flow-box">
-            <span class="flow-label">FakeRAM Update</span>
-            <span class="flow-desc">Identify new memories, generate black-box macros</span>
+          <div class="flow-or">or</div>
+          <div class="flow-choice-option">
+            <div class="flow-subflow">
+              <div class="flow-subflow-title">Design Update (optional)</div>
+              <div class="flow-box">
+                <span class="flow-label">Git Submodule Pull</span>
+                <span class="flow-desc">Fetch upstream sources (Chisel, LiteX, SystemVerilog, etc.)</span>
+              </div>
+              <div class="flow-arrow">&#8595;</div>
+              <div class="flow-box">
+                <span class="flow-label">RTL Generation</span>
+                <span class="flow-desc">setup.sh compiles native HDL to Verilog</span>
+              </div>
+              <div class="flow-arrow">&#8595;</div>
+              <div class="flow-box">
+                <span class="flow-label">FakeRAM Update</span>
+                <span class="flow-desc">Identify new memories, generate black-box macros</span>
+              </div>
+            </div>
           </div>
         </div>
         <div class="flow-arrow">&#8595;</div>

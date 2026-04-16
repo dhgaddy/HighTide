@@ -32,13 +32,14 @@ And should meet at least one of these motivations:
 ## Current Designs (do NOT propose duplicates)
 
 Check the existing designs before proposing:
-- gemmini (ML systolic array accelerator)
-- minimax (RISC-V core)
-- NyuziProcessor (RISC processor)
-- lfsr (LFSR/PRBS generator)
-- liteeth (Ethernet MAC, multiple variants)
-- cnn (CNN accelerator via NNgen/Veriloggen)
-- sha3 (SHA3 hash, in progress)
+- gemmini (ML systolic array accelerator) — asap7, nangate45
+- minimax (RISC-V core) — asap7, nangate45, sky130hd
+- NyuziProcessor (RISC processor) — asap7, nangate45
+- lfsr (LFSR/PRBS generator) — asap7, nangate45, sky130hd
+- liteeth (Ethernet MAC, 6 variants) — asap7, nangate45, sky130hd
+- cnn (CNN accelerator via NNgen/Veriloggen) — asap7, nangate45
+- sha3 (SHA3 hash) — asap7, nangate45
+- bp_processor (Black-Parrot RISC-V, bp_uno + bp_quad variants) — asap7, nangate45
 
 Also check open GitHub issues for already-proposed designs:
 ```bash

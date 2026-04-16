@@ -137,11 +137,7 @@ tail -200 logs/<platform>/<design>/base/3_*.log
 2. **Congestion hotspots**: Router estimates show high congestion during placement.
    - Look for "Congestion" warnings in the log
    - Generate a placement density and RUDY heatmap (see Step 4)
-   - Congestion fix priority (try in order):
-     1. Create/improve `io.tcl` to spread pins (see `designs/asap7/gemmini/io.tcl`)
-     2. Increase `MACRO_PLACE_HALO` to give macros routing clearance
-     3. Add `PLACE_PINS_ARGS = -min_distance 30 -min_distance_in_tracks`
-     4. Only as last resort: lower `CORE_UTILIZATION`
+   - Follow the congestion fix priority in `.claude/skills/shared/congestion-analysis.md`
 
 ---
 
@@ -173,8 +169,13 @@ tail -200 logs/<platform>/<design>/base/5_*.log
    ```
 
 2. **Congestion-driven routing failures**: Too many routing resources consumed.
-   - Generate a routing congestion heatmap (see Step 4)
-   - Follow the congestion fix priority from section C
+   - Check the GRT congestion report for per-layer overflow counts (see `.claude/skills/shared/congestion-analysis.md`):
+     ```bash
+     grep -A 15 "Final congestion report" logs/*/base/5_1_grt.log 2>/dev/null
+     ```
+   - Non-zero overflow on any layer means congestion-driven failures
+   - Generate a routing congestion heatmap (see Step 4) for spatial diagnosis
+   - Follow the congestion fix priority in `.claude/skills/shared/congestion-analysis.md`
 
 3. **Antenna violations**: Check antenna report if available
 
@@ -200,7 +201,10 @@ cat logs/<platform>/<design>/base/6_report.json 2>/dev/null
 - **WNS** (worst negative slack) — negative means violation
 - **TNS** (total negative slack) — sum of all violating paths
 - **Fmax** — maximum achievable frequency
+- **`report_clock_min_period`** — look for this in the finish report; it gives the true minimum achievable clock period directly, which is more reliable than computing it from WNS
 - **Top 5 worst paths**: start point, end point, path delay breakdown
+
+**Important: utilization and clock period are coupled.** Tighter clock constraints cause synthesis to produce more cells (more buffering, complex gate decompositions), which increases the effective utilization. A design that fits at 80% util with a relaxed clock may overflow at 80% with an aggressive clock. When diagnosing timing, also check if the cell count and instance area increased compared to a relaxed-clock build.
 
 **Clock skew analysis:**
 
@@ -255,93 +259,9 @@ head -50 reports/<platform>/<design>/base/6_finish_drc.rpt 2>/dev/null
 
 ## Step 4: Generate Layout Images
 
-For visual diagnosis of floorplan, placement, congestion, and power routing problems, generate images using OpenROAD's `save_image` command inside Docker with Xvfb (virtual framebuffer), since Docker has no X11 display.
+For visual diagnosis of floorplan, placement, congestion, and power routing problems, generate images using OpenROAD's `save_image` command.
 
-**Extract the Docker image name:**
-```bash
-DOCKER_IMAGE=$(grep -oP 'image\s*=\s*"\K[^"]+' MODULE.bazel)
-```
-
-**Determine the ODB file path** for the stage to visualize (check `bazel-bin/designs/$0/` or `artifacts/$0/`):
-- Floorplan: `results/*/base/2_floorplan.odb`
-- Placement: `results/*/base/3_place.odb`
-- CTS: `results/*/base/4_cts.odb`
-- Routing: `results/*/base/5_route.odb`
-- Final: `results/*/base/6_final.odb`
-
-### Basic layout image
-
-Write a Tcl script and run it in Docker with Xvfb:
-
-```bash
-cat > /tmp/ht_save_image.tcl << 'TCLEOF'
-read_db $::env(ODB_FILE)
-save_image -width 2048 $::env(OUTPUT_IMAGE)
-TCLEOF
-
-cd OpenROAD-flow-scripts
-docker run --rm \
-  -u $(id -u):$(id -g) \
-  -v $(pwd)/flow:/OpenROAD-flow-scripts/flow \
-  -v $(pwd)/..:/OpenROAD-flow-scripts/UCSC_ML_suite \
-  -v /tmp:/tmp \
-  -w /OpenROAD-flow-scripts/UCSC_ML_suite \
-  -e ODB_FILE=<path-to-odb-relative-to-workdir> \
-  -e OUTPUT_IMAGE=/tmp/design_layout.webp \
-  -e DISPLAY=:99 \
-  ${DOCKER_IMAGE} \
-  bash -c "Xvfb :99 -screen 0 2048x2048x24 &>/dev/null & sleep 1 && openroad -no_splash -gui /tmp/ht_save_image.tcl"
-```
-
-### Routing congestion heatmap
-
-```tcl
-read_db $::env(ODB_FILE)
-gui::save_display_controls
-gui::set_display_controls "Heat Maps/Routing" visible true
-gui::set_heatmap Routing rebuild 1
-gui::set_heatmap Routing ShowLegend 1
-save_image -width 2048 $::env(OUTPUT_IMAGE)
-gui::restore_display_controls
-```
-
-### Placement density heatmap
-
-```tcl
-read_db $::env(ODB_FILE)
-gui::save_display_controls
-gui::set_display_controls "Heat Maps/Placement" visible true
-gui::set_heatmap Placement rebuild 1
-gui::set_heatmap Placement ShowLegend 1
-save_image -width 2048 $::env(OUTPUT_IMAGE)
-gui::restore_display_controls
-```
-
-### RUDY (routing demand estimation) heatmap
-
-```tcl
-read_db $::env(ODB_FILE)
-gui::save_display_controls
-gui::set_display_controls "Heat Maps/RUDY" visible true
-gui::set_heatmap RUDY rebuild 1
-gui::set_heatmap RUDY ShowLegend 1
-save_image -width 2048 $::env(OUTPUT_IMAGE)
-gui::restore_display_controls
-```
-
-### IR drop heatmap
-
-```tcl
-read_db $::env(ODB_FILE)
-gui::save_display_controls
-gui::set_display_controls "Heat Maps/IR Drop" visible true
-gui::set_heatmap IRDrop rebuild 1
-gui::set_heatmap IRDrop ShowLegend 1
-save_image -width 2048 $::env(OUTPUT_IMAGE)
-gui::restore_display_controls
-```
-
-After generating images, use the Read tool to display them to the user and analyze what the image shows — hotspots, macro placement issues, pin congestion areas, power routing gaps, etc.
+See `.claude/skills/shared/image-generation.md` for the full Docker/Xvfb setup, Tcl scripts, and heatmap variants (routing congestion, placement density, RUDY, IR drop).
 
 ---
 
@@ -349,11 +269,7 @@ After generating images, use the Read tool to display them to the user and analy
 
 Based on the diagnosis, recommend specific changes. Always explain **what** to change, **why**, and provide the exact file edits. Remember: never suggest RTL modifications — the Verilog is a fixed benchmark input.
 
-**Congestion fix priority** (prefer keeping utilization high):
-1. IO pin placement (`io.tcl`) — spread pins to reduce localized congestion
-2. Macro halo (`MACRO_PLACE_HALO`) — give macros more routing clearance
-3. Pin spacing (`PLACE_PINS_ARGS`) — increase minimum pin distance
-4. Utilization/density — lower only as a last resort
+**Congestion fix priority** — see `.claude/skills/shared/congestion-analysis.md`
 
 **Timing fix priority:**
 1. Check if the clock period target is realistic for the platform and design complexity

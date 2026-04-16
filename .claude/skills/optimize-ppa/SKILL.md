@@ -13,34 +13,38 @@ You are optimizing the PPA (power, performance, area) of the design at `designs/
 
 **Important:** HighTide is a benchmark suite — the RTL is a fixed input. Never suggest modifying the upstream Verilog/RTL. All optimizations must be scoped to flow parameters (config.mk), timing constraints (constraint.sdc), physical design files (io.tcl, pdn.tcl), and FakeRAM configuration.
 
+**Key lesson: utilization and clock period are coupled.** Tighter clock constraints cause synthesis and repair_timing to insert more buffers, increasing the effective cell area. A design that fits at 80% utilization with a relaxed clock may overflow at 80% with an aggressive clock. Optimize utilization first at the current clock, then tighten the clock and re-check utilization.
+
 ## Step 1: Establish Baseline
 
 First, gather the current metrics from the most recent build.
 
-**Find the metrics report:**
+**Find the metrics report** (check `bazel-bin/designs/$0/` then `artifacts/$0/`):
 ```bash
-# Bazel flow
 cat bazel-bin/designs/$0/logs/*/base/6_report.json 2>/dev/null
-# Make flow
-cat logs/<platform>/<design>/base/6_report.json 2>/dev/null
+cat artifacts/$0/logs/*/base/6_report.json 2>/dev/null
 ```
 
-If no completed build exists, run the flow first:
+If no artifacts exist locally, fetch from the Nautilus PVC:
 ```bash
-# Bazel
+./tools/fetch_artifacts.sh --keep <platform> <design>
+```
+
+If no build exists at all, run the flow:
+```bash
 bazel build //designs/<platform>/<design>:<design>_final
-# Make
-./runorfs_ni.sh make DESIGN_CONFIG=./designs/<platform>/<design>/config.mk
 ```
 
 **Record baseline metrics:**
 - Die area, core area, instance area
 - Cell utilization (%)
 - WNS, TNS, Fmax
+- `report_clock_min_period` — the true minimum achievable clock period (more reliable than computing from WNS)
 - Total power
 - DRC error count
 - Cell count, macro count
-- **Total flow runtime** — record wall-clock time for the baseline build (check log timestamps or Bazel build time). This is a critical early-warning signal.
+- **Total flow runtime** — record wall-clock time for the baseline build. This is a critical early-warning signal.
+- **GRT congestion** — check routing overflow counts (see Step 2d)
 
 **Read the design configuration:**
 - `designs/<platform>/<design>/config.mk`
@@ -48,6 +52,8 @@ bazel build //designs/<platform>/<design>:<design>_final
 - `designs/<platform>/<design>/BUILD.bazel` (if it exists)
 - `designs/<platform>/<design>/pdn.tcl` (if it exists)
 - `designs/<platform>/<design>/io.tcl` (if it exists)
+
+**Artifact path convention:** Throughout this skill, paths like `logs/*/base/` refer to whichever artifact location has the files. Check `bazel-bin/designs/$0/` first, then `artifacts/$0/`.
 
 ## Step 2: Maximize Utilization (Area Optimization)
 
@@ -63,27 +69,30 @@ Also check the placement density — if `PLACE_DENSITY` is much lower than the t
 
 Raise `CORE_UTILIZATION` in steps (e.g., +5% at a time). For each step:
 
-1. Update `CORE_UTILIZATION` in config.mk (or `arguments` in BUILD.bazel)
+1. Update `CORE_UTILIZATION` in BUILD.bazel (or config.mk)
 2. Adjust `PLACE_DENSITY` to match — it should be slightly above the utilization fraction (e.g., if utilization is 60%, density ~0.65-0.70)
-3. Run the flow and check for:
+3. Run `bazel build //designs/<platform>/<design>:<design>_final`
+4. Check for:
    - Placement overflow (placement cannot converge)
-   - Routing congestion (DRC violations from congestion)
+   - Routing congestion (DRC violations — check GRT overflow, see 2d)
    - Timing degradation (WNS getting worse)
-   - **Runtime blowup** (see section 2e below)
+   - **Runtime blowup** (see section 2e)
 
 ### 2c. Handle congestion at high utilization
 
-As utilization increases, congestion will eventually become the bottleneck. Address congestion in this priority order (keep utilization high):
+As utilization increases, congestion will become the bottleneck. See `.claude/skills/shared/congestion-analysis.md` for the fix priority and diagnostic approach.
 
-1. **IO pin placement** — Create or improve `io.tcl` to spread pins evenly across die edges. See `designs/asap7/gemmini/io.tcl` for reference. Set both `IO_CONSTRAINTS` and `FOOTPRINT_TCL` to the io.tcl path in config.mk.
+### 2d. Check GRT congestion metrics
 
-2. **Macro halo** — If the design has FakeRAM macros, increase `MACRO_PLACE_HALO` (e.g., from `5 5` to `6 6` or `8 8`) to give the router clearance around macros.
+After each build, check the global routing congestion report — this is the most reliable numeric indicator of whether utilization can be pushed further:
 
-3. **Pin spacing** — Add `PLACE_PINS_ARGS = -min_distance 30 -min_distance_in_tracks` to spread auto-placed pins.
+```bash
+grep -A 15 "Final congestion report" logs/*/base/5_1_grt.log 2>/dev/null
+```
 
-4. **ABC area optimization** — Set `ABC_AREA = 1` to tell the synthesis tool to optimize for area, which reduces cell count and eases routing.
-
-5. **Hierarchical synthesis** — For large designs, `SYNTH_HIERARCHICAL = 1` can help by keeping the hierarchy during synthesis, enabling better placement.
+- **Total Overflow = 0**: routing succeeded, may have room for more utilization
+- **Usage % > 70-80% on any layer**: approaching the congestion wall
+- **Any overflow > 0**: congestion failures — apply fixes from `.claude/skills/shared/congestion-analysis.md` before increasing utilization further
 
 ### 2e. Monitor runtime as an early-warning signal
 
@@ -104,10 +113,10 @@ A significant increase in flow runtime compared to the baseline is a strong indi
 
 ### 2f. Generate images to diagnose congestion
 
-When congestion blocks further utilization increases, generate heatmaps to identify specific problem areas (see Image Generation below):
-- **Placement density heatmap** — find regions with excessive cell density
-- **RUDY heatmap** — estimate routing demand before routing
-- **Routing congestion heatmap** — find actual routing bottlenecks after routing
+When congestion blocks further utilization increases, generate heatmaps to identify specific problem areas. See `.claude/skills/shared/image-generation.md` for Tcl scripts and Docker commands. The most useful heatmaps:
+- **Placement density** — find regions with excessive cell density
+- **RUDY** — estimate routing demand before routing
+- **Routing congestion** — find actual routing bottlenecks after routing
 
 ## Step 3: Maximize Clock Frequency (Performance Optimization)
 
@@ -115,49 +124,45 @@ The goal is to find the highest Fmax by tightening the clock period until timing
 
 ### 3a. Analyze current timing
 
-**Read the timing report:**
+**Read the timing report and extract `report_clock_min_period`:**
 ```bash
-head -100 reports/<platform>/<design>/base/6_finish_setup.rpt 2>/dev/null
+grep "period_min\|fmax" reports/*/base/6_finish.rpt 2>/dev/null
 ```
 
-**Determine where timing margin exists:**
+This gives the true minimum period directly — use it as the starting point for clock tightening instead of computing from WNS.
+
+**Also determine where timing margin exists:**
 - If WNS is significantly positive (e.g., > 0.1ns), there is room to tighten the clock
 - Identify the critical path — is it register-to-register or involves IO?
+- Check both the overall worst path and the reg-to-reg worst path separately
 
 ### 3b. Check for clock skew effects on IO paths
 
 Clock tree insertion delay can cause misleading timing results when IO constraints assume ideal clocks.
 
-1. **Find clock insertion delay:**
-   ```bash
-   grep -i "insertion\|skew\|latency" reports/<platform>/<design>/base/4_cts*.rpt 2>/dev/null
-   grep -i "insertion\|skew\|latency" logs/<platform>/<design>/base/4_*.log 2>/dev/null
-   ```
+1. **Find clock insertion delay** from the CTS log or finish report (`report_clock_skew` section)
 
 2. **Compare to IO delay budget**: IO delays are typically `clk_period * clk_io_pct`. If clock insertion delay is a significant fraction of this budget, IO paths have unrealistic constraints that will limit apparent Fmax.
 
 3. **Separate IO timing from core timing**: For benchmarking, the core register-to-register Fmax is what matters. If IO paths are the bottleneck:
-   - Increase `clk_io_pct` (e.g., 0.3 or 0.4) to give IO paths more slack
-   - Or use `set_false_path` on IO ports to exclude them from timing analysis
-   - Or set asymmetric input/output delays that account for insertion delay:
-     ```tcl
-     set_input_delay  [expr $clk_period * 0.3] -clock $clk_name $non_clock_inputs
-     set_output_delay [expr $clk_period * 0.4] -clock $clk_name [all_outputs]
-     ```
+   - Increase `clk_io_pct` (e.g., 0.3–0.8) to give IO paths more slack
+   - Or set asymmetric input/output delays that account for insertion delay
    - Add `set_clock_uncertainty` to model expected skew
 
 ### 3c. Tighten clock period
 
-Binary search for the optimal clock period:
+Use `report_clock_min_period` from the finish report as the starting target, then binary search:
 
 1. Start from the current `clk_period` in constraint.sdc
-2. If WNS is positive, reduce `clk_period` by the WNS amount (minus a small margin)
+2. If WNS is positive, reduce `clk_period` toward the `period_min` value (minus a small margin)
 3. Re-run the flow
 4. If WNS is still positive, tighten further
 5. If WNS is negative, back off — the previous period was close to optimal
 6. Converge when WNS is near zero (within ~0.01-0.05ns for asap7, ~0.05-0.1ns for nangate45/sky130hd)
 
 **Set `TNS_END_PERCENT = 100`** in config.mk to ensure the flow tries hard to close timing.
+
+**Remember the util/clock coupling:** after tightening the clock significantly, re-check that the design still fits. CTS repair_timing inserts buffers that increase cell area. You may need to lower utilization when the clock gets aggressive.
 
 ### 3d. Watch for runtime blowup during clock tightening
 
@@ -173,7 +178,7 @@ As the clock period gets tighter, the CTS and routing stages will spend increasi
 
 Power is generally a secondary concern for benchmarking, but some quick wins:
 
-1. **Check for IR drop issues** — Generate an IR drop heatmap. If there are hotspots, create or adjust `pdn.tcl` to add power stripes (see `designs/asap7/gemmini/pdn.tcl`).
+1. **Check for IR drop issues** — Generate an IR drop heatmap (see `.claude/skills/shared/image-generation.md`). If there are hotspots, create or adjust `pdn.tcl` to add power stripes (see `designs/asap7/gemmini/pdn.tcl`).
 
 2. **ABC area optimization** (`ABC_AREA = 1`) reduces cell count, which also reduces dynamic power.
 
@@ -181,104 +186,14 @@ Power is generally a secondary concern for benchmarking, but some quick wins:
 
 ## Step 5: Generate Layout Images
 
-For visual diagnosis, generate images using OpenROAD's `save_image` command inside Docker with Xvfb (virtual framebuffer), since Docker has no X11 display.
+For visual diagnosis, generate images using OpenROAD's `save_image` command.
 
-**Extract the Docker image name:**
-```bash
-DOCKER_IMAGE=$(grep -oP 'image\s*=\s*"\K[^"]+' MODULE.bazel)
-```
-
-**Determine the ODB file path** for the stage to visualize:
-- Placement: `results/<platform>/<design>/base/3_place.odb`
-- Routing: `results/<platform>/<design>/base/5_route.odb`
-- Final: `results/<platform>/<design>/base/6_final.odb`
-
-For Bazel flow, ODB files are at: `bazel-bin/designs/$0/results/*/base/<stage>.odb`
-
-### Run image generation in Docker
-
-Write a Tcl script to a temp file, then execute inside Docker with Xvfb:
-
-```bash
-cat > /tmp/ht_save_image.tcl << 'TCLEOF'
-read_db $::env(ODB_FILE)
-# <heatmap setup commands go here — see variants below>
-save_image -width 2048 $::env(OUTPUT_IMAGE)
-TCLEOF
-
-cd OpenROAD-flow-scripts
-docker run --rm \
-  -u $(id -u):$(id -g) \
-  -v $(pwd)/flow:/OpenROAD-flow-scripts/flow \
-  -v $(pwd)/..:/OpenROAD-flow-scripts/UCSC_ML_suite \
-  -v /tmp:/tmp \
-  -w /OpenROAD-flow-scripts/UCSC_ML_suite \
-  -e ODB_FILE=<path-to-odb-relative-to-workdir> \
-  -e OUTPUT_IMAGE=/tmp/design_image.webp \
-  -e DISPLAY=:99 \
-  ${DOCKER_IMAGE} \
-  bash -c "Xvfb :99 -screen 0 2048x2048x24 &>/dev/null & sleep 1 && openroad -no_splash -gui /tmp/ht_save_image.tcl"
-```
-
-### Heatmap Tcl variants
-
-**Placement density:**
-```tcl
-read_db $::env(ODB_FILE)
-gui::save_display_controls
-gui::set_display_controls "Heat Maps/Placement" visible true
-gui::set_heatmap Placement rebuild 1
-gui::set_heatmap Placement ShowLegend 1
-save_image -width 2048 $::env(OUTPUT_IMAGE)
-gui::restore_display_controls
-```
-
-**Routing congestion:**
-```tcl
-read_db $::env(ODB_FILE)
-gui::save_display_controls
-gui::set_display_controls "Heat Maps/Routing" visible true
-gui::set_heatmap Routing rebuild 1
-gui::set_heatmap Routing ShowLegend 1
-save_image -width 2048 $::env(OUTPUT_IMAGE)
-gui::restore_display_controls
-```
-
-**RUDY (routing demand estimation):**
-```tcl
-read_db $::env(ODB_FILE)
-gui::save_display_controls
-gui::set_display_controls "Heat Maps/RUDY" visible true
-gui::set_heatmap RUDY rebuild 1
-gui::set_heatmap RUDY ShowLegend 1
-save_image -width 2048 $::env(OUTPUT_IMAGE)
-gui::restore_display_controls
-```
-
-**IR drop:**
-```tcl
-read_db $::env(ODB_FILE)
-gui::save_display_controls
-gui::set_display_controls "Heat Maps/IR Drop" visible true
-gui::set_heatmap IRDrop rebuild 1
-gui::set_heatmap IRDrop ShowLegend 1
-save_image -width 2048 $::env(OUTPUT_IMAGE)
-gui::restore_display_controls
-```
-
-After generating images, use the Read tool to display them to the user and analyze what the image shows.
+See `.claude/skills/shared/image-generation.md` for the full Docker/Xvfb setup, Tcl scripts, and heatmap variants (routing congestion, placement density, RUDY, IR drop).
 
 ## Step 6: Iterate and Report
 
 After each round of changes, re-run the flow and compare metrics:
 
-**Make flow:**
-```bash
-./runorfs_ni.sh make DESIGN_CONFIG=./designs/<platform>/<design>/config.mk clean_all
-./runorfs_ni.sh make DESIGN_CONFIG=./designs/<platform>/<design>/config.mk
-```
-
-**Bazel flow:**
 ```bash
 bazel build //designs/<platform>/<design>:<design>_final
 ```
@@ -294,6 +209,8 @@ bazel build //designs/<platform>/<design>:<design>_final
 | WNS (ns)     | 0.05     | 0.01     | -0.04   |
 | Power (mW)   | 45.2     | 38.7     | -14%    |
 | DRC errors   | 0        | 0        | clean   |
+| GRT overflow | 0        | 0        | clean   |
+| Runtime (s)  | 255      | 260      | +2%     |
 ```
 
 Continue iterating until either:

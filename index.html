@@ -742,27 +742,39 @@
           <tbody>
             <tr>
               <td><strong>BlackParrot</strong></td>
-              <td>RISC-V multicore processor (single &amp; quad core)</td>
+              <td>RISC-V multicore processor (unicore &amp; quad core variants)</td>
               <td><span class="lang-badge">SystemVerilog</span></td>
-              <td><span class="platform-badge badge-asap7">asap7</span></td>
+              <td>
+                <span class="platform-badge badge-asap7">asap7</span>
+                <span class="platform-badge badge-nangate45">nangate45</span>
+              </td>
             </tr>
             <tr>
               <td><strong>Gemmini</strong></td>
               <td>Systolic array matrix multiplication accelerator</td>
               <td><span class="lang-badge">Chisel</span></td>
-              <td><span class="platform-badge badge-asap7">asap7</span></td>
+              <td>
+                <span class="platform-badge badge-asap7">asap7</span>
+                <span class="platform-badge badge-nangate45">nangate45</span>
+              </td>
             </tr>
             <tr>
               <td><strong>SHA3</strong></td>
               <td>SHA-3 cryptographic hash accelerator</td>
               <td><span class="lang-badge">Chisel</span></td>
-              <td><span class="platform-badge badge-asap7">asap7</span></td>
+              <td>
+                <span class="platform-badge badge-asap7">asap7</span>
+                <span class="platform-badge badge-nangate45">nangate45</span>
+              </td>
             </tr>
             <tr>
               <td><strong>CNN</strong></td>
               <td>Convolutional neural network accelerator</td>
               <td><span class="lang-badge">Verilog</span></td>
-              <td><span class="platform-badge badge-asap7">asap7</span></td>
+              <td>
+                <span class="platform-badge badge-asap7">asap7</span>
+                <span class="platform-badge badge-nangate45">nangate45</span>
+              </td>
             </tr>
             <tr>
               <td><strong>NyuziProcessor</strong></td>
@@ -941,6 +953,46 @@
             <li>Binary searches for optimal clock period to maximize Fmax</li>
             <li>Monitors runtime as an early-warning signal for over-constrained designs</li>
             <li>Generates before/after comparison tables across all PPA metrics</li>
+          </ul>
+        </div>
+        <div class="skill-card">
+          <div class="skill-name">/port-design</div>
+          <h3>Port to New Platforms</h3>
+          <p>
+            Ports an existing design from one technology platform to another, adapting
+            constraints, FakeRAM macros, and flow parameters for the target node.
+          </p>
+          <ul>
+            <li>Copies and adapts config, SDC, and physical design files for the target platform</li>
+            <li>Generates platform-specific FakeRAM LEF/LIB with correct metal stacks</li>
+            <li>Adjusts clock period, utilization, and density for the technology node</li>
+            <li>Tests the full flow and iterates on congestion or timing issues</li>
+          </ul>
+        </div>
+        <div class="skill-card">
+          <div class="skill-name">/openroad-tcl</div>
+          <h3>OpenROAD Command Reference</h3>
+          <p>
+            Cached reference for OpenROAD Tcl commands and their arguments, for writing
+            io.tcl, pdn.tcl, save_image scripts, and custom flow steps.
+          </p>
+          <ul>
+            <li>Covers 20+ OpenROAD modules (floorplan, placement, CTS, routing, GUI, etc.)</li>
+            <li>Provides exact command syntax and argument options</li>
+            <li>Locally mirrored from upstream documentation for offline use</li>
+          </ul>
+        </div>
+        <div class="skill-card">
+          <div class="skill-name">/sdc-sta</div>
+          <h3>SDC / OpenSTA Reference</h3>
+          <p>
+            Reference for SDC timing constraints and OpenSTA commands, for writing
+            constraint files and debugging timing analysis.
+          </p>
+          <ul>
+            <li>SDC commands: create_clock, set_input_delay, set_false_path, set_multicycle_path, etc.</li>
+            <li>OpenSTA analysis: report_checks, report_clock_skew, report_tns, etc.</li>
+            <li>Filter expressions, timing variables, and multi-corner/multi-mode setup</li>
           </ul>
         </div>
       </div>

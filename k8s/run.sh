@@ -69,22 +69,25 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# User label for filtering (only show/delete your own jobs)
+USER_LABEL=$(echo "$USER" | tr '[:upper:]' '[:lower:]')
+
 # Handle status/delete modes
 if [[ "$MODE" == "status" ]]; then
-    echo "Jobs in namespace $NAMESPACE:"
-    kubectl get jobs -n "$NAMESPACE" -l app=hightide \
+    echo "Jobs in namespace $NAMESPACE (user: $USER_LABEL):"
+    kubectl get jobs -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL" \
         -o custom-columns='NAME:.metadata.name,STATUS:.status.conditions[0].type,COMPLETIONS:.status.succeeded,FAILURES:.status.failed,AGE:.metadata.creationTimestamp' \
-        2>/dev/null || kubectl get jobs -n "$NAMESPACE" -l app=hightide
+        2>/dev/null || kubectl get jobs -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL"
     echo ""
     echo "Pods:"
-    kubectl get pods -n "$NAMESPACE" -l app=hightide \
+    kubectl get pods -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL" \
         -o custom-columns='NAME:.metadata.name,STATUS:.status.phase,NODE:.spec.nodeName' \
-        2>/dev/null || kubectl get pods -n "$NAMESPACE" -l app=hightide
+        2>/dev/null || kubectl get pods -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL"
     exit 0
 fi
 
 if [[ "$MODE" == "delete" ]]; then
-    LABEL_SELECTOR="app=hightide"
+    LABEL_SELECTOR="app=hightide,user=$USER_LABEL"
     DESC="all"
     if [[ -n "$FILTER_PLATFORM" ]]; then
         LABEL_SELECTOR="$LABEL_SELECTOR,platform=$FILTER_PLATFORM"
@@ -155,9 +158,9 @@ echo ""
 for entry in "${DESIGNS[@]}"; do
     IFS='|' read -r platform name relpath target <<< "$entry"
 
-    # Create a DNS-safe job name using the leaf directory name
+    # Create a DNS-safe job name with username prefix
     leaf_name="${relpath##*/}"
-    job_name="hightide-${platform}-${leaf_name}"
+    job_name="${USER}-hightide-${platform}-${leaf_name}"
     job_name=$(echo "$job_name" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | cut -c1-63)
 
     # Generate YAML from template
@@ -173,7 +176,8 @@ for entry in "${DESIGNS[@]}"; do
         "$TEMPLATE")
 
     # Add labels for filtering
-    yaml=$(echo "$yaml" | sed '/^  template:$/a\    metadata:\n      labels:\n        app: hightide\n        platform: '"$platform"'\n        design: '"$(echo "$name" | tr '[:upper:]' '[:lower:]')"'')
+    user_label=$(echo "$USER" | tr '[:upper:]' '[:lower:]')
+    yaml=$(echo "$yaml" | sed '/^  template:$/a\    metadata:\n      labels:\n        app: hightide\n        user: '"$user_label"'\n        platform: '"$platform"'\n        design: '"$(echo "$name" | tr '[:upper:]' '[:lower:]')"'')
 
     if [[ "$DRY_RUN" == true ]]; then
         echo "--- # $platform / $name"

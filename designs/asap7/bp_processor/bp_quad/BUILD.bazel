@@ -10,6 +10,7 @@ _ARGS.update({
     "MACRO_PLACE_HALO": "6 6",
     "MACRO_BLOCKAGE_HALO": "0.5",
     "PLACE_DENSITY_LB_ADDON": "0.10",
+    "RTLMP_MAX_LEVEL": "4",
 })
 
 hightide_design(

@@ -7,7 +7,7 @@ export DEV_DESIGN_HOME = $(DESIGN_NAME)/dev
 export SYNTH_HIERARCHICAL = 1
 export SYNTH_MINIMUM_KEEP_SIZE = 500
 
--include $(BENCH_DESIGN_HOME)/src/$(DESIGN_NAME)/verilog.mk
+-include $(BENCH_DESIGN_HOME)/src/$(DESIGN_NAME)/$(DESIGN_NICKNAME)/verilog.mk
 
 export ABC_AREA = 1
 

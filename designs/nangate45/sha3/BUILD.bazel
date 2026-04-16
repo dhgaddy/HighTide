@@ -1,0 +1,14 @@
+load("//:defs.bzl", "hightide_design")
+
+hightide_design(
+    name = "sha3",
+    platform = "nangate45",
+    verilog_files = ["//designs/src/sha3:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+    },
+    arguments = {
+        "CORE_UTILIZATION": "45",
+        "PLACE_DENSITY_LB_ADDON": "0.20",
+    },
+)

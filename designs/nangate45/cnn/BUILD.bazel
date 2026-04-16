@@ -1,0 +1,29 @@
+load("//:defs.bzl", "hightide_design")
+
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
+hightide_design(
+    name = "cnn",
+    platform = "nangate45",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "CORE_UTILIZATION": "30",
+        "PLACE_DENSITY_LB_ADDON": "0.10",
+        "MACRO_PLACE_HALO": "40 40",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+    },
+)

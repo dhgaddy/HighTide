@@ -1,37 +1,79 @@
-# bp_processor has no pre-generated release RTL.
-# To create release RTL: run update-rtl flow, then copy output here.
+# bp_processor uses yosys-slang for direct SystemVerilog synthesis.
+# BP_SRCS: ordered source files from flist.vcs (passed as VERILOG_FILES)
+# rtl_data: all repo HDL files for sandbox include dir resolution
+#           (via stage_data, NOT in VERILOG_FILES)
+
+load("//designs/src/bp_processor:release_srcs.bzl", _REL_SRCS = "BP_SRCS")
+load("//designs/src/bp_processor:dev/generated/srcs.bzl", _DEV_SRCS = "BP_SRCS")
+
+# Exclude bsg_mem_*_synth modules — macros.v provides FakeRAM replacements
+_EXCLUDED_SUFFIXES = [
+    "bsg_mem_1rw_sync_synth.sv",
+    "bsg_mem_1rw_sync_mask_write_bit_synth.sv",
+]
 
 filegroup(
     name = "rtl_release",
-    srcs = glob(["bp_processor.v"]),
+    srcs = [f for f in _REL_SRCS if not any([f.endswith(e) for e in _EXCLUDED_SUFFIXES])] + ["stubs.v"],
 )
 
-# update-rtl mode: init submodule + generate Black Parrot RTL via sv2v.
-genrule(
-    name = "rtl_dev_gen",
-    srcs = glob(
-        ["dev/**"],
-        exclude = ["dev/generated/**"],
-    ),
-    outs = ["bp_processor_gen.v"],
-    local = True,
-    cmd = """
-        bash $(location //:tools/update_rtl.sh) \
-            designs/src/bp_processor/dev/repo \
-            $(location dev/setup.sh) && \
-        cp $$(dirname $$(readlink -f $(location dev/setup.sh)))/generated/bp_processor.v $(OUTS)
-    """,
-    tools = [
-        "dev/setup.sh",
-        "//:tools/update_rtl.sh",
-    ],
+filegroup(
+    name = "rtl_dev",
+    srcs = [f for f in _DEV_SRCS if not any([f.endswith(e) for e in _EXCLUDED_SUFFIXES])] + ["stubs.v"],
 )
 
 alias(
     name = "rtl",
     actual = select({
-        "//:update_rtl": ":rtl_dev_gen",
+        "//:update_rtl": ":rtl_dev",
         "//conditions:default": ":rtl_release",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "rtl_data_release",
+    srcs = glob(
+        [
+            "release/repo/**/*.sv",
+            "release/repo/**/*.svh",
+            "release/repo/**/*.vh",
+            "release/repo/**/*.vi",
+            "release/repo/**/*.v",
+        ],
+        exclude = [
+            "release/repo/**/test/**",
+            "release/repo/**/testing/**",
+            "release/repo/**/ARM-VFPv2/**",
+        ],
+        allow_empty = True,
+    ),
+)
+
+filegroup(
+    name = "rtl_data_dev",
+    srcs = glob(
+        [
+            "dev/repo/**/*.sv",
+            "dev/repo/**/*.svh",
+            "dev/repo/**/*.vh",
+            "dev/repo/**/*.vi",
+            "dev/repo/**/*.v",
+        ],
+        exclude = [
+            "dev/repo/**/test/**",
+            "dev/repo/**/testing/**",
+            "dev/repo/**/ARM-VFPv2/**",
+        ],
+        allow_empty = True,
+    ),
+)
+
+alias(
+    name = "rtl_data",
+    actual = select({
+        "//:update_rtl": ":rtl_data_dev",
+        "//conditions:default": ":rtl_data_release",
     }),
     visibility = ["//visibility:public"],
 )

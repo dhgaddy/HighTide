@@ -1,0 +1,14 @@
+repo/external/basejump_stl/bsg_cache
+repo/external/basejump_stl/bsg_dataflow
+repo/external/basejump_stl/bsg_dmc
+repo/external/basejump_stl/bsg_mem
+repo/external/basejump_stl/bsg_misc
+repo/external/basejump_stl/bsg_test
+repo/external/basejump_stl/bsg_noc
+repo/external/HardFloat/source
+repo/external/HardFloat/source/RISCV
+repo/bp_common/src/include
+repo/bp_fe/src/include
+repo/bp_be/src/include
+repo/bp_me/src/include
+repo/bp_top/src/include

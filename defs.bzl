@@ -4,9 +4,9 @@ load("@bazel-orfs//:openroad.bzl", "orfs_flow")
 
 # PDK label mapping per platform
 PDKS = {
-    "asap7": "@docker_orfs//:asap7",
-    "nangate45": "//:nangate45",
-    "sky130hd": "@docker_orfs//:sky130hd",
+    "asap7": "@orfs//flow:asap7",
+    "nangate45": "@orfs//flow:nangate45",
+    "sky130hd": "@orfs//flow:sky130hd",
 }
 
 def hightide_design(name, platform, verilog_files, top = None, arguments = {}, sources = {}, **kwargs):

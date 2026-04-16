@@ -24,12 +24,18 @@ spec:
           mountPath: /repo
       containers:
       - name: build
-        image: docker.io/openroad/orfs:26Q1-656-g97416b2e4
+        image: ubuntu:24.04
         command:
         - /bin/bash
         - -c
         - |
           set -euo pipefail
+
+          # Install dependencies: curl for bazelisk, git for bazel-orfs fetch,
+          # build-essential for Bazel CC toolchain, python3/time for ORFS flow scripts
+          apt-get update -qq && apt-get install -y -qq \
+            curl git build-essential time \
+            python3 python3-yaml python3-numpy >/dev/null 2>&1
 
           # Install bazelisk as bazel
           curl -fsSL -o /usr/local/bin/bazel \
@@ -41,16 +47,52 @@ spec:
           # Build the design with remote cache (upload if credentials available)
           CACHE_FLAGS="--remote_cache=https://storage.googleapis.com/hightide-bazel-cache"
           if [ -f /secrets/gcs/key.json ]; then
+            echo "GCS credentials found, enabling cache upload"
             CACHE_FLAGS="$CACHE_FLAGS --remote_upload_local_results=true --google_credentials=/secrets/gcs/key.json"
+          else
+            echo "WARNING: GCS credentials not found, cache is read-only"
+          fi
+
+          # When uploading artifacts, force download of all intermediate
+          # outputs (logs, reports, results) so we capture them on cache hits.
+          if [ "__UPLOAD_ARTIFACTS__" = "true" ]; then
+            CACHE_FLAGS="$CACHE_FLAGS --remote_download_outputs=all"
           fi
 
           bazel build $CACHE_FLAGS __BAZEL_TARGET__
+
+          # Copy build artifacts to persistent storage (when enabled)
+          if [ "__UPLOAD_ARTIFACTS__" = "true" ]; then
+            # Extract design path from bazel target //designs/<platform>/<design>:<name>
+            TARGET="__BAZEL_TARGET__"
+            DESIGN_PATH="${TARGET#//}"
+            DESIGN_PATH="${DESIGN_PATH%%:*}"
+
+            ARTIFACT_DIR="bazel-bin/${DESIGN_PATH}"
+            if [ -d "$ARTIFACT_DIR" ]; then
+              DEST="/artifacts/${DESIGN_PATH}"
+              echo "Copying build artifacts to $DEST..."
+              rm -rf "$DEST"
+              mkdir -p "$DEST"
+              # Resolve symlinks (bazel-bin is a symlink tree to bazel-out)
+              cp -rL "$ARTIFACT_DIR"/* "$DEST/" 2>/dev/null || true
+              # Remove runfiles (not useful for debug)
+              find "$DEST" -name '*.runfiles' -type d -exec rm -rf {} + 2>/dev/null || true
+              find "$DEST" -name '*.runfiles_manifest' -delete 2>/dev/null || true
+              echo "Artifacts saved to $DEST/"
+              du -sh "$DEST"
+            else
+              echo "WARNING: artifact directory $ARTIFACT_DIR not found"
+            fi
+          fi
         volumeMounts:
         - name: repo
           mountPath: /repo
         - name: gcs-key
           mountPath: /secrets/gcs
           readOnly: true
+        - name: artifacts
+          mountPath: /artifacts
         resources:
           requests:
             memory: __MEM_REQUEST__
@@ -65,4 +107,7 @@ spec:
         secret:
           secretName: gcs-bazel-cache
           optional: true
+      - name: artifacts
+        persistentVolumeClaim:
+          claimName: hightide-artifacts
       restartPolicy: Never

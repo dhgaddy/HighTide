@@ -13,12 +13,13 @@
 #   ./k8s/run.sh --delete --design lfsr # delete lfsr across all platforms
 #
 # Options:
-#   --branch BRANCH   Git branch to build (default: current branch)
-#   --cpu NUM         CPU request per job (default: 8)
-#   --mem SIZE        Memory request per job (default: 32Gi)
-#   --dry-run         Print generated YAML without submitting
-#   --status          Show status of submitted jobs
-#   --delete          Delete jobs (filtered by platform/design args)
+#   --branch BRANCH    Git branch to build (default: current branch)
+#   --cpu NUM          CPU request per job (default: 8)
+#   --mem SIZE         Memory request per job (default: 64Gi)
+#   --upload-artifacts Upload build artifacts (bazel-bin) to GCS for debug
+#   --dry-run          Print generated YAML without submitting
+#   --status           Show status of submitted jobs
+#   --delete           Delete jobs (filtered by platform/design args)
 
 set -euo pipefail
 
@@ -35,6 +36,7 @@ MEM_REQUEST="64Gi"
 MEM_LIMIT="128Gi"
 DRY_RUN=false
 MODE="submit"
+UPLOAD_ARTIFACTS="false"
 FILTER_PLATFORM=""
 FILTER_DESIGN=""
 
@@ -44,6 +46,7 @@ while [[ $# -gt 0 ]]; do
         --branch)   BRANCH="$2"; shift 2 ;;
         --cpu)      CPU_REQUEST="$2"; CPU_LIMIT="$((${2} * 2))"; shift 2 ;;
         --mem)      MEM_REQUEST="$2"; MEM_LIMIT="${2%Gi}"; MEM_LIMIT="$((MEM_LIMIT * 2))Gi"; shift 2 ;;
+        --upload-artifacts) UPLOAD_ARTIFACTS=true; shift ;;
         --dry-run)  DRY_RUN=true; shift ;;
         --status)   MODE="status"; shift ;;
         --delete)   MODE="delete"; shift ;;
@@ -66,22 +69,25 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# User label for filtering (only show/delete your own jobs)
+USER_LABEL=$(echo "$USER" | tr '[:upper:]' '[:lower:]')
+
 # Handle status/delete modes
 if [[ "$MODE" == "status" ]]; then
-    echo "Jobs in namespace $NAMESPACE:"
-    kubectl get jobs -n "$NAMESPACE" -l app=hightide \
+    echo "Jobs in namespace $NAMESPACE (user: $USER_LABEL):"
+    kubectl get jobs -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL" \
         -o custom-columns='NAME:.metadata.name,STATUS:.status.conditions[0].type,COMPLETIONS:.status.succeeded,FAILURES:.status.failed,AGE:.metadata.creationTimestamp' \
-        2>/dev/null || kubectl get jobs -n "$NAMESPACE" -l app=hightide
+        2>/dev/null || kubectl get jobs -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL"
     echo ""
     echo "Pods:"
-    kubectl get pods -n "$NAMESPACE" -l app=hightide \
+    kubectl get pods -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL" \
         -o custom-columns='NAME:.metadata.name,STATUS:.status.phase,NODE:.spec.nodeName' \
-        2>/dev/null || kubectl get pods -n "$NAMESPACE" -l app=hightide
+        2>/dev/null || kubectl get pods -n "$NAMESPACE" -l app=hightide,user="$USER_LABEL"
     exit 0
 fi
 
 if [[ "$MODE" == "delete" ]]; then
-    LABEL_SELECTOR="app=hightide"
+    LABEL_SELECTOR="app=hightide,user=$USER_LABEL"
     DESC="all"
     if [[ -n "$FILTER_PLATFORM" ]]; then
         LABEL_SELECTOR="$LABEL_SELECTOR,platform=$FILTER_PLATFORM"
@@ -152,8 +158,9 @@ echo ""
 for entry in "${DESIGNS[@]}"; do
     IFS='|' read -r platform name relpath target <<< "$entry"
 
-    # Create a DNS-safe job name (lowercase, alphanumeric + dashes, max 63 chars)
-    job_name="hightide-${platform}-${name}"
+    # Create a DNS-safe job name with username prefix
+    leaf_name="${relpath##*/}"
+    job_name="${USER}-hightide-${platform}-${leaf_name}"
     job_name=$(echo "$job_name" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | cut -c1-63)
 
     # Generate YAML from template
@@ -161,6 +168,7 @@ for entry in "${DESIGNS[@]}"; do
         -e "s|__JOB_NAME__|${job_name}|g" \
         -e "s|__BRANCH__|${BRANCH}|g" \
         -e "s|__BAZEL_TARGET__|${target}|g" \
+        -e "s|__UPLOAD_ARTIFACTS__|${UPLOAD_ARTIFACTS}|g" \
         -e "s|__CPU_REQUEST__|${CPU_REQUEST}|g" \
         -e "s|__CPU_LIMIT__|${CPU_LIMIT}|g" \
         -e "s|__MEM_REQUEST__|${MEM_REQUEST}|g" \
@@ -168,7 +176,8 @@ for entry in "${DESIGNS[@]}"; do
         "$TEMPLATE")
 
     # Add labels for filtering
-    yaml=$(echo "$yaml" | sed '/^  template:$/a\    metadata:\n      labels:\n        app: hightide\n        platform: '"$platform"'\n        design: '"$(echo "$name" | tr '[:upper:]' '[:lower:]')"'')
+    user_label=$(echo "$USER" | tr '[:upper:]' '[:lower:]')
+    yaml=$(echo "$yaml" | sed '/^  template:$/a\    metadata:\n      labels:\n        app: hightide\n        user: '"$user_label"'\n        platform: '"$platform"'\n        design: '"$(echo "$name" | tr '[:upper:]' '[:lower:]')"'')
 
     if [[ "$DRY_RUN" == true ]]; then
         echo "--- # $platform / $name"

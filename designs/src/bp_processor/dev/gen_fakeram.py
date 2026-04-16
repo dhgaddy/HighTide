@@ -10,13 +10,14 @@ register-array implementations that synthesize to flip-flops.
 Memory configurations are determined from Yosys memory analysis of the
 bp_processor quad-core (e_bp_multicore_4_cfg) design.
 
-Usage: python3 gen_fakeram.py <sram_dir> <macros.v>
+Usage: python3 gen_fakeram.py [--platform asap7|nangate45] <sram_dir> <macros.v>
 
 This script generates:
   - sram_dir/lef/fakeram_DxW_1rw.lef for each large memory config
   - sram_dir/lib/fakeram_DxW_1rw.lib for each large memory config
   - macros.v with replacement bsg_mem_*_synth modules
 """
+import argparse
 import math
 import os
 import sys
@@ -42,24 +43,54 @@ LARGE_CONFIGS = [
     (128, 8),     # 1024  bits - byte lanes from byte-mask memories
 ]
 
+# ── Platform-specific constants ──────────────────────────────────────────
+PLATFORM_PARAMS = {
+    "asap7": {
+        "pin_w": 0.024,
+        "pin_pitch": 0.144,
+        "snap_w": 0.054,
+        "snap_h": 0.270,
+        "area_per_bit": 0.5,
+        "min_area": 100,
+        "pin_layer": "M4",
+        "obs_layers": ["M1", "M2", "M3"],
+        "nom_voltage": 0.7,
+        "op_cond_name": "tt_0.7_25.0",
+    },
+    "nangate45": {
+        "pin_w": 0.140,
+        "pin_pitch": 1.400,
+        "snap_w": 0.190,
+        "snap_h": 1.400,
+        "area_per_bit": 3.8,
+        "min_area": 800,
+        "pin_layer": "metal3",
+        "obs_layers": ["metal1", "metal2", "metal3", "metal4"],
+        "nom_voltage": 1.1,
+        "op_cond_name": "tt_1.0_25.0",
+    },
+}
+
 
 def fakeram_name(depth, width):
     return f"fakeram_{depth}x{width}_1rw"
 
 
 # ── LEF generation ───────────────────────────────────────────────────────
-def gen_lef(name, width, depth, outdir):
+def gen_lef(name, width, depth, outdir, platform="asap7"):
     addr_bits = max(1, math.ceil(math.log2(depth))) if depth > 1 else 1
+    params = PLATFORM_PARAMS[platform]
 
-    # ASAP7 grid constants
-    pin_w = 0.024
-    pin_pitch = 0.144
-    snap_w = 0.054
-    snap_h = 0.270
+    pin_w = params["pin_w"]
+    pin_pitch = params["pin_pitch"]
+    snap_w = params["snap_w"]
+    snap_h = params["snap_h"]
+    pin_layer = params["pin_layer"]
+    obs_layers = params["obs_layers"]
 
     # Estimate macro size from bit count
     bits = width * depth
-    area = max(bits * 0.5, 100)
+    area = max(bits * params["area_per_bit"], params["min_area"])
     h = math.sqrt(area / 2.0)
     w = area / h
     w = math.ceil(w / snap_w) * snap_w
@@ -91,7 +122,7 @@ def gen_lef(name, width, depth, outdir):
             "    USE SIGNAL ;",
             "    SHAPE ABUTMENT ;",
             "    PORT",
-            "      LAYER M4 ;",
+            f"      LAYER {pin_layer} ;",
             f"      RECT 0.000 {y_pos:.3f} {pin_w:.3f} {y_pos + pin_w:.3f} ;",
             "    END",
             f"  END {pname}",
@@ -110,14 +141,13 @@ def gen_lef(name, width, depth, outdir):
     add_pin("ce_in", "INPUT")
     add_pin("we_in", "INPUT")
 
+    lines.append("  OBS")
+    for layer in obs_layers:
+        lines.extend([
+            f"    LAYER {layer} ;",
+            f"      RECT 0.000 0.000 {w:.3f} {h:.3f} ;",
+        ])
     lines.extend([
-        "  OBS",
-        "    LAYER M1 ;",
-        f"      RECT 0.000 0.000 {w:.3f} {h:.3f} ;",
-        "    LAYER M2 ;",
-        f"      RECT 0.000 0.000 {w:.3f} {h:.3f} ;",
-        "    LAYER M3 ;",
-        f"      RECT 0.000 0.000 {w:.3f} {h:.3f} ;",
         "  END",
         f"END {name}",
         "END LIBRARY",
@@ -130,9 +160,12 @@ def gen_lef(name, width, depth, outdir):
 
 
 # ── LIB generation ───────────────────────────────────────────────────────
-def gen_lib(name, width, depth, outdir, w_um, h_um):
+def gen_lib(name, width, depth, outdir, w_um, h_um, platform="asap7"):
     addr_bits = max(1, math.ceil(math.log2(depth))) if depth > 1 else 1
     area = w_um * h_um
+    params = PLATFORM_PARAMS[platform]
+    voltage = params["nom_voltage"]
+    op_cond = params["op_cond_name"]
 
     lines = [
         f"library({name}) {{",
@@ -147,13 +180,13 @@ def gen_lib(name, width, depth, outdir, w_um, h_um):
         '    leakage_power_unit : "1uW";',
         "    nom_process : 1;",
         "    nom_temperature : 25.000;",
-        "    nom_voltage : 0.7;",
+        f"    nom_voltage : {voltage};",
         '    capacitive_load_unit (1,pf);',
         '    pulling_resistance_unit : "1kohm";',
-        "    operating_conditions(tt_0.7_25.0) {",
+        f"    operating_conditions({op_cond}) {{",
         "        process : 1;",
         "        temperature : 25.000;",
-        "        voltage : 0.7;",
+        f"        voltage : {voltage};",
         "        tree_type : balanced_tree;",
         "    }",
         "    default_cell_leakage_power : 0;",
@@ -162,7 +195,7 @@ def gen_lib(name, width, depth, outdir, w_um, h_um):
         "    default_input_pin_cap : 0.0;",
         "    default_output_pin_cap : 0.0;",
         "    default_max_transition : 0.227;",
-        "    default_operating_conditions : tt_0.7_25.0;",
+        f"    default_operating_conditions : {op_cond};",
         "    default_leakage_power_density : 0.0;",
         "    slew_derate_from_library : 1.000;",
         "    slew_lower_threshold_pct_fall : 20.000;",
@@ -495,12 +528,18 @@ def gen_macros(large_configs, macros_path):
 
 # ── Main ─────────────────────────────────────────────────────────────────
 def main():
-    if len(sys.argv) != 3:
-        print(f"Usage: {sys.argv[0]} <sram_dir> <macros.v>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Generate FakeRAM LEF/LIB files and macros.v for Black-Parrot SRAM memories.")
+    parser.add_argument("--platform", choices=list(PLATFORM_PARAMS.keys()),
+                        default="asap7",
+                        help="Target platform (default: asap7)")
+    parser.add_argument("sram_dir", help="Output directory for sram/lef/ and sram/lib/")
+    parser.add_argument("macros_v", help="Output path for macros.v")
+    args = parser.parse_args()
 
-    sram_dir = sys.argv[1]
-    macros_path = sys.argv[2]
+    sram_dir = args.sram_dir
+    macros_path = args.macros_v
+    platform = args.platform
 
     os.makedirs(os.path.join(sram_dir, "lef"), exist_ok=True)
     os.makedirs(os.path.join(sram_dir, "lib"), exist_ok=True)
@@ -512,13 +551,13 @@ def main():
             if f.startswith("fakeram_"):
                 os.remove(os.path.join(d, f))
 
-    print(f"Generating FakeRAM files for {len(LARGE_CONFIGS)} large memory configs:")
+    print(f"Generating FakeRAM files for {len(LARGE_CONFIGS)} large memory configs ({platform}):")
     for depth, width in LARGE_CONFIGS:
         bits = depth * width
         name = fakeram_name(depth, width)
         print(f"  {name} ({bits} bits)")
-        w, h = gen_lef(name, width, depth, sram_dir)
-        gen_lib(name, width, depth, sram_dir, w, h)
+        w, h = gen_lef(name, width, depth, sram_dir, platform)
+        gen_lib(name, width, depth, sram_dir, w, h, platform)
 
     print(f"\nGenerating {macros_path}...")
     gen_macros(LARGE_CONFIGS, macros_path)

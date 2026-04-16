@@ -1,0 +1,3 @@
+# bp_quad: quad-core Black-Parrot (bp_params_p=11).
+# Uses yosys-slang for direct SV synthesis — no release RTL needed.
+# VERILOG_TOP_PARAMS=bp_params_p 11 is set in the design config.

@@ -38,3 +38,4 @@ The release RTL is then run through the [OpenROAD-flow-scripts](https://github.c
 - **[Architecture](docs/architecture.md)** — build system, flow stages, RTL management, caching
 - **[Adding Designs](docs/adding-designs.md)** — how to add a new design to the suite
 - **[Kubernetes Builds](k8s/README.md)** — building at scale on NRP Nautilus
+- **[Legacy Make Flow](docs/make-flow.md)** — Docker-based Make flow (still functional)

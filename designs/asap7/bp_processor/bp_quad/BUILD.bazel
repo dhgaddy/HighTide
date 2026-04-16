@@ -5,8 +5,7 @@ _ARGS = dict(BP_COMMON_ARGS)
 
 _ARGS.update({
     "VERILOG_TOP_PARAMS": "bp_params_p 11",
-    "DIE_AREA": "0 0 1200 1200",
-    "CORE_AREA": "10 10 1190 1190",
+    "CORE_UTILIZATION": "35",
     "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
     "MACRO_PLACE_HALO": "6 6",
     "MACRO_BLOCKAGE_HALO": "0.5",

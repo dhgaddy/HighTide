@@ -12,17 +12,14 @@ _EXCLUDED_SUFFIXES = [
     "bsg_mem_1rw_sync_mask_write_bit_synth.sv",
 ]
 
-def _filter_srcs(srcs):
-    return [f for f in srcs if not any(f.endswith(e) for e in _EXCLUDED_SUFFIXES)]
-
 filegroup(
     name = "rtl_release",
-    srcs = _filter_srcs(_REL_SRCS) + ["stubs.v"],
+    srcs = [f for f in _REL_SRCS if not any([f.endswith(e) for e in _EXCLUDED_SUFFIXES])] + ["stubs.v"],
 )
 
 filegroup(
     name = "rtl_dev",
-    srcs = _filter_srcs(_DEV_SRCS) + ["stubs.v"],
+    srcs = [f for f in _DEV_SRCS if not any([f.endswith(e) for e in _EXCLUDED_SUFFIXES])] + ["stubs.v"],
 )
 
 alias(

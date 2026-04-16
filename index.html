@@ -327,20 +327,93 @@
       background: var(--gray-50);
     }
 
-    .workflow-img {
-      display: block;
-      max-width: 700px;
+    .workflow-diagram {
+      display: flex;
+      gap: 1.5rem;
+      max-width: 900px;
       margin: 0 auto;
-      border-radius: 12px;
-      border: 2px solid var(--gray-100);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      align-items: stretch;
     }
 
-    .workflow-caption {
+    .workflow-path {
+      flex: 1;
+      background: var(--white);
+      border-radius: 12px;
+      padding: 1.75rem;
+      border: 2px solid var(--gray-100);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+
+    .workflow-path h3 {
+      color: var(--navy);
+      font-size: 1.05rem;
+      margin-bottom: 1rem;
+    }
+
+    .workflow-path.path-default {
+      border-color: var(--navy);
+      border-width: 2px;
+    }
+
+    .workflow-path.path-default h3::after {
+      content: ' (recommended)';
+      font-weight: 400;
+      font-size: 0.8rem;
+      color: var(--gray-600);
+    }
+
+    .flow-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .flow-arrow {
+      text-align: center;
+      color: var(--sea-light);
+      font-size: 1.2rem;
+      padding: 0.15rem 0;
+    }
+
+    .flow-box {
+      flex: 1;
+      background: var(--gray-50);
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      font-size: 0.85rem;
+      color: var(--gray-800);
+      border-left: 3px solid var(--sea-light);
+    }
+
+    .flow-box.flow-cache {
+      border-left-color: var(--yellow);
+      background: var(--yellow-glow);
+    }
+
+    .flow-box code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      background: rgba(0,0,0,0.05);
+      padding: 0.1rem 0.3rem;
+      border-radius: 3px;
+    }
+
+    .flow-box .flow-label {
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    .workflow-note {
       text-align: center;
       color: var(--gray-600);
       font-size: 0.9rem;
-      margin-top: 1.25rem;
+      margin-top: 2rem;
       max-width: 700px;
       margin-left: auto;
       margin-right: auto;
@@ -854,13 +927,39 @@
     <div class="container">
       <h2 class="section-title">How It Works</h2>
       <p class="section-subtitle">
-        HighTide tracks upstream sources via Git submodules and regenerates Verilog from each design's
-        native language, or uses pre-processed RTL for immediate builds.
+        Bazel-ORFS partitions the RTL-to-GDSII flow into incremental build targets with remote caching
+        for fast rebuilds and reproducible baseline results.
       </p>
-      <img src="figures/HighTideFLOW.png" alt="HighTide workflow diagram" class="workflow-img">
-      <p class="workflow-caption">
-        Design update path (left) pulls upstream sources and regenerates Verilog from the design's
-        native language. Default path (right) runs pre-existing Verilog through the ORFS RTL-to-GDS flow.
+      <div class="workflow-diagram">
+        <div class="workflow-path path-default">
+          <h3>Default Build</h3>
+          <div class="flow-steps">
+            <div class="flow-box"><span class="flow-label">Pre-generated Verilog</span> &mdash; release RTL checked into the repo</div>
+            <div class="flow-arrow">&#8595;</div>
+            <div class="flow-box"><span class="flow-label">Bazel-ORFS Flow</span> &mdash; synthesis, floorplan, place, CTS, route, finish</div>
+            <div class="flow-arrow">&#8595;</div>
+            <div class="flow-box flow-cache"><span class="flow-label">Remote Cache</span> &mdash; per-stage results cached and shared; only re-run stages whose inputs changed</div>
+            <div class="flow-arrow">&#8595;</div>
+            <div class="flow-box"><span class="flow-label">GDSII + QoR Reports</span> &mdash; final layout, timing, area, power metrics</div>
+          </div>
+        </div>
+        <div class="workflow-path">
+          <h3>Design Update</h3>
+          <div class="flow-steps">
+            <div class="flow-box"><span class="flow-label">Git Submodule</span> &mdash; pull upstream sources (Chisel, LiteX, SystemVerilog, etc.)</div>
+            <div class="flow-arrow">&#8595;</div>
+            <div class="flow-box"><span class="flow-label">RTL Generation</span> &mdash; <code>setup.sh</code> compiles native HDL to Verilog</div>
+            <div class="flow-arrow">&#8595;</div>
+            <div class="flow-box"><span class="flow-label">FakeRAM Update</span> &mdash; identify new memories, generate black-box macros</div>
+            <div class="flow-arrow">&#8595;</div>
+            <div class="flow-box"><span class="flow-label">Incremental Rebuild</span> &mdash; Bazel re-runs only affected stages from cache</div>
+          </div>
+        </div>
+      </div>
+      <p class="workflow-note">
+        Baseline results for all designs are cached remotely. After tracking an upstream update,
+        Bazel re-executes only the stages whose inputs changed, drastically reducing rebuild times
+        for large designs.
       </p>
     </div>
   </section>
@@ -967,32 +1066,6 @@
             <li>Generates platform-specific FakeRAM LEF/LIB with correct metal stacks</li>
             <li>Adjusts clock period, utilization, and density for the technology node</li>
             <li>Tests the full flow and iterates on congestion or timing issues</li>
-          </ul>
-        </div>
-        <div class="skill-card">
-          <div class="skill-name">/openroad-tcl</div>
-          <h3>OpenROAD Command Reference</h3>
-          <p>
-            Cached reference for OpenROAD Tcl commands and their arguments, for writing
-            io.tcl, pdn.tcl, save_image scripts, and custom flow steps.
-          </p>
-          <ul>
-            <li>Covers 20+ OpenROAD modules (floorplan, placement, CTS, routing, GUI, etc.)</li>
-            <li>Provides exact command syntax and argument options</li>
-            <li>Locally mirrored from upstream documentation for offline use</li>
-          </ul>
-        </div>
-        <div class="skill-card">
-          <div class="skill-name">/sdc-sta</div>
-          <h3>SDC / OpenSTA Reference</h3>
-          <p>
-            Reference for SDC timing constraints and OpenSTA commands, for writing
-            constraint files and debugging timing analysis.
-          </p>
-          <ul>
-            <li>SDC commands: create_clock, set_input_delay, set_false_path, set_multicycle_path, etc.</li>
-            <li>OpenSTA analysis: report_checks, report_clock_skew, report_tns, etc.</li>
-            <li>Filter expressions, timing variables, and multi-corner/multi-mode setup</li>
           </ul>
         </div>
       </div>

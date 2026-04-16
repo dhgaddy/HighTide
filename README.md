@@ -1,158 +1,90 @@
 # HighTide
 
-There are two ways to build designs: the **Bazel flow** (recommended) or the legacy **Make flow**.
+A VLSI design benchmark suite that runs open-source hardware designs through the [OpenROAD](https://github.com/The-OpenROAD-Project/OpenROAD) RTL-to-GDSII flow on academic and open-source technology nodes (ASAP7 7nm, NanGate 45nm, SkyWater 130nm).
 
-## Bazel Flow (recommended)
-
-### Prerequisites
-
-- Ubuntu 24.04 (or other Linux distribution supported by ORFS)
-- Docker (used by bazel-orfs to extract OpenROAD tools from the ORFS image)
-
-### Getting Started
-
-1. Install dependencies:
+## Quick Start
 
 ```bash
+# Install Bazel
 sudo apt install perl
 sudo wget -O /usr/local/bin/bazel https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
 sudo chmod +x /usr/local/bin/bazel
-```
 
-2. Clone this repository:
-
-```bash
+# Clone and build
 git clone git@github.com:VLSIDA/HighTide.git
 cd HighTide
-```
-
-3. Build a design:
-
-```bash
 bazel build //designs/asap7/lfsr:lfsr_final
 ```
 
-No additional setup is needed. Bazel automatically fetches ORFS and bazel-orfs via `MODULE.bazel`.
+Requires Linux and Docker. Bazel automatically fetches ORFS and tools. See the [Quick Start Guide](docs/quickstart.md) for details.
 
-### Build Commands
+## Designs
+
+| Design | Type | asap7 | nangate45 | sky130hd |
+|--------|------|:-----:|:---------:|:--------:|
+| lfsr | LFSR/PRBS generator | x | x | x |
+| minimax | RISC-V RV32I core | x | x | x |
+| liteeth | Ethernet MAC (6 variants) | x | x | x |
+| NyuziProcessor | Multi-threaded GPGPU | x | x | |
+| bp_processor | Black-Parrot RISC-V (2 variants) | x | x | |
+| gemmini | ML systolic array | x | x | |
+| cnn | CNN accelerator | x | x | |
+| sha3 | SHA3 hash | x | x | |
+
+See the [Design Catalog](docs/designs.md) for the full matrix including variants and complexity.
+
+## Build Commands
 
 ```bash
-# Build a single design (full RTL-to-GDSII flow)
+# Single design, full flow
 bazel build //designs/asap7/lfsr:lfsr_final
 
-# Build all designs for a platform
+# Individual stages (synth, floorplan, place, cts, route, final)
+bazel build //designs/asap7/lfsr:lfsr_synth
+
+# All designs for a platform
 bazel build //designs/asap7/...
 
-# Build all designs across all platforms
+# All designs, all platforms
 bazel build //designs/...
 
-# Build individual stages
-bazel build //designs/asap7/lfsr:lfsr_synth
-bazel build //designs/asap7/lfsr:lfsr_floorplan
-bazel build //designs/asap7/lfsr:lfsr_place
-bazel build //designs/asap7/lfsr:lfsr_cts
-bazel build //designs/asap7/lfsr:lfsr_route
+# View build summary
+./tools/summary.sh
 ```
 
-### RTL Regeneration (Bazel)
+## Fetch Pre-built Results
 
-By default, designs use pre-generated RTL checked into the repository. Some designs use Verilog converted from SystemVerilog via sv2v, while others (e.g., bp_processor) use SystemVerilog directly with the yosys-slang plugin. To regenerate RTL from source repositories:
+Baseline results for all designs are available from a remote cache:
+
+```bash
+./tools/fetch_cache.sh              # all designs
+./tools/fetch_cache.sh asap7 lfsr   # specific design
+```
+
+## Documentation
+
+- **[Quick Start Guide](docs/quickstart.md)** — build your first design in 5 minutes
+- **[Design Catalog](docs/designs.md)** — all designs, platforms, and complexity
+- **[Architecture](docs/architecture.md)** — how the build system, RTL management, and caching work
+- **[Adding Designs](docs/adding-designs.md)** — how to add a new design to the suite
+- **[Kubernetes Builds](k8s/README.md)** — building at scale on NRP Nautilus
+
+## RTL Regeneration
+
+Designs use pre-generated Verilog by default. To regenerate from upstream source:
 
 ```bash
 bazel build --define update_rtl=true //designs/asap7/lfsr:lfsr_final
 ```
 
-This automatically initializes the git submodule and runs the design's generation script.
-Some designs require additional tools (sv2v, sbt, litex) on PATH.
+Some designs require additional tools (sv2v, JDK, Python) on PATH.
 
-### Build Results
+## Legacy Make Flow
 
-Outputs are in `bazel-bin/designs/<platform>/<design>/`:
-- `results/` — ODB and GDS files per stage (`1_synth.odb` through `6_final.gds`)
-- `reports/` — QoR reports per stage (timing, area, DRC)
-- `logs/` — Log files and JSON metrics per stage
-
-To view a summary table of all completed builds:
+The Make flow is still available for designs that have a `config.mk`:
 
 ```bash
-./tools/summary.sh
-```
-
-```
-Platform     Design                      Die Area  Core Area  Inst Area    Util%    Cells   Macr   IOs        WNS        TNS    Fmax(GHz)    Power(mW)   DRCs
-================================================================================================================================================================
-asap7        lfsr                   81.7       47.0       21.8     46.4      205      0    13      56.91       0.00         5.78        0.381      0
-```
-
-## Kubernetes (NRP Nautilus)
-
-Designs can be built at scale on the [NRP Nautilus](https://nationalresearchplatform.org/nautilus/) Kubernetes cluster. See [k8s/README.md](k8s/README.md) for full documentation on submitting jobs, monitoring, and managing builds.
-
-### Fetching Baseline Results
-
-HighTide generates baseline build results for all designs and stores them in a GCS remote cache. Users can fetch these baseline results locally without rebuilding:
-
-```bash
-# Fetch all cached designs
-./tools/fetch_cache.sh
-
-# Fetch all cached asap7 designs
-./tools/fetch_cache.sh asap7
-
-# Fetch a specific design
-./tools/fetch_cache.sh asap7 lfsr
-
-# Fetch only through a specific stage
-./tools/fetch_cache.sh --stage synth asap7
-```
-
-Each design reports whether it was fetched from the remote cache, found locally, or not cached. After fetching, view baseline results with `./tools/summary.sh`.
-
-## Make Flow (legacy)
-
-### Getting Started
-
-1. Clone this repository:
-
-```bash
-git clone git@github.com:VLSIDA/HighTide.git
-cd HighTide
-```
-
-2. Run the setup to clone ORFS as a submodule and link the settings:
-
-```bash
-./setup.sh
-```
-
-3. [Run ORFS](https://vlsida.github.io/chip-tutorials/orfs-installation.html#run-orfs-docker-image) (this will run the Docker image corresponding to our submodule):
-
-```bash
-./runorfs.sh
-```
-
-4. Run a design in the Docker image:
-
-```bash
+./setup.sh                  # init ORFS submodule
+./runorfs.sh                # launch Docker
 make DESIGN_CONFIG=./designs/asap7/lfsr/config.mk
 ```
-
-### Dev RTL Generation (Make)
-
-By default, the suite will run using Verilog that has already been generated from its respective source (just like in ORFS). If the user wishes to amend changes to source files, the command `make update-rtl` should be used.
-- `make update-rtl` will perform the generation of Verilog from the source repo (it will also do any prerequisite installation as well).
-- The development folder for each design can be found under `designs/src/<DESIGN_NAME>/dev`
-
-## Goal/Objectives
-
-GOAL: Port open source designs to asap7/sky130/nangate45 technologies using ORFS, as a benchmark suite for ML projects.
-
-Objective 1: Setup github CI/CD (to work with google cloud compute engine)
-
-Objective 2: Formulate testbenches to verify the functionality of designs post-flow completion.
-
-Objective 3: Expand suite by creating various versions of designs that fail at specific parts of the flow.
-
-## Resources
-
-In order to change (or update) the UCSC_ML_suite repository, you'll need to submit a pull request. For more information on submitting a PR, see [here](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request).

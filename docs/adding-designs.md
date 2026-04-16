@@ -51,13 +51,36 @@ git submodule add <upstream-url> designs/src/<design>/dev/repo
 
 `designs/src/<design>/dev/setup.sh` must convert the upstream HDL to plain Verilog. See existing examples:
 
-| Source Language | Reference Script |
-|----------------|-----------------|
-| SystemVerilog | `designs/src/minimax/dev/setup.sh` (sv2v) |
-| Pure Verilog | `designs/src/lfsr/dev/setup.sh` (copy) |
-| Chisel/Scala | `designs/src/gemmini/dev/setup.sh` (JDK + sbt) |
-| LiteX/Python | `designs/src/liteeth/dev/setup.sh` (venv + pip) |
-| Veriloggen | `designs/src/cnn/dev/setup.sh` (venv + pip) |
+| Source Language | Approach | Reference |
+|----------------|----------|-----------|
+| Pure Verilog | Direct (no conversion) | `designs/src/lfsr/dev/setup.sh` |
+| SystemVerilog | **yosys-slang** (preferred) — synthesize SV directly | `designs/src/bp_processor/` |
+| SystemVerilog | sv2v — convert to Verilog first | `designs/src/minimax/dev/setup.sh` |
+| Chisel/Scala | JDK + sbt to generate Verilog | `designs/src/gemmini/dev/setup.sh` |
+| LiteX/Python | Python venv + LiteX | `designs/src/liteeth/dev/setup.sh` |
+| Veriloggen | Python venv + NNgen | `designs/src/cnn/dev/setup.sh` |
+
+#### Using yosys-slang for SystemVerilog
+
+For SystemVerilog designs, **yosys-slang is preferred over sv2v** because it handles parameter elaboration natively and avoids the sv2v conversion step. To use it:
+
+1. The `setup.sh` parses the upstream file list and include paths (no Verilog conversion needed)
+2. Set `"SYNTH_HDL_FRONTEND": "slang"` in the BUILD.bazel arguments
+3. Pass include directories via `"VERILOG_INCLUDE_DIRS": "<space-separated paths>"`
+4. Pass defines via `"VERILOG_DEFINES": "-D YOSYS"` (or other defines the design needs)
+
+See `designs/src/bp_processor/defs.bzl` for a complete example:
+```python
+BP_COMMON_ARGS = {
+    "SYNTH_HDL_FRONTEND": "slang",
+    "VERILOG_DEFINES": "-D YOSYS",
+    "VERILOG_INCLUDE_DIRS": BP_INCLUDE_DIRS_STR,
+    "SYNTH_HIERARCHICAL": "1",
+    ...
+}
+```
+
+The `setup.sh` for bp_processor (`designs/src/bp_processor/dev/setup.sh`) shows how to parse an upstream `flist.vcs` file list into the format needed by Bazel — it extracts source files and include directories without any HDL conversion.
 
 ### 3. Create timing constraints
 

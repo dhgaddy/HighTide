@@ -8,7 +8,7 @@ _ARGS.update({
     "CORE_UTILIZATION": "35",
     "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
     "PLACE_DENSITY_LB_ADDON": "0.10",
-    "MACRO_PLACE_HALO": "30 30",
+    "MACRO_PLACE_HALO": "40 40",
 })
 
 hightide_design(

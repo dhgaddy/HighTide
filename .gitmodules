@@ -25,6 +25,9 @@
 [submodule "designs/src/sha3/dev/repo"]
 	path = designs/src/sha3/dev/repo
 	url = https://github.com/ucb-bar/sha3
+[submodule "designs/src/vortex/dev/repo"]
+	path = designs/src/vortex/dev/repo
+	url = https://github.com/vortexgpgpu/vortex.git
 [submodule "designs/src/floonoc/dev/repo"]
 	path = designs/src/floonoc/dev/repo
 	url = https://github.com/pulp-platform/FlooNoC.git

@@ -1,0 +1,48 @@
+load("//:defs.bzl", "hightide_design")
+load(
+    "//designs/src/vortex:srcs.bzl",
+    "VORTEX_INCLUDE_DIRS_DEV_STR",
+    "VORTEX_INCLUDE_DIRS_RELEASE_STR",
+)
+
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
+# Include path differs between release and dev modes because the rtl tree
+# lives at different package-relative paths. Pass both concatenated — only
+# the one staged into the synth sandbox will resolve; yosys-slang tolerates
+# non-existent include directories.
+_INCLUDE_DIRS = VORTEX_INCLUDE_DIRS_RELEASE_STR + " " + VORTEX_INCLUDE_DIRS_DEV_STR
+
+# Mirrors designs/asap7/vortex/config.mk from the closed suite-update PR.
+# See designs/asap7/vortex/constraint.sdc for the clock/period and the
+# Vortex top module (NOT Vortex_axi).
+hightide_design(
+    name = "vortex",
+    platform = "asap7",
+    verilog_files = ["//designs/src/vortex:rtl"],
+    top = "Vortex",
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HDL_FRONTEND": "slang",
+        "SYNTH_HIERARCHICAL": "0",
+        "VERILOG_DEFINES": "-DSYNTHESIS -DSV_DPI -DMEM_BLOCK_SIZE=16 -DMAX_FANOUT=32 -DLATENCY_IMUL=5",
+        "VERILOG_INCLUDE_DIRS": _INCLUDE_DIRS,
+        "CORE_UTILIZATION": "50",
+        "PLACE_DENSITY_LB_ADDON": "0.46",
+        "MACRO_PLACE_HALO": "5 5",
+        "TNS_END_PERCENT": "100",
+    },
+    stage_data = {"synth": ["//designs/src/vortex:rtl_data"]},
+)

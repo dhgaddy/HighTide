@@ -37,14 +37,6 @@ set_ideal_network  [get_ports {pwrbus_ram_pd*}]
 
 set_false_path -to [get_pin */RESETN]
 set_false_path -to [get_pin */SETN]
-set_ideal_network  [get_ports {global_clk_ovr_on}]
-set_ideal_network  [get_ports {test_mode}]
-set_ideal_network  [get_ports {direct_reset_}]
-set_ideal_network  [get_ports {dla_reset_rstn}]
-set_ideal_network  [get_ports {nvdla_core_clk}]
-set_ideal_network  [get_ports {nvdla_clk_ovr_on}]
-set_ideal_network  [get_ports {tmc2slcg_disable_clock_gating}]
-set_ideal_network  [get_ports {pwrbus_ram_pd*}]
 
 set_max_fanout 128 [current_design]
 

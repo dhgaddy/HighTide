@@ -1,6 +1,6 @@
 ---
 name: port-design
-description: Port an existing HighTide2 design from one technology platform to another (e.g., asap7 to nangate45 or sky130hd). Use when a design exists for one platform and needs to be added to another.
+description: Port an existing HighTide design from one technology platform to another (e.g., asap7 to nangate45 or sky130hd). Use when a design exists for one platform and needs to be added to another.
 argument-hint: "[design-name] [source-platform] [target-platform]"
 ---
 

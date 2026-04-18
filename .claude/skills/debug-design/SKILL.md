@@ -1,6 +1,6 @@
 ---
 name: debug-design
-description: Analyze and debug a failing HighTide2 design. Diagnose synthesis problems, memory inference issues, congestion, timing violations, and placement/routing failures. Can generate layout images for visual diagnosis.
+description: Analyze and debug a failing HighTide design. Diagnose synthesis problems, memory inference issues, congestion, timing violations, and placement/routing failures. Can generate layout images for visual diagnosis.
 argument-hint: "<platform>/<design> [stage] [issue-description]"
 ---
 

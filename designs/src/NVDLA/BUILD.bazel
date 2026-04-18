@@ -1,0 +1,39 @@
+# NVDLA shared RTL.
+#
+# All 5 partitions (a, c, m, o, p) compile against the same vmod tree.
+# Per verilog.mk, only vmod/{rams/synth, vlibs, nvdla} + macros.v are
+# fed to synthesis; vmod/rams/{model,fpga} are simulation-only.
+#
+# Release RTL is pre-generated and committed under vmod/. See
+# dev/setup.sh + dev/install/* for the dev-mode generation flow
+# (downloads JDK11, OpenSSL 1.0.2u, Perl 5.10.1, Python 2.7.18,
+# SystemC 2.3.0, then runs `perl tools/bin/tmake -build vmod` against
+# the nv_small project and substitutes a pre-baked NV_NVDLA_cfgrom.v).
+#
+# The dev path is heavyweight (multi-hour, network downloads, host
+# tooling) and is not wrapped as a Bazel genrule — run setup.sh
+# manually then re-stage vmod/ to refresh release RTL.
+
+filegroup(
+    name = "include",
+    srcs = glob(["vmod/include/*.vh"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "rtl_release",
+    srcs = glob([
+        "vmod/rams/synth/*.v",
+        "vmod/vlibs/*.v",
+        "vmod/nvdla/**/*.v",
+    ]) + [
+        "macros.v",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "rtl",
+    actual = ":rtl_release",
+    visibility = ["//visibility:public"],
+)

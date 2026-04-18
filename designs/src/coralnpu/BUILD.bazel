@@ -1,0 +1,50 @@
+filegroup(
+    name = "rtl_release",
+    srcs = [
+        "CoreMiniAxi.v",
+        "macros.v",
+    ],
+)
+
+# update-rtl mode: init submodule + generate CoreMiniAxi.v via chisel/sv2v.
+# setup.sh writes the generated Verilog to designs/src/coralnpu/CoreMiniAxi.v;
+# we copy that file into the Bazel output tree as CoreMiniAxi_gen.v.
+genrule(
+    name = "rtl_dev_gen",
+    srcs = glob(
+        ["dev/**"],
+        exclude = ["dev/repo/**"],
+    ),
+    outs = ["CoreMiniAxi_gen.v"],
+    local = True,
+    cmd = """
+        bash $(location //:tools/update_rtl.sh) \
+            designs/src/coralnpu/dev/repo \
+            $(location dev/setup.sh) && \
+        DEV_DIR=$$(dirname $$(readlink -f $(location dev/setup.sh))) && \
+        cp $$DEV_DIR/../CoreMiniAxi.v $(location CoreMiniAxi_gen.v)
+    """,
+    tools = [
+        "dev/setup.sh",
+        "//:tools/update_rtl.sh",
+    ],
+)
+
+# macros.v (FakeRAM wrappers) is hand-maintained and not produced by setup.sh,
+# so bundle it with the generated CoreMiniAxi.v for dev mode.
+filegroup(
+    name = "rtl_dev",
+    srcs = [
+        ":rtl_dev_gen",
+        "macros.v",
+    ],
+)
+
+alias(
+    name = "rtl",
+    actual = select({
+        "//:update_rtl": ":rtl_dev",
+        "//conditions:default": ":rtl_release",
+    }),
+    visibility = ["//visibility:public"],
+)

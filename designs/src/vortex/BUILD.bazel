@@ -1,0 +1,70 @@
+# Vortex GPGPU — SystemVerilog sources for asap7 synthesis via yosys-slang.
+#
+# Release mode (default): uses the pre-generated SV tree at rtl/, which is a
+# pinned copy of upstream vortexgpgpu/vortex hw/rtl with VX_dp_ram/VX_sp_ram
+# swapped for FakeRAM-aware variants (libs/VX_{dp,sp}_ram.sv).
+#
+# Dev mode (--define update_rtl=true): uses files under dev/gen/rtl/ produced
+# by designs/src/vortex/dev/setup.sh — which copies upstream hw/rtl/ from the
+# initialized submodule and overlays the *_REPLACE.sv stubs from dev/.
+# Run setup.sh before invoking bazel in dev mode (Bazel does not fetch the
+# submodule itself).
+
+load("//designs/src/vortex:srcs.bzl", "VORTEX_FILES")
+
+_RTL_SRCS_RELEASE = ["rtl/" + f for f in VORTEX_FILES]
+_RTL_SRCS_DEV = ["dev/gen/rtl/" + f for f in VORTEX_FILES]
+
+filegroup(
+    name = "rtl_release",
+    srcs = _RTL_SRCS_RELEASE,
+)
+
+filegroup(
+    name = "rtl_dev",
+    srcs = _RTL_SRCS_DEV,
+)
+
+alias(
+    name = "rtl",
+    actual = select({
+        "//:update_rtl": ":rtl_dev",
+        "//conditions:default": ":rtl_release",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+# All .sv/.vh/.svh files — staged into the synth sandbox so that
+# VERILOG_INCLUDE_DIRS can resolve `include "VX_platform.vh" etc.
+filegroup(
+    name = "rtl_data_release",
+    srcs = glob(
+        [
+            "rtl/**/*.sv",
+            "rtl/**/*.vh",
+            "rtl/**/*.svh",
+        ],
+        allow_empty = True,
+    ),
+)
+
+filegroup(
+    name = "rtl_data_dev",
+    srcs = glob(
+        [
+            "dev/gen/rtl/**/*.sv",
+            "dev/gen/rtl/**/*.vh",
+            "dev/gen/rtl/**/*.svh",
+        ],
+        allow_empty = True,
+    ),
+)
+
+alias(
+    name = "rtl_data",
+    actual = select({
+        "//:update_rtl": ":rtl_data_dev",
+        "//conditions:default": ":rtl_data_release",
+    }),
+    visibility = ["//visibility:public"],
+)

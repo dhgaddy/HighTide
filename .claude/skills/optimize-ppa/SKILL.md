@@ -1,6 +1,6 @@
 ---
 name: optimize-ppa
-description: Optimize power, performance, and area (PPA) for a HighTide2 design. Maximize cell utilization and clock frequency while maintaining a clean flow (no DRC violations).
+description: Optimize power, performance, and area (PPA) for a HighTide design. Maximize cell utilization and clock frequency while maintaining a clean flow (no DRC violations).
 argument-hint: "<platform>/<design>"
 ---
 

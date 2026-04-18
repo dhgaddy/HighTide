@@ -1,6 +1,6 @@
 ---
 name: update-design
-description: Check for upstream updates to existing HighTide2 designs and tools, summarize what changed, and apply updates. Use when a design needs to be refreshed, or with no arguments to audit all designs for available updates.
+description: Check for upstream updates to existing HighTide designs and tools, summarize what changed, and apply updates. Use when a design needs to be refreshed, or with no arguments to audit all designs for available updates.
 argument-hint: "[design-name or 'all'] [platform]"
 ---
 
@@ -80,7 +80,7 @@ Let the user decide which updates to apply. Small changes that don't affect RTL 
    cd designs/src/$0/dev/repo
    git fetch origin
    git checkout <new-commit-or-tag>
-   cd /home/mrg/HighTide2
+   cd /home/mrg/HighTide
    ```
 
 2. **Check if `setup.sh` needs changes:**

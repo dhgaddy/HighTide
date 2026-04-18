@@ -1,12 +1,12 @@
 ---
 name: improve-skills
-description: Review past experiences from debugging, optimization, porting, and design work, then update existing HighTide2 skills or propose new ones. Use after completing a session that revealed new patterns, workarounds, or failure modes.
+description: Review past experiences from debugging, optimization, porting, and design work, then update existing HighTide skills or propose new ones. Use after completing a session that revealed new patterns, workarounds, or failure modes.
 argument-hint: "[optional: skill-name to focus on, or 'all' to audit everything]"
 ---
 
 # Improve Skills from Experience
 
-Review recent work and update the HighTide2 skills to capture new knowledge. This prevents the team from rediscovering the same solutions.
+Review recent work and update the HighTide skills to capture new knowledge. This prevents the team from rediscovering the same solutions.
 
 ## Step 1: Gather Recent Experience
 

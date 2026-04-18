@@ -1,12 +1,12 @@
 ---
 name: find-designs
-description: Search for new open-source hardware designs that would be good candidates for the HighTide2 benchmark suite and open GitHub issues to propose them.
+description: Search for new open-source hardware designs that would be good candidates for the HighTide benchmark suite and open GitHub issues to propose them.
 argument-hint: "[optional: category or keyword to focus on, e.g. 'processors', 'accelerators', 'peripherals']"
 ---
 
 # Find New Benchmark Designs
 
-Search for interesting open-source hardware designs that would be good additions to the HighTide2 benchmark suite, then open GitHub issues to propose adding them.
+Search for interesting open-source hardware designs that would be good additions to the HighTide benchmark suite, then open GitHub issues to propose adding them.
 
 ## Selection Criteria
 

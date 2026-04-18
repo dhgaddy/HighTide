@@ -59,7 +59,9 @@ spec:
             CACHE_FLAGS="$CACHE_FLAGS --remote_download_outputs=all"
           fi
 
-          bazel build $CACHE_FLAGS __BAZEL_TARGET__
+          # Capture build exit code so we can save artifacts even on failure
+          BUILD_RC=0
+          bazel build $CACHE_FLAGS __BAZEL_TARGET__ || BUILD_RC=$?
 
           # Copy build artifacts to persistent storage (when enabled)
           if [ "__UPLOAD_ARTIFACTS__" = "true" ]; then
@@ -85,6 +87,8 @@ spec:
               echo "WARNING: artifact directory $ARTIFACT_DIR not found"
             fi
           fi
+
+          exit $BUILD_RC
         volumeMounts:
         - name: repo
           mountPath: /repo

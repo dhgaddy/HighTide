@@ -8,7 +8,6 @@ _ARGS.update({
     "CORE_UTILIZATION": "35",
     "PLACE_DENSITY_LB_ADDON": "0.10",
     "MACRO_PLACE_HALO": "40 40",
-    "GPL_ROUTABILITY_DRIVEN": "1",
 })
 
 hightide_design(

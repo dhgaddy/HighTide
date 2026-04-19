@@ -1,12 +1,12 @@
 ---
 name: new-design
-description: Incorporate a new open-source hardware design into the HighTide2 benchmark suite. Use when adding a design that doesn't exist yet in the project.
+description: Incorporate a new open-source hardware design into the HighTide benchmark suite. Use when adding a design that doesn't exist yet in the project.
 argument-hint: "[design-name] [upstream-repo-url]"
 ---
 
 # Incorporate a New Design
 
-You are adding a new design called `$0` from upstream repository `$1` into the HighTide2 benchmark suite.
+You are adding a new design called `$0` from upstream repository `$1` into the HighTide benchmark suite.
 
 ## Step-by-step Process
 

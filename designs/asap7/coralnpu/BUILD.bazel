@@ -1,0 +1,30 @@
+load("//:defs.bzl", "hightide_design")
+
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
+hightide_design(
+    name = "coralnpu",
+    platform = "asap7",
+    top = "CoreMiniAxi",
+    verilog_files = ["//designs/src/coralnpu:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "CORE_UTILIZATION": "50",
+        "PLACE_DENSITY_LB_ADDON": "0.20",
+        "MACRO_PLACE_HALO": "6 6",
+        "TNS_END_PERCENT": "100",
+    },
+)

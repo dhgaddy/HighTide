@@ -1,0 +1,46 @@
+# FlooNoC RTL sources.
+#
+# This design uses yosys-slang (SYNTH_HDL_FRONTEND=slang) to read
+# SystemVerilog directly. setup.sh runs bender + floogen and copies
+# all dependency sources and headers into generated/deps/ with clean
+# package names (no bender git hashes).
+
+# update-rtl mode: init submodule + run setup.sh to regenerate.
+genrule(
+    name = "rtl_dev_gen",
+    srcs = glob(
+        ["dev/**"],
+        exclude = [
+            "dev/generated/**",
+            "dev/repo/**",
+            "dev/.venv/**",
+            "dev/bender",
+        ],
+    ),
+    outs = ["floonoc_rtl.tar"],
+    local = True,
+    cmd = """
+        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
+        cd $$WORKSPACE_ROOT
+        git submodule update --init designs/src/floonoc/dev/repo >&2
+        bash designs/src/floonoc/dev/setup.sh >&2
+        tar cf $(OUTS) designs/src/floonoc/dev/generated/deps/
+    """,
+    tools = [
+        "dev/setup.sh",
+        "//:tools/update_rtl.sh",
+    ],
+)
+
+# RTL sources: generated .sv files + bender dependency copies (no git hashes)
+filegroup(
+    name = "rtl",
+    srcs = glob(
+        ["dev/generated/**/*.sv"],
+        allow_empty = True,
+    ) + glob(
+        ["dev/generated/deps/include/**/*.svh"],
+        allow_empty = True,
+    ),
+    visibility = ["//visibility:public"],
+)

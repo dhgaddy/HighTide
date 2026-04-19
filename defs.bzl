@@ -1,4 +1,4 @@
-"""Shared Starlark helpers for HighTide2 design definitions."""
+"""Shared Starlark helpers for HighTide design definitions."""
 
 load("@bazel-orfs//:openroad.bzl", "orfs_flow")
 
@@ -10,7 +10,7 @@ PDKS = {
 }
 
 def hightide_design(name, platform, verilog_files, top = None, arguments = {}, sources = {}, **kwargs):
-    """Wraps orfs_flow with HighTide2 defaults.
+    """Wraps orfs_flow with HighTide defaults.
 
     Automatically sets GDS_ALLOW_EMPTY for FakeRAM and maps platform
     names to PDK labels.

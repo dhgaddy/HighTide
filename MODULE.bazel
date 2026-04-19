@@ -1,4 +1,4 @@
-"""HighTide2 module — uses bazel-orfs with OpenROAD extracted from the
+"""HighTide module — uses bazel-orfs with OpenROAD extracted from the
 ORFS Docker image (zero-source OpenROAD build).
 
 Mirrors the bazel-orfs test/docker/MODULE.bazel pattern.

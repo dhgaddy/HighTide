@@ -29,3 +29,18 @@
 	path = designs/src/NVDLA/dev/repo
 	url = https://github.com/nvdla/hw.git
 	branch = nv_small
+[submodule "designs/src/coralnpu/dev/repo"]
+	path = designs/src/coralnpu/dev/repo
+	url = https://github.com/google-coral/coralnpu.git
+[submodule "designs/src/vortex/dev/repo"]
+	path = designs/src/vortex/dev/repo
+	url = https://github.com/vortexgpgpu/vortex.git
+[submodule "designs/src/floonoc/dev/repo"]
+	path = designs/src/floonoc/dev/repo
+	url = https://github.com/pulp-platform/FlooNoC.git
+[submodule "designs/src/snitch_cluster/dev/repo"]
+	path = designs/src/snitch_cluster/dev/repo
+	url = https://github.com/pulp-platform/snitch_cluster.git
+[submodule "tools/bsg_fakeram"]
+	path = tools/bsg_fakeram
+	url = https://github.com/VLSIDA/bsg_fakeram.git

@@ -1,0 +1,21 @@
+load("//:defs.bzl", "hightide_design")
+
+# partition_m has no FakeRAM macros (config.mk omits ADDITIONAL_LEFS/LIBS).
+hightide_design(
+    name = "partition_m",
+    top = "NV_NVDLA_partition_m",
+    platform = "asap7",
+    verilog_files = ["//designs/src/NVDLA:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+    },
+    stage_data = {"synth": ["//designs/src/NVDLA:include"]},
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "VERILOG_INCLUDE_DIRS": "designs/src/NVDLA/vmod/include designs/src/NVDLA/vmod/vlibs",
+        "CORE_UTILIZATION": "55",
+        "PLACE_DENSITY_LB_ADDON": "0.2",
+        "MACRO_PLACE_HALO": "5 5",
+        "TNS_END_PERCENT": "100",
+    },
+)

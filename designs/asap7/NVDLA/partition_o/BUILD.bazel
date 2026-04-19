@@ -1,0 +1,24 @@
+load("//:defs.bzl", "hightide_design")
+
+# partition_o is the only multi-clock partition: nvdla_core_clk (2000ps)
+# + nvdla_falcon_clk (2500ps) — see constraint.sdc.
+hightide_design(
+    name = "partition_o",
+    top = "NV_NVDLA_partition_o",
+    platform = "asap7",
+    verilog_files = ["//designs/src/NVDLA:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": ["//designs/asap7/NVDLA:sram_lefs_o"],
+        "ADDITIONAL_LIBS": ["//designs/asap7/NVDLA:sram_libs_o"],
+    },
+    stage_data = {"synth": ["//designs/src/NVDLA:include"]},
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "VERILOG_INCLUDE_DIRS": "designs/src/NVDLA/vmod/include designs/src/NVDLA/vmod/vlibs",
+        "CORE_UTILIZATION": "45",
+        "PLACE_DENSITY_LB_ADDON": "0.15",
+        "MACRO_PLACE_HALO": "7 7",
+        "TNS_END_PERCENT": "100",
+    },
+)

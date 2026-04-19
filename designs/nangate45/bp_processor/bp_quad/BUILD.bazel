@@ -8,6 +8,7 @@ _ARGS.update({
     "CORE_UTILIZATION": "35",
     "PLACE_DENSITY_LB_ADDON": "0.10",
     "MACRO_PLACE_HALO": "40 40",
+    "GPL_ROUTABILITY_DRIVEN": "1",
 })
 
 hightide_design(
@@ -19,7 +20,6 @@ hightide_design(
     ],
     sources = {
         "SDC_FILE": [":constraint.sdc"],
-        "IO_CONSTRAINTS": [":io.tcl"],
         "ADDITIONAL_LEFS": ["//designs/nangate45/bp_processor:sram_lefs"],
         "ADDITIONAL_LIBS": ["//designs/nangate45/bp_processor:sram_libs"],
     },

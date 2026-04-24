@@ -19,6 +19,7 @@ hightide_design(
         "ADDITIONAL_LEFS": [":sram_lefs"],
         "ADDITIONAL_LIBS": [":sram_libs"],
         "FASTROUTE_TCL": [":fastroute.tcl"],
+        "PRE_CTS_TCL": [":pre_cts.tcl"],
     },
     arguments = {
         "SYNTH_HIERARCHICAL": "1",

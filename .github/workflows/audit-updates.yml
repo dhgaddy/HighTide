@@ -6,9 +6,8 @@ on:
     - cron: "0 9 * * 1"  # Every Monday at 9 AM
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
-  pull-requests: write
   issues: write
 
 jobs:
@@ -21,5 +20,15 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: "/update-design all"
-          claude_args: "--max-turns 10"
+          prompt: |
+            Run the /update-design Upstream Audit across all designs, tool
+            dependencies, and the ORFS submodule. Produce ONLY the markdown
+            summary table described in step 4 of the skill. Do NOT apply any
+            updates, do not modify submodules, do not regenerate RTL, do not
+            open PRs.
+
+            Then find or create a GitHub issue titled exactly "Weekly upstream
+            audit report" (label: audit) and overwrite its body with the
+            table plus a short "Last run: <UTC timestamp>" header. If the
+            issue exists, update it in place rather than opening a new one.
+          claude_args: "--max-turns 30"

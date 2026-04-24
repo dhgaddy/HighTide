@@ -140,17 +140,23 @@ set left_pins [concat \
     [bus_pins io_in_d 8] \
 ]
 
-# RIGHT (512 pins): in_b(8b x 32), in_valid(1b x 32), in_last(1b x 32),
-#   in_id(2b x 32), out_valid(1b x 32), out_id(2b x 32), out_last(1b x 32)
-set right_pins [concat \
-    [bus_pins io_in_b 8] \
-    [bus_pins io_in_valid 1] \
-    [bus_pins io_in_last 1] \
-    [bus_pins io_in_id 2] \
-    [bus_pins io_out_valid 1] \
-    [bus_pins io_out_id 2] \
-    [bus_pins io_out_last 1] \
-]
+# RIGHT (512 pins): interleave by mesh row (i, j) so high-fanout control
+# signals (io_in_id, io_out_id, io_in_valid/last, io_out_valid/last) are
+# spread along the full edge instead of clustered in the vertical middle.
+# Each row contributes 16 pins:
+#   in_b[8], in_valid, in_last, in_id[2], out_valid, out_id[2], out_last.
+set right_pins {}
+for {set i 0} {$i < 16} {incr i} {
+    for {set j 0} {$j < 2} {incr j} {
+        foreach p [expand_port "io_in_b_${i}_${j}"  8] { lappend right_pins $p }
+        foreach p [expand_port "io_in_valid_${i}_${j}"  1] { lappend right_pins $p }
+        foreach p [expand_port "io_in_last_${i}_${j}"   1] { lappend right_pins $p }
+        foreach p [expand_port "io_in_id_${i}_${j}"     2] { lappend right_pins $p }
+        foreach p [expand_port "io_out_valid_${i}_${j}" 1] { lappend right_pins $p }
+        foreach p [expand_port "io_out_id_${i}_${j}"    2] { lappend right_pins $p }
+        foreach p [expand_port "io_out_last_${i}_${j}"  1] { lappend right_pins $p }
+    }
+}
 
 # TOP (866 pins): out_b(20b x 32), in_control(7b x 32), clock, reset
 set top_pins [concat \

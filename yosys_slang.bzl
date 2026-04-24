@@ -12,7 +12,7 @@ def _yosys_slang_impl(_module_ctx):
     new_git_repository(
         name = "yosys-slang",
         remote = "https://github.com/povik/yosys-slang.git",
-        commit = "4e53d772996184b07e9bfe784060f96e6cb0a267",
+        commit = "eabdfd1b836f08047de64dca93c286f2a935d68a",
         init_submodules = True,
         build_file = Label("//:yosys_slang.BUILD.bazel"),
     )

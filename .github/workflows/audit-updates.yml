@@ -16,19 +16,62 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
-      - uses: anthropics/claude-code-action@v1
+          submodules: false
+
+      - name: Run phase-1 upstream audit (bash only)
+        id: audit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./tools/audit_upstream.sh | tee audit_table.md
+          {
+            echo "# Weekly upstream audit"
+            echo
+            cat audit_table.md
+          } >> "$GITHUB_STEP_SUMMARY"
+          items=$(wc -l < audit_upstream_items.ndjson | awk '{print $1}')
+          echo "items=${items:-0}" >> "$GITHUB_OUTPUT"
+
+      - name: Classify changes and file issues (Claude)
+        if: steps.audit.outputs.items != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            Run the /update-design Upstream Audit across all designs, tool
-            dependencies, and the ORFS submodule. Produce ONLY the markdown
-            summary table described in step 4 of the skill. Do NOT apply any
-            updates, do not modify submodules, do not regenerate RTL, do not
-            open PRs.
+            audit_upstream_items.ndjson in the repo root contains one JSON
+            object per submodule that is behind upstream.  Each object has:
+            path, owner, repo, branch, pinned, upstream, behind, pinned_date,
+            upstream_date, days_stale.
 
-            Then find or create a GitHub issue titled exactly "Weekly upstream
-            audit report" (label: audit) and overwrite its body with the
-            table plus a short "Last run: <UTC timestamp>" header. If the
-            issue exists, update it in place rather than opening a new one.
-          claude_args: "--max-turns 30"
+            For each item:
+              1. Fetch the commit list via
+                 `gh api repos/{owner}/{repo}/compare/{pinned}...{upstream} --jq '.commits[] | "\(.sha[0:7]) \(.commit.message | split("\n")[0])"'`
+              2. Classify the diff as:
+                   - minor  : docs, CI, tests, whitespace, cosmetic only
+                   - moderate: bug fixes, small features, dep bumps
+                   - major  : architecture/API/RTL-affecting changes, new deps
+              3. For MODERATE and MAJOR only, find or create a GitHub issue
+                 titled exactly "Upstream update available: <path>"
+                 (label: upstream-update).  Overwrite the body with:
+                   - pinned → upstream SHAs and dates
+                   - commits behind, days stale
+                   - severity classification with justification
+                   - a short bulleted summary of what changed
+                   - recommendation (update now / defer / ignore)
+              4. For MINOR items, do nothing.
+
+            Keep per-item work bounded: a few gh api calls each.  Do not
+            clone repos, regenerate RTL, open PRs, or modify any files.
+          claude_args: "--max-turns 20"
+
+      - name: Upload audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upstream-audit
+          path: |
+            audit_table.md
+            audit_upstream_items.ndjson
+          if-no-files-found: ignore

@@ -17,3 +17,4 @@ MODULE.bazel.lock
 .bazelrc.user
 google-cloud-sdk/
 google-cloud-cli-*.tar.gz
+audit_upstream_items.ndjson

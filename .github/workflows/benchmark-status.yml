@@ -1,0 +1,106 @@
+name: Benchmark status report
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Technology platform"
+        default: "asap7"
+        type: choice
+        options: [asap7, nangate45, sky130hd, all]
+      stage:
+        description: "Pipeline stage to check"
+        default: "final"
+        type: choice
+        options: [synth, floorplan, place, cts, grt, route, final]
+      timeout:
+        description: "Per-target fetch timeout (seconds)"
+        default: "120"
+  schedule:
+    - cron: "0 12 * * *"  # Daily at 12:00 UTC
+
+jobs:
+  status-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PLATFORM: ${{ inputs.platform || 'asap7' }}
+      STAGE: ${{ inputs.stage || 'final' }}
+      FETCH_TIMEOUT: ${{ inputs.timeout || '120' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Bazelisk
+        run: |
+          sudo curl -fsSL -o /usr/local/bin/bazel \
+            https://github.com/bazelbuild/bazelisk/releases/download/v1.22.1/bazelisk-linux-amd64
+          sudo chmod +x /usr/local/bin/bazel
+          bazel --version
+
+      - name: Cache Bazel external dirs
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/bazel
+            ~/.cache/bazel-disk-cache
+          key: bazel-cache-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'bazel-orfs/MODULE.bazel') }}
+          restore-keys: |
+            bazel-cache-${{ runner.os }}-
+
+      - name: Warm up Bazel (module resolution + tool extraction)
+        timeout-minutes: 45
+        run: |
+          # First bazel invocation on a cold runner pays for MODULE resolution,
+          # LLVM/OpenROAD/Qt checkouts, and OpenROAD Docker tool extraction.
+          # --local_cpu_resources=0 keeps this cache-only (no local build).
+          timeout 2400 bazel build \
+            --local_cpu_resources=0 \
+            --remote_upload_local_results=false \
+            //designs/asap7/lfsr:lfsr_${STAGE} || true
+
+      - name: Check remote cache coverage
+        run: |
+          args=(--stage "${STAGE}" --timeout "${FETCH_TIMEOUT}")
+          if [[ "${PLATFORM}" != "all" ]]; then
+            args+=("${PLATFORM}")
+          fi
+          ./tools/fetch_cache.sh "${args[@]}" | tee fetch_cache.log
+
+      - name: Render markdown summary
+        if: always()
+        run: |
+          {
+            echo "# Benchmark status report"
+            echo ""
+            echo "- **Platform:** \`${PLATFORM}\`"
+            echo "- **Stage:** \`${STAGE}\`"
+            echo "- **Commit:** \`${GITHUB_SHA}\`"
+            echo "- **Trigger:** \`${GITHUB_EVENT_NAME}\`"
+            echo ""
+            echo "| Platform | Design | Status |"
+            echo "|:---------|:-------|:-------|"
+            awk '
+              /^  [a-zA-Z0-9]/ && NF >= 3 {
+                platform = $1
+                design = $2
+                status = $3
+                for (i = 4; i <= NF; i++) status = status " " $i
+                if (status ~ /^OK/)          icon = ":white_check_mark:"
+                else if (status ~ /CACHED/)  icon = ":x:"
+                else                         icon = ":grey_question:"
+                printf "| %s | `%s` | %s %s |\n", platform, design, icon, status
+              }
+            ' fetch_cache.log
+            echo ""
+            grep -E "^Fetched:" fetch_cache.log || true
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload raw log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: status-report-${{ env.PLATFORM }}-${{ env.STAGE }}
+          path: fetch_cache.log
+          if-no-files-found: ignore

@@ -69,7 +69,7 @@ jobs:
 
             Keep per-item work bounded: a few gh api calls each.  Do not
             clone repos, regenerate RTL, open PRs, or modify any files.
-          claude_args: "--max-turns 60"
+          claude_args: '--max-turns 60 --allowedTools Bash --allowedTools Read'
 
       - name: Upload audit artifacts
         if: always()

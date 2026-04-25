@@ -48,7 +48,11 @@ jobs:
             audit_upstream_items.ndjson in the repo root contains one JSON
             object per submodule that is behind upstream.  Each object has:
             path, owner, repo, branch, pinned, upstream, behind, pinned_date,
-            upstream_date, days_stale.
+            upstream_date, days_stale, existing_issue, existing_state.
+
+            `existing_issue` is the number of an already-filed
+            "Upstream update available: <path>" issue (or empty string if
+            none).  `existing_state` is "OPEN" or "CLOSED" when present.
 
             For each item:
               1. Fetch the commit list via
@@ -57,18 +61,29 @@ jobs:
                    - minor  : docs, CI, tests, whitespace, cosmetic only
                    - moderate: bug fixes, small features, dep bumps
                    - major  : architecture/API/RTL-affecting changes, new deps
-              3. For MODERATE and MAJOR only, find or create a GitHub issue
-                 titled exactly "Upstream update available: <path>"
-                 (label: upstream-update).  Overwrite the body with:
+              3. Decide what to do based on severity AND existing_issue:
+                   - MINOR + no existing_issue → do nothing.
+                   - MINOR + existing OPEN issue → `gh issue comment <n>` once
+                     noting the change is now classified minor; do not edit
+                     the body or close the issue (humans triage state).
+                   - MODERATE/MAJOR + no existing_issue → `gh issue create`
+                     with title "Upstream update available: <path>" and label
+                     `upstream-update`.
+                   - MODERATE/MAJOR + existing_issue (any state) →
+                     `gh issue edit <existing_issue> --body-file <file>` with
+                     refreshed contents.  Do NOT reopen a CLOSED issue and do
+                     NOT change its state — humans control that.
+              4. The body (for create or edit) contains:
                    - pinned → upstream SHAs and dates
                    - commits behind, days stale
                    - severity classification with justification
-                   - a short bulleted summary of what changed
+                   - short bulleted summary of what changed
                    - recommendation (update now / defer / ignore)
-              4. For MINOR items, do nothing.
+                   - "Last refreshed: <UTC timestamp>" footer
 
-            Keep per-item work bounded: a few gh api calls each.  Do not
-            clone repos, regenerate RTL, open PRs, or modify any files.
+            Never open more than one issue per submodule path.  Keep per-item
+            work bounded: a few gh api calls each.  Do not clone repos,
+            regenerate RTL, open PRs, or modify any files in the repo.
           claude_args: '--max-turns 60 --allowedTools Bash --allowedTools Read'
 
       - name: Upload audit artifacts

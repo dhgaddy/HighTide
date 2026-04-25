@@ -18,6 +18,11 @@ cd "$REPO_DIR"
 OUT_JSON="${AUDIT_OUT:-audit_upstream_items.ndjson}"
 : > "$OUT_JSON"
 
+# Snapshot all existing audit issues (open and closed) so we can attach
+# their numbers to each actionable item.  One API call total.
+EXISTING_ISSUES=$(gh issue list --label upstream-update --state all --limit 200 \
+                    --json number,state,title 2>/dev/null || echo '[]')
+
 # Collect submodule names from .gitmodules
 mapfile -t NAMES < <(
     git config -f .gitmodules --get-regexp '^submodule\..*\.path$' \
@@ -93,6 +98,11 @@ for name in "${NAMES[@]}"; do
         "${pinned_date:--}" "${upstream_date:--}" "$days_stale"
 
     if [[ "$behind" != "0" && "$behind" != "?" ]]; then
+        title="Upstream update available: $path"
+        existing=$(jq -c --arg t "$title" 'map(select(.title == $t)) | first // null' <<<"$EXISTING_ISSUES")
+        existing_number=$(jq -r 'if . == null then "" else .number end' <<<"$existing")
+        existing_state=$(jq -r 'if . == null then "" else .state end' <<<"$existing")
+
         jq -cn \
             --arg path "$path" --arg owner "$owner" --arg repo "$repo" \
             --arg branch "$branch" \
@@ -100,10 +110,14 @@ for name in "${NAMES[@]}"; do
             --argjson behind "$behind" \
             --arg pinned_date "${pinned_date:-}" --arg upstream_date "${upstream_date:-}" \
             --arg days_stale "$days_stale" \
+            --arg existing_issue "$existing_number" \
+            --arg existing_state "$existing_state" \
             '{path:$path, owner:$owner, repo:$repo, branch:$branch,
               pinned:$pinned, upstream:$upstream, behind:$behind,
               pinned_date:$pinned_date, upstream_date:$upstream_date,
-              days_stale:$days_stale}' >> "$OUT_JSON"
+              days_stale:$days_stale,
+              existing_issue:$existing_issue,
+              existing_state:$existing_state}' >> "$OUT_JSON"
     fi
 done
 

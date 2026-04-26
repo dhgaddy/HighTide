@@ -35,6 +35,6 @@ export CORE_UTILIZATION = 35
 
 export PLACE_DENSITY_LB_ADDON = 0.1
 
-export MACRO_PLACE_HALO    = 10 10
+export MACRO_PLACE_HALO    = 30 30
 
 export TNS_END_PERCENT     = 100

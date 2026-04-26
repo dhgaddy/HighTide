@@ -223,41 +223,20 @@
       margin-bottom: 1rem;
     }
 
-    .ppa-table {
-      width: 100%;
-      border-collapse: collapse;
+    .source-link {
+      margin-top: 0.5rem;
       font-size: 0.85rem;
     }
 
-    .ppa-table th {
-      text-align: left;
-      color: var(--navy);
-      font-weight: 600;
-      padding: 0.4rem 0.75rem;
-      border-bottom: 2px solid var(--gray-100);
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .ppa-table td {
-      padding: 0.4rem 0.75rem;
-      border-bottom: 1px solid var(--gray-100);
+    .source-link a {
+      color: var(--sea-blue);
+      text-decoration: none;
       font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 0.8rem;
     }
 
-    .ppa-table td:first-child {
-      font-family: inherit;
-      font-weight: 500;
-    }
-
-    .ppa-table tr:hover { background: var(--yellow-glow); }
-
-    .ppa-pending {
-      color: var(--gray-600);
-      font-style: italic;
-      font-size: 0.85rem;
+    .source-link a:hover {
+      color: var(--navy);
+      text-decoration: underline;
     }
 
     footer {
@@ -294,7 +273,7 @@
   <div class="container">
     <h1>Design Gallery</h1>
     <p class="subtitle">
-      Placement views, upstream links, and QoR metrics for each design in the HighTide benchmark suite.
+      Placement views and upstream links for each design in the HighTide benchmark suite.
     </p>
 
     <!-- BlackParrot -->
@@ -317,7 +296,7 @@
             HighTide includes two variants: <strong>bp_uno</strong> (single unicore) and <strong>bp_quad</strong>
             (quad-core). The design uses dense SRAM macros for caches and register files.
           </p>
-          <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
+          <p class="source-link"><a href="https://github.com/black-parrot/black-parrot">black-parrot/black-parrot &rarr;</a></p>
         </div>
       </div>
     </div>
@@ -347,7 +326,7 @@
             Chisel. It is the largest macro-free design in the suite (~570k cells), testing how the flow
             scales with large, regular datapath structures.
           </p>
-          <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
+          <p class="source-link"><a href="https://github.com/ucb-bar/gemmini">ucb-bar/gemmini &rarr;</a></p>
         </div>
       </div>
     </div>
@@ -377,7 +356,7 @@
             A small, macro-free design (~15k cells) dominated by combinational logic, exercising synthesis
             optimization and logic density.
           </p>
-          <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
+          <p class="source-link"><a href="https://github.com/ucb-bar/sha3">ucb-bar/sha3 &rarr;</a></p>
         </div>
       </div>
     </div>
@@ -402,7 +381,7 @@
             A convolutional neural network inference accelerator generated via NNgen/Veriloggen.
             Includes embedded memory macros for weight and activation storage via FakeRAM.
           </p>
-          <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
+          <p class="source-link"><a href="https://github.com/NNgen/nngen">NNgen/nngen &rarr;</a></p>
         </div>
       </div>
     </div>
@@ -429,7 +408,7 @@
             vector arithmetic, and an L1/L2 cache hierarchy. Uses multiple SRAM macros for caches and
             register files across its cores.
           </p>
-          <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
+          <p class="source-link"><a href="https://github.com/jbush001/NyuziProcessor">jbush001/NyuziProcessor &rarr;</a></p>
         </div>
       </div>
     </div>
@@ -459,7 +438,7 @@
             One of the smallest designs in the suite, available on all three platforms, useful as
             a quick sanity check for cross-platform flow testing.
           </p>
-          <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
+          <p class="source-link"><a href="https://github.com/gsmecher/minimax">gsmecher/minimax &rarr;</a></p>
         </div>
       </div>
     </div>
@@ -489,7 +468,7 @@
             available on all three platforms. Useful for rapid flow validation and as a baseline
             for PPA optimization experiments.
           </p>
-          <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
+          <p class="source-link"><a href="https://github.com/alexforencich/verilog-lfsr">alexforencich/verilog-lfsr &rarr;</a></p>
         </div>
       </div>
     </div>
@@ -522,7 +501,7 @@
             HighTide includes six MAC/PHY variants (MII, RGMII, SGMII) covering different interface
             configurations, each with embedded SRAM macros. Available on all three platforms.
           </p>
-          <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
+          <p class="source-link"><a href="https://github.com/enjoy-digital/liteeth">enjoy-digital/liteeth &rarr;</a></p>
         </div>
       </div>
     </div>
@@ -550,7 +529,7 @@
             Includes embedded SRAM blocks (512x128 and 2048x128) via FakeRAM. Uses hierarchical synthesis
             at 50% core utilization.
           </p>
-          <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
+          <p class="source-link"><a href="https://github.com/google-coral/coralnpu">google-coral/coralnpu &rarr;</a></p>
         </div>
       </div>
     </div>
@@ -603,7 +582,7 @@
             mesh of black-box cluster endpoints. Read directly as SystemVerilog via yosys-slang. Uses the
             Bender dependency manager and FloGen for mesh topology generation.
           </p>
-          <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
+          <p class="source-link"><a href="https://github.com/pulp-platform/FlooNoC">pulp-platform/FlooNoC &rarr;</a></p>
         </div>
       </div>
     </div>
@@ -627,7 +606,7 @@
             Uses the Bender dependency manager and clustergen for cluster wrapper generation.
             Read directly as SystemVerilog via yosys-slang with hierarchical synthesis and embedded SRAM macros.
           </p>
-          <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
+          <p class="source-link"><a href="https://github.com/pulp-platform/snitch_cluster">pulp-platform/snitch_cluster &rarr;</a></p>
         </div>
       </div>
     </div>
@@ -653,7 +632,7 @@
             subsystem. Read directly as SystemVerilog via yosys-slang. Includes multiple embedded SRAM blocks
             with FakeRAM support for caches and register files.
           </p>
-          <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
+          <p class="source-link"><a href="https://github.com/vortexgpgpu/vortex">vortexgpgpu/vortex &rarr;</a></p>
         </div>
       </div>
     </div>

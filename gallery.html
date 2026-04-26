@@ -137,7 +137,7 @@
     }
 
     .design-image {
-      flex: 0 0 300px;
+      flex: 0 0 320px;
       text-align: center;
     }
 
@@ -159,6 +159,58 @@
       color: var(--gray-600);
       font-size: 0.85rem;
       font-style: italic;
+    }
+
+    .design-thumbs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.5rem;
+    }
+
+    .thumb-link {
+      display: block;
+      text-decoration: none;
+      color: var(--gray-800);
+      transition: transform 0.15s;
+    }
+
+    .thumb-link:hover {
+      transform: translateY(-2px);
+    }
+
+    .thumb-link img {
+      width: 100%;
+      border-radius: 6px;
+      border: 2px solid var(--gray-100);
+      display: block;
+      background: #000;
+    }
+
+    .thumb-link:hover img {
+      border-color: var(--sea-blue);
+    }
+
+    .thumb-label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-align: center;
+      padding: 0.25rem 0.4rem;
+      margin-top: 0.25rem;
+      border-radius: 3px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    .thumb-label.asap7 { background: #e3f2fd; color: #1565c0; }
+    .thumb-label.nangate45 { background: #e8f5e9; color: #2e7d32; }
+    .thumb-label.sky130hd { background: #fff3e0; color: #e65100; }
+
+    .thumb-variant {
+      display: block;
+      font-size: 0.65rem;
+      color: var(--gray-600);
+      text-align: center;
+      margin-top: 0.15rem;
     }
 
     .design-info {
@@ -278,11 +330,16 @@
           <span class="lang-badge">Chisel</span>
           <span class="platform-badge badge-asap7">asap7</span>
           <span class="platform-badge badge-nangate45">nangate45</span>
+          <span class="platform-badge badge-sky130hd">sky130hd</span>
         </div>
       </div>
       <div class="design-body">
         <div class="design-image">
-          <img src="figures/final_placement_gemmini.png" alt="Gemmini placement view">
+          <div class="design-thumbs">
+            <a class="thumb-link" href="figures/gemmini_asap7.png"><img src="figures/thumbs/gemmini_asap7.jpg" alt="Gemmini asap7 final"><span class="thumb-label asap7">asap7</span></a>
+            <a class="thumb-link" href="figures/gemmini_nangate45.png"><img src="figures/thumbs/gemmini_nangate45.jpg" alt="Gemmini nangate45 final"><span class="thumb-label nangate45">nangate45</span></a>
+            <a class="thumb-link" href="figures/gemmini_sky130hd.png"><img src="figures/thumbs/gemmini_sky130hd.jpg" alt="Gemmini sky130hd final"><span class="thumb-label sky130hd">sky130hd</span></a>
+          </div>
         </div>
         <div class="design-info">
           <p>
@@ -303,11 +360,16 @@
           <span class="lang-badge">Chisel</span>
           <span class="platform-badge badge-asap7">asap7</span>
           <span class="platform-badge badge-nangate45">nangate45</span>
+          <span class="platform-badge badge-sky130hd">sky130hd</span>
         </div>
       </div>
       <div class="design-body">
         <div class="design-image">
-          <img src="figures/final_placement_sha3.png" alt="SHA3 placement view">
+          <div class="design-thumbs">
+            <a class="thumb-link" href="figures/sha3_asap7.png"><img src="figures/thumbs/sha3_asap7.jpg" alt="SHA3 asap7 final"><span class="thumb-label asap7">asap7</span></a>
+            <a class="thumb-link" href="figures/sha3_nangate45.png"><img src="figures/thumbs/sha3_nangate45.jpg" alt="SHA3 nangate45 final"><span class="thumb-label nangate45">nangate45</span></a>
+            <a class="thumb-link" href="figures/sha3_sky130hd.png"><img src="figures/thumbs/sha3_sky130hd.jpg" alt="SHA3 sky130hd final"><span class="thumb-label sky130hd">sky130hd</span></a>
+          </div>
         </div>
         <div class="design-info">
           <p>
@@ -328,6 +390,7 @@
           <span class="lang-badge">Verilog</span>
           <span class="platform-badge badge-asap7">asap7</span>
           <span class="platform-badge badge-nangate45">nangate45</span>
+          <span class="platform-badge badge-sky130hd">sky130hd</span>
         </div>
       </div>
       <div class="design-body">
@@ -356,7 +419,9 @@
       </div>
       <div class="design-body">
         <div class="design-image">
-          <div class="placeholder">Die image pending</div>
+          <div class="design-thumbs">
+            <a class="thumb-link" href="figures/NyuziProcessor_nangate45.png"><img src="figures/thumbs/NyuziProcessor_nangate45.jpg" alt="Nyuzi nangate45 final"><span class="thumb-label nangate45">nangate45</span></a>
+          </div>
         </div>
         <div class="design-info">
           <p>
@@ -382,7 +447,11 @@
       </div>
       <div class="design-body">
         <div class="design-image">
-          <div class="placeholder">Die image pending</div>
+          <div class="design-thumbs">
+            <a class="thumb-link" href="figures/minimax_asap7.png"><img src="figures/thumbs/minimax_asap7.jpg" alt="Minimax asap7 final"><span class="thumb-label asap7">asap7</span></a>
+            <a class="thumb-link" href="figures/minimax_nangate45.png"><img src="figures/thumbs/minimax_nangate45.jpg" alt="Minimax nangate45 final"><span class="thumb-label nangate45">nangate45</span></a>
+            <a class="thumb-link" href="figures/minimax_sky130hd.png"><img src="figures/thumbs/minimax_sky130hd.jpg" alt="Minimax sky130hd final"><span class="thumb-label sky130hd">sky130hd</span></a>
+          </div>
         </div>
         <div class="design-info">
           <p>
@@ -408,7 +477,11 @@
       </div>
       <div class="design-body">
         <div class="design-image">
-          <div class="placeholder">Die image pending</div>
+          <div class="design-thumbs">
+            <a class="thumb-link" href="figures/lfsr_asap7.png"><img src="figures/thumbs/lfsr_asap7.jpg" alt="LFSR asap7 final"><span class="thumb-label asap7">asap7</span></a>
+            <a class="thumb-link" href="figures/lfsr_nangate45.png"><img src="figures/thumbs/lfsr_nangate45.jpg" alt="LFSR nangate45 final"><span class="thumb-label nangate45">nangate45</span></a>
+            <a class="thumb-link" href="figures/lfsr_sky130hd.png"><img src="figures/thumbs/lfsr_sky130hd.jpg" alt="LFSR sky130hd final"><span class="thumb-label sky130hd">sky130hd</span></a>
+          </div>
         </div>
         <div class="design-info">
           <p>
@@ -434,7 +507,14 @@
       </div>
       <div class="design-body">
         <div class="design-image">
-          <div class="placeholder">Die image pending</div>
+          <div class="design-thumbs">
+            <a class="thumb-link" href="figures/liteeth_mac_axi_mii_asap7.png"><img src="figures/thumbs/liteeth_mac_axi_mii_asap7.jpg" alt="LiteEth MAC/AXI/MII asap7 final"><span class="thumb-label asap7">asap7</span><span class="thumb-variant">mac_axi_mii</span></a>
+            <a class="thumb-link" href="figures/liteeth_mac_axi_mii_nangate45.png"><img src="figures/thumbs/liteeth_mac_axi_mii_nangate45.jpg" alt="LiteEth MAC/AXI/MII nangate45 final"><span class="thumb-label nangate45">nangate45</span><span class="thumb-variant">mac_axi_mii</span></a>
+            <a class="thumb-link" href="figures/liteeth_mac_axi_mii_sky130hd.png"><img src="figures/thumbs/liteeth_mac_axi_mii_sky130hd.jpg" alt="LiteEth MAC/AXI/MII sky130hd final"><span class="thumb-label sky130hd">sky130hd</span><span class="thumb-variant">mac_axi_mii</span></a>
+            <a class="thumb-link" href="figures/liteeth_udp_stream_rgmii_asap7.png"><img src="figures/thumbs/liteeth_udp_stream_rgmii_asap7.jpg" alt="LiteEth UDP/RGMII asap7 final"><span class="thumb-label asap7">asap7</span><span class="thumb-variant">udp_stream_rgmii</span></a>
+            <a class="thumb-link" href="figures/liteeth_udp_stream_rgmii_nangate45.png"><img src="figures/thumbs/liteeth_udp_stream_rgmii_nangate45.jpg" alt="LiteEth UDP/RGMII nangate45 final"><span class="thumb-label nangate45">nangate45</span><span class="thumb-variant">udp_stream_rgmii</span></a>
+            <a class="thumb-link" href="figures/liteeth_udp_stream_rgmii_sky130hd.png"><img src="figures/thumbs/liteeth_udp_stream_rgmii_sky130hd.jpg" alt="LiteEth UDP/RGMII sky130hd final"><span class="thumb-label sky130hd">sky130hd</span><span class="thumb-variant">udp_stream_rgmii</span></a>
+          </div>
         </div>
         <div class="design-info">
           <p>
@@ -454,17 +534,50 @@
         <div class="badges">
           <span class="lang-badge">Chisel</span>
           <span class="platform-badge badge-asap7">asap7</span>
+          <span class="platform-badge badge-nangate45">nangate45</span>
         </div>
       </div>
       <div class="design-body">
         <div class="design-image">
-          <div class="placeholder">Die image pending</div>
+          <div class="design-thumbs">
+            <a class="thumb-link" href="figures/coralnpu_asap7.png"><img src="figures/thumbs/coralnpu_asap7.jpg" alt="CoralNPU asap7 final"><span class="thumb-label asap7">asap7</span></a>
+            <a class="thumb-link" href="figures/coralnpu_nangate45.png"><img src="figures/thumbs/coralnpu_nangate45.jpg" alt="CoralNPU nangate45 final"><span class="thumb-label nangate45">nangate45</span></a>
+          </div>
         </div>
         <div class="design-info">
           <p>
             Google Coral neural processing unit accelerator, generated from Chisel via sv2v conversion.
             Includes embedded SRAM blocks (512x128 and 2048x128) via FakeRAM. Uses hierarchical synthesis
             at 50% core utilization.
+          </p>
+          <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- NVDLA -->
+    <div class="design-card">
+      <div class="design-header">
+        <h2><a href="https://github.com/nvdla/hw">NVDLA</a></h2>
+        <div class="badges">
+          <span class="lang-badge">Verilog</span>
+          <span class="platform-badge badge-asap7">asap7</span>
+        </div>
+      </div>
+      <div class="design-body">
+        <div class="design-image">
+          <div class="design-thumbs">
+            <a class="thumb-link" href="figures/partition_a_asap7.png"><img src="figures/thumbs/partition_a_asap7.jpg" alt="NVDLA partition_a asap7 final"><span class="thumb-label asap7">asap7</span><span class="thumb-variant">partition_a</span></a>
+            <a class="thumb-link" href="figures/partition_m_asap7.png"><img src="figures/thumbs/partition_m_asap7.jpg" alt="NVDLA partition_m asap7 final"><span class="thumb-label asap7">asap7</span><span class="thumb-variant">partition_m</span></a>
+            <a class="thumb-link" href="figures/partition_o_asap7.png"><img src="figures/thumbs/partition_o_asap7.jpg" alt="NVDLA partition_o asap7 final"><span class="thumb-label asap7">asap7</span><span class="thumb-variant">partition_o</span></a>
+          </div>
+        </div>
+        <div class="design-info">
+          <p>
+            NVDLA is NVIDIA's open-source Deep Learning Accelerator, partitioned into five sub-blocks
+            (partitions a, c, m, o, p) for hierarchical physical design. Each partition exercises a
+            distinct mix of compute datapath, control, and embedded SRAM macros via FakeRAM, providing
+            multiple medium-to-large accelerator targets from a single upstream design.
           </p>
           <p class="ppa-pending">PPA metrics will be populated once builds complete.</p>
         </div>
@@ -530,7 +643,9 @@
       </div>
       <div class="design-body">
         <div class="design-image">
-          <div class="placeholder">Die image pending</div>
+          <div class="design-thumbs">
+            <a class="thumb-link" href="figures/vortex_asap7.png"><img src="figures/thumbs/vortex_asap7.jpg" alt="Vortex asap7 final"><span class="thumb-label asap7">asap7</span></a>
+          </div>
         </div>
         <div class="design-info">
           <p>

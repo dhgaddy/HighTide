@@ -11,6 +11,10 @@ _ARGS.update({
     "MACRO_BLOCKAGE_HALO": "0.5",
     "PLACE_DENSITY_LB_ADDON": "0.10",
     "RTLMP_MAX_LEVEL": "4",
+    # Workaround for OpenROAD #9985 (MPL-0040): hand-place all fakeram_*
+    # macros via macros.tcl so rtl_macro_placer skips the failing pipe_fma
+    # cluster.
+    "MACRO_PLACEMENT_TCL": "$(location :macros.tcl)",
 })
 
 hightide_design(
@@ -23,6 +27,7 @@ hightide_design(
     sources = {
         "SDC_FILE": [":constraint.sdc"],
         "IO_CONSTRAINTS": [":io.tcl"],
+        "MACRO_PLACEMENT_TCL": [":macros.tcl"],
         "ADDITIONAL_LEFS": ["//designs/asap7/bp_processor:sram_lefs"],
         "ADDITIONAL_LIBS": ["//designs/asap7/bp_processor:sram_libs"],
     },

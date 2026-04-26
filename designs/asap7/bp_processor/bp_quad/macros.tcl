@@ -32,12 +32,15 @@ foreach inst [$block getInsts] {
 }
 
 # Largest masters first so they take the leftmost (less-fragmented) columns.
-set masters [lsort -command {apply {{a b} {
-  upvar 1 by_master by_master
-  set wa [lindex [dict get $by_master $a] 0 1]
-  set wb [lindex [dict get $by_master $b] 0 1]
-  expr {$wb - $wa}
-}}} [dict keys $by_master]]
+set master_pairs {}
+foreach mname [dict keys $by_master] {
+  set w [lindex [lindex [dict get $by_master $mname] 0] 1]
+  lappend master_pairs [list $w $mname]
+}
+set masters {}
+foreach pair [lsort -real -decreasing -index 0 $master_pairs] {
+  lappend masters [lindex $pair 1]
+}
 
 set cur_x  [expr {$die_xl + $margin}]
 set y_top  [expr {$die_yh - $margin}]

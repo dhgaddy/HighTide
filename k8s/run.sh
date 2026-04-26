@@ -98,6 +98,33 @@ if [[ "$MODE" == "delete" ]]; then
         LABEL_SELECTOR="$LABEL_SELECTOR,design=$design_label"
         DESC="$DESC/$FILTER_DESIGN"
     fi
+
+    # Find matching jobs first so we can list and (if >3) confirm.
+    matched_jobs=()
+    while read -r jobname; do
+        [[ -n "$jobname" ]] && matched_jobs+=("$jobname")
+    done < <(kubectl get jobs -n "$NAMESPACE" -l "$LABEL_SELECTOR" \
+                -o name 2>/dev/null | sed 's|^job\.batch/||' | sort)
+
+    if [[ ${#matched_jobs[@]} -eq 0 ]]; then
+        echo "No matching jobs to delete (selector: $LABEL_SELECTOR)."
+        exit 0
+    fi
+
+    echo "Jobs to delete ($DESC, ${#matched_jobs[@]}):"
+    for j in "${matched_jobs[@]}"; do
+        echo "  $j"
+    done
+    echo ""
+
+    if [[ ${#matched_jobs[@]} -gt 3 ]]; then
+        read -r -p "Delete ${#matched_jobs[@]} jobs from $NAMESPACE? [y/N] " reply || reply=""
+        if [[ ! "$reply" =~ ^[yY] ]]; then
+            echo "Aborted."
+            exit 1
+        fi
+    fi
+
     echo "Deleting $DESC hightide jobs in $NAMESPACE..."
     kubectl delete jobs -n "$NAMESPACE" -l "$LABEL_SELECTOR"
     exit 0
@@ -147,6 +174,21 @@ if [[ ${#DESIGNS[@]} -eq 0 ]]; then
     echo "  Platform: ${FILTER_PLATFORM:-<all>}"
     echo "  Design:   ${FILTER_DESIGN:-<all>}"
     exit 1
+fi
+
+echo "Designs to submit (${#DESIGNS[@]}):"
+for entry in "${DESIGNS[@]}"; do
+    IFS='|' read -r platform name _ _ <<< "$entry"
+    echo "  $platform/$name"
+done
+echo ""
+
+if [[ "$DRY_RUN" == false && ${#DESIGNS[@]} -gt 3 ]]; then
+    read -r -p "Submit ${#DESIGNS[@]} jobs to $NAMESPACE? [y/N] " reply || reply=""
+    if [[ ! "$reply" =~ ^[yY] ]]; then
+        echo "Aborted."
+        exit 1
+    fi
 fi
 
 echo "Submitting ${#DESIGNS[@]} job(s) to NRP Nautilus ($NAMESPACE)..."

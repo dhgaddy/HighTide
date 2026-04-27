@@ -38,3 +38,11 @@ export PLACE_DENSITY_LB_ADDON = 0.1
 export MACRO_PLACE_HALO    = 30 30
 
 export TNS_END_PERCENT     = 100
+
+# Workaround for OpenROAD ODB-1200 crash in post-CTS hold-repair on sky130hd
+# (same root cause as VLSIDA/HighTide#75 / liteeth_udp_stream_sgmii). The new
+# RSZ-0100 move sequence orphans a load pin during repair_timing, then a later
+# InsertBufferBeforeLoads pass trips an ODB consistency check. Skipping the
+# CTS repair_timing pass bypasses it; downstream GRT/route still run their
+# own hold-repair passes.
+export SKIP_CTS_REPAIR_TIMING = 1

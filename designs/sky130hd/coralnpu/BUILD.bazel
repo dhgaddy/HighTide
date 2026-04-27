@@ -22,9 +22,10 @@ hightide_design(
     },
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
-        "CORE_UTILIZATION": "30",
-        "PLACE_DENSITY_LB_ADDON": "0.20",
+        "CORE_UTILIZATION": "20",
+        "PLACE_DENSITY": "0.15",
         "MACRO_PLACE_HALO": "30 30",
+        "ROUTING_LAYER_ADJUSTMENT": "0.25",
         "TNS_END_PERCENT": "100",
     },
 )

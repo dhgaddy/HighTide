@@ -31,7 +31,9 @@ export ABC_AREA = 1
 
 export SDC_FILE      = $(BENCH_DESIGN_HOME)/$(PLATFORM)/$(DESIGN_NAME)/constraint.sdc
 
-export CORE_UTILIZATION = 35
+export CORE_UTILIZATION = 25
+
+export FASTROUTE_TCL = $(BENCH_DESIGN_HOME)/$(PLATFORM)/$(DESIGN_NAME)/fastroute.tcl
 
 export PLACE_DENSITY_LB_ADDON = 0.1
 

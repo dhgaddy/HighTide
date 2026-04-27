@@ -1,0 +1,19 @@
+load("//:defs.bzl", "hightide_design")
+
+hightide_design(
+    name = "partition_m",
+    top = "NV_NVDLA_partition_m",
+    platform = "sky130hd",
+    verilog_files = ["//designs/src/NVDLA:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+    },
+    stage_data = {"synth": ["//designs/src/NVDLA:include"]},
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "VERILOG_INCLUDE_DIRS": "designs/src/NVDLA/vmod/include designs/src/NVDLA/vmod/vlibs",
+        "CORE_UTILIZATION": "45",
+        "PLACE_DENSITY_LB_ADDON": "0.20",
+        "TNS_END_PERCENT": "100",
+    },
+)

@@ -75,16 +75,29 @@ PLATFORM_PARAMS = {
         "op_cond_name": "tt_1.0_25.0",
     },
     "sky130hd": {
-        "pin_w": 0.170,
-        "pin_pitch": 0.340,
+        # Signal pin RECT spans (0, y) -> (pin_w, y + pin_w). pin_w must
+        # be wide enough to overlap met3's first vertical track at x=0.34
+        # (so set 0.5, covers x=0..0.5). pin_pitch matches met4's track
+        # pitch so each pin's Y extent always covers a met4 track,
+        # allowing DRT to stack a met3-met4 via.
+        "pin_w": 0.500,
+        "pin_pitch": 0.920,
+        # Supply rails run VERTICAL on met4 (perpendicular to met4's
+        # horizontal preferred direction). The platform's macro_grid_1
+        # connects met4-met5 with vertical met5 stripes; perpendicular
+        # met4 macro rails meet them at clean crossings with proper M4
+        # enclosure. Width 1.2 / pitch ~14.7 mirrors the working
+        # liteeth fakeram on this platform.
+        "supply_direction": "vertical",
+        "supply_rail_w": 1.200,
+        "supply_track_offset": 8.360,
+        "supply_track_pitch": 7.360,
         "snap_w": 0.460,
         "snap_h": 2.720,
         "area_per_bit": 10.0,
         "min_area": 1000,
         "pin_layer": "met3",
         "supply_layer": "met4",
-        "supply_track_offset": 0.085,
-        "supply_track_pitch": 0.340,
         "obs_layers": ["met1", "met2", "met3"],
         "nom_voltage": 1.8,
         "op_cond_name": "tt_1.0_25.0",
@@ -156,34 +169,33 @@ def gen_lef(name, width, depth, outdir, platform):
     add_pin("r0_clk", "INPUT")
     add_pin("r0_ce_in", "INPUT")
 
-    # VDD / VSS — horizontal rails on the supply layer, with rail centers
-    # snapped to that layer's routing track grid so DRT accepts the pins.
-    # VDD takes even-indexed tracks; VSS takes odd-indexed.
+    # VDD / VSS supply rails on the supply layer, snapped to that layer's
+    # routing track grid. Two orientations supported:
+    #   "horizontal" — rails run along the layer's preferred direction
+    #     (full-width thin strips stacked in Y). Works for asap7/nangate45.
+    #   "vertical" — rails run perpendicular to the preferred direction
+    #     (full-height thin strips spaced in X). Required for sky130hd:
+    #     the platform's met5 stripes that connect via macro_grid_1 are
+    #     vertical, so met4 macro rails must be vertical too to give the
+    #     M4-M5 via a perpendicular crossing with proper enclosure.
     track_off = p["supply_track_offset"]
     track_pitch = p["supply_track_pitch"]
-    rail_h = p["pin_w"]
-    # Sweep tracks within macro height. Skip tracks too close to top/bottom
-    # to keep the pin RECT inside the macro outline.
+    rail_w = p.get("supply_rail_w", p["pin_w"])
+    direction = p.get("supply_direction", "horizontal")
+    span_axis = h if direction == "horizontal" else w
     track_centers = []
     n = 0
     while True:
         c = track_off + n * track_pitch
-        if c + rail_h / 2 > h:
+        if c + rail_w / 2 > span_axis:
             break
-        if c - rail_h / 2 >= 0:
+        if c - rail_w / 2 >= 0:
             track_centers.append(c)
         n += 1
-    # Dense alternating VDD/VSS rails on every track. The macro sits under
-    # the platform's macro_grid stripes (M5 for nangate45, etc.); the PDN
-    # connect rule needs a same-polarity M4 rail under each M5 stripe to
-    # drop a via, so rails are placed every track. DRT still routes signals
-    # on lower metals (signal pins are on a different layer).
     vdd_centers = track_centers[0::2]
     vss_centers = track_centers[1::2]
 
     def add_supply(net, use, centers):
-        rail_x0 = p["snap_w"]
-        rail_x1 = w - p["snap_w"]
         lines.extend([
             f"  PIN {net}",
             f"    DIRECTION INOUT ;",
@@ -192,9 +204,13 @@ def gen_lef(name, width, depth, outdir, platform):
             f"      LAYER {p['supply_layer']} ;",
         ])
         for c in sorted(centers):
-            y0 = c - rail_h / 2
-            y1 = c + rail_h / 2
-            lines.append(f"      RECT {rail_x0:.3f} {y0:.3f} {rail_x1:.3f} {y1:.3f} ;")
+            if direction == "horizontal":
+                x0, x1 = p["snap_w"], w - p["snap_w"]
+                y0, y1 = c - rail_w / 2, c + rail_w / 2
+            else:  # vertical
+                x0, x1 = c - rail_w / 2, c + rail_w / 2
+                y0, y1 = p["snap_h"], h - p["snap_h"]
+            lines.append(f"      RECT {x0:.3f} {y0:.3f} {x1:.3f} {y1:.3f} ;")
         lines.extend([
             "    END",
             f"  END {net}",

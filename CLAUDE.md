@@ -168,6 +168,12 @@ SRAM LEF/LIB files are organized per-platform:
 - `designs/src/cnn/fakeram_*.{lef,lib}` — CNN asap7 memories (shared with src dir)
 - `designs/{nangate45,sky130hd}/cnn/sram/{lef,lib}/` — CNN per-platform synthetic FakeRAMs (regenerable via `designs/src/cnn/dev/gen_fakeram_{nangate45,sky130hd}.py`)
 
+## Reporting cell counts
+
+When reporting or comparing cell counts across designs or platforms, **exclude fill cells, tap cells, and antenna cells**. They are physical-only / manufacturing-rule cells, not part of the design's logic. Their counts vary wildly across platforms (sky130hd uses ~17× more tap cells than nangate45 due to a stricter max-tap-distance rule, and lower `CORE_UTILIZATION` inflates filler counts proportionally), so including them obscures real differences.
+
+Use the per-class fields in `6_report.json` (e.g. `class:sequential_cell`, `class:multi_input_combinational_cell`, `class:inverter`, `class:clock_buffer`, `class:timing_repair_buffer`) — not the top-level `instance__count` — when comparing designs.
+
 ## Shared Machine
 
 - This is a shared multi-user machine. When checking process status (e.g., `ps aux | grep openroad`), always filter to the current user's processes or check for bazel sandbox paths (`external/bazel-orfs`) to avoid confusing other users' builds with ours.

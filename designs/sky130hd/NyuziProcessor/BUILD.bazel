@@ -24,13 +24,8 @@ hightide_design(
         "SYNTH_HIERARCHICAL": "1",
         "ABC_AREA": "1",
         "CORE_UTILIZATION": "25",
-        "ALLOW_CONGESTION": "1",
         "PLACE_DENSITY_LB_ADDON": "0.1",
         "MACRO_PLACE_HALO": "30 30",
         "TNS_END_PERCENT": "100",
-        # Workaround for OpenROAD ODB-1200 crash in post-CTS hold-repair on
-        # sky130hd (VLSIDA/HighTide#75). Skipping CTS repair_timing bypasses
-        # the orphaned-pin crash; downstream stages still do hold repair.
-        "SKIP_CTS_REPAIR_TIMING": "1",
     },
 )

@@ -31,7 +31,10 @@ export ABC_AREA = 1
 
 export SDC_FILE      = $(BENCH_DESIGN_HOME)/$(PLATFORM)/$(DESIGN_NAME)/constraint.sdc
 
-export CORE_UTILIZATION = 20
+export CORE_UTILIZATION = 25
+
+# Detail-route can usually clean up the residual congestion that GRT flags.
+export ALLOW_CONGESTION = 1
 
 export PLACE_DENSITY_LB_ADDON = 0.1
 

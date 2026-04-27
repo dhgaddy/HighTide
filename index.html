@@ -1026,7 +1026,7 @@
               </div>
               <div class="flow-arrow">&#8595;</div>
               <div class="flow-box">
-                <span class="flow-label">FakeRAM Update</span>
+                <span class="flow-label">SRAM Macro Update</span>
                 <span class="flow-desc">Identify new memories, generate black-box macros</span>
               </div>
             </div>
@@ -1094,7 +1094,7 @@
           <ul>
             <li>Adds the upstream repo as a Git submodule</li>
             <li>Creates setup scripts to compile from the design's native HDL to Verilog</li>
-            <li>Identifies embedded memories and generates FakeRAM black-box macros</li>
+            <li>Identifies embedded memories and generates SRAM black-box macros</li>
             <li>Creates platform-specific config, constraints, and power delivery</li>
             <li>Generates release RTL and tests the full RTL-to-GDSII flow</li>
             <li>Ports across ASAP7, NanGate45, and SKY130HD technology nodes</li>
@@ -1111,7 +1111,7 @@
             <li>Compares pinned submodule commits against upstream HEAD</li>
             <li>Audits tool dependencies (sv2v, JDK, Python packages) for newer versions</li>
             <li>Classifies changes as minor, moderate, or major with recommendations</li>
-            <li>Regenerates RTL, identifies new memories, and updates FakeRAM</li>
+            <li>Regenerates RTL, identifies new memories, and updates SRAM macros</li>
             <li>Tunes flow parameters (utilization, timing, placement) when needed</li>
             <li>Ports existing designs to additional technology platforms</li>
           </ul>
@@ -1151,11 +1151,11 @@
           <h3>Port to New Platforms</h3>
           <p>
             Ports an existing design from one technology platform to another, adapting
-            constraints, FakeRAM macros, and flow parameters for the target node.
+            constraints, SRAM macros, and flow parameters for the target node.
           </p>
           <ul>
             <li>Copies and adapts config, SDC, and physical design files for the target platform</li>
-            <li>Generates platform-specific FakeRAM LEF/LIB with correct metal stacks</li>
+            <li>Generates platform-specific SRAM LEF/LIB with correct metal stacks</li>
             <li>Adjusts clock period, utilization, and density for the technology node</li>
             <li>Tests the full flow and iterates on congestion or timing issues</li>
           </ul>

@@ -132,13 +132,17 @@
 
     .design-body {
       display: flex;
-      gap: 1.5rem;
+      flex-direction: column;
+      gap: 1rem;
       padding: 1.5rem;
     }
 
+    .design-info {
+      order: 1;
+    }
+
     .design-image {
-      flex: 0 0 320px;
-      text-align: center;
+      order: 2;
     }
 
     .design-image img {
@@ -149,7 +153,8 @@
 
     .design-image .placeholder {
       width: 100%;
-      aspect-ratio: 1;
+      max-width: 320px;
+      aspect-ratio: 4 / 1;
       background: var(--gray-50);
       border: 2px dashed var(--gray-100);
       border-radius: 8px;
@@ -163,8 +168,8 @@
 
     .design-thumbs {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 0.5rem;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.75rem;
     }
 
     .thumb-link {
@@ -251,8 +256,7 @@
     footer a:hover { text-decoration: underline; }
 
     @media (max-width: 768px) {
-      .design-body { flex-direction: column; }
-      .design-image { flex: auto; max-width: 350px; margin: 0 auto; }
+      .design-thumbs { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
     }
   </style>
 </head>

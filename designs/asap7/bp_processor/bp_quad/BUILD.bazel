@@ -28,6 +28,7 @@ hightide_design(
         "SDC_FILE": [":constraint.sdc"],
         "IO_CONSTRAINTS": [":io.tcl"],
         "MACRO_PLACEMENT_TCL": [":macros.tcl"],
+        "PRE_CTS_TCL": [":pre_cts.tcl"],
         "ADDITIONAL_LEFS": ["//designs/asap7/bp_processor:sram_lefs"],
         "ADDITIONAL_LIBS": ["//designs/asap7/bp_processor:sram_libs"],
     },

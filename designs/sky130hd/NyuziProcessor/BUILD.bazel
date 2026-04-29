@@ -25,7 +25,7 @@ hightide_design(
         "ABC_AREA": "1",
         "CORE_UTILIZATION": "25",
         "PLACE_DENSITY_LB_ADDON": "0.1",
-        "MACRO_PLACE_HALO": "60 60",
+        "MACRO_PLACE_HALO": "30 30",
         "TNS_END_PERCENT": "100",
     },
 )

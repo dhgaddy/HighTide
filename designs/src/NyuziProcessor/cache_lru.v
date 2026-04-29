@@ -120,7 +120,7 @@ module lru_policy (
 
 	initial _sv2v_0 = 0;
 endmodule
-module cache_lru_8x256 (
+module cache_lru_4x256 (
 	clk,
 	reset,
 	fill_en,
@@ -158,8 +158,8 @@ module cache_lru_8x256 (
 	assign read_set = (fill_en ? fill_set : access_set);
 	assign new_mru = (was_fill ? fill_way : update_way);
 	assign update_lru_en = was_fill || update_en;
-	fakeram_1r1w_7x256 #(
-		.DATA_WIDTH(7),
+	fakeram_1r1w_3x256 #(
+		.DATA_WIDTH(3),
 		.SIZE(256),
 		.READ_DURING_WRITE("NEW_DATA")
 	) lru_data(

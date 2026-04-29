@@ -18,8 +18,10 @@ filegroup(
 _INCLUDE_DIRS = VORTEX_INCLUDE_DIRS_RELEASE_STR + " " + VORTEX_INCLUDE_DIRS_DEV_STR
 
 # Mirrors designs/asap7/vortex/BUILD.bazel; per-platform tuning:
-#   - clock period 1100 ps -> 8.0 ns (~7x, calibrated against minimax
-#     400 ps -> 4 ns and lfsr 108 ps -> 1.1 ns)
+#   - clock period 1100 ps -> 10.0 ns; first run at 8.0 ns missed timing
+#     (critical path 11.69 ns), so retarget to 10.0 ns to test how much
+#     of the overrun was placement-driven slack vs structural
+#     (~100 MHz on sky130hd vs ~333 MHz on nangate45 and ~909 MHz on asap7)
 #   - utilization eased from 50 -> 30 for the 130 nm node
 #   - macro halo grown to 60 60 to relieve memory-pin-access congestion
 #     (initial 30 30 left rdata/gpr_ram fan-out routing local hot-spots)

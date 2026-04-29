@@ -240,7 +240,7 @@ module NyuziProcessor (
 				wire l2r_cache_hit;
 				wire [511:0] l2r_data;
 				wire [511:0] l2r_data_from_memory;
-				wire [9:0] l2r_hit_cache_idx;
+				wire [8:0] l2r_hit_cache_idx;
 				wire l2r_l2_fill;
 				wire l2r_needs_writeback;
 				wire l2r_perf_l2_hit;
@@ -249,26 +249,26 @@ module NyuziProcessor (
 				wire l2r_request_valid;
 				wire l2r_restarted_flush;
 				wire l2r_store_sync_success;
-				wire [3:0] l2r_update_dirty_en;
+				wire [1:0] l2r_update_dirty_en;
 				wire [7:0] l2r_update_dirty_set;
 				wire l2r_update_dirty_value;
 				wire l2r_update_lru_en;
-				wire [1:0] l2r_update_lru_hit_way;
-				wire [3:0] l2r_update_tag_en;
+				wire [0:0] l2r_update_lru_hit_way;
+				wire [1:0] l2r_update_tag_en;
 				wire [7:0] l2r_update_tag_set;
 				wire l2r_update_tag_valid;
 				wire [17:0] l2r_update_tag_value;
 				wire [17:0] l2r_writeback_tag;
 				wire [511:0] l2t_data_from_memory;
-				wire [0:3] l2t_dirty;
-				wire [1:0] l2t_fill_way;
+				wire [0:1] l2t_dirty;
+				wire [0:0] l2t_fill_way;
 				wire l2t_l2_fill;
 				wire [611:0] l2t_request;
 				wire l2t_request_valid;
 				wire l2t_restarted_flush;
-				wire [71:0] l2t_tag;
-				wire [0:3] l2t_valid;
-				wire [9:0] l2u_write_addr;
+				wire [35:0] l2t_tag;
+				wire [0:1] l2t_valid;
+				wire [8:0] l2u_write_addr;
 				wire [511:0] l2u_write_data;
 				wire l2u_write_en;
 				l2_cache_arb_stage l2_cache_arb_stage(
@@ -1902,27 +1902,27 @@ module l2_cache_tag_stage (
 	input wire [511:0] l2a_data_from_memory;
 	input l2a_l2_fill;
 	input l2a_restarted_flush;
-	input [3:0] l2r_update_dirty_en;
+	input [1:0] l2r_update_dirty_en;
 	input wire [7:0] l2r_update_dirty_set;
 	input l2r_update_dirty_value;
-	input [3:0] l2r_update_tag_en;
+	input [1:0] l2r_update_tag_en;
 	input wire [7:0] l2r_update_tag_set;
 	input l2r_update_tag_valid;
 	input wire [17:0] l2r_update_tag_value;
 	input l2r_update_lru_en;
-	input wire [1:0] l2r_update_lru_hit_way;
+	input wire [0:0] l2r_update_lru_hit_way;
 	output reg l2t_request_valid;
 	output reg [611:0] l2t_request;
-	output reg [0:3] l2t_valid;
-	output wire [71:0] l2t_tag;
-	output wire [0:3] l2t_dirty;
+	output reg [0:1] l2t_valid;
+	output wire [35:0] l2t_tag;
+	output wire [0:1] l2t_dirty;
 	output reg l2t_l2_fill;
-	output wire [1:0] l2t_fill_way;
+	output wire [0:0] l2t_fill_way;
 	output reg [511:0] l2t_data_from_memory;
 	output reg l2t_restarted_flush;
-	cache_lru_4x256 #(
+	cache_lru_2x256 #(
 		.NUM_SETS(256),
-		.NUM_WAYS(4)
+		.NUM_WAYS(2)
 	) cache_lru(
 		.fill_en(l2a_l2_fill),
 		.fill_set(l2a_request[583-:8]),
@@ -1935,7 +1935,7 @@ module l2_cache_tag_stage (
 	);
 	genvar _gv_way_idx_2;
 	generate
-		for (_gv_way_idx_2 = 0; _gv_way_idx_2 < 4; _gv_way_idx_2 = _gv_way_idx_2 + 1) begin : way_tags_gen
+		for (_gv_way_idx_2 = 0; _gv_way_idx_2 < 2; _gv_way_idx_2 = _gv_way_idx_2 + 1) begin : way_tags_gen
 			localparam way_idx = _gv_way_idx_2;
 			reg line_valid [0:255];
 			fakeram_1r1w_18x256 #(
@@ -1945,7 +1945,7 @@ module l2_cache_tag_stage (
 			) sram_tags(
 				.read_en(l2a_request_valid),
 				.read_addr(l2a_request[583-:8]),
-				.read_data(l2t_tag[0 + ((3 - way_idx) * 18)+:18]),
+				.read_data(l2t_tag[0 + ((1 - way_idx) * 18)+:18]),
 				.write_en(l2r_update_tag_en[way_idx]),
 				.write_addr(l2r_update_tag_set),
 				.write_data(l2r_update_tag_value),
@@ -5416,14 +5416,14 @@ module l2_cache_update_stage (
 	input wire [611:0] l2r_request;
 	input wire [511:0] l2r_data;
 	input l2r_cache_hit;
-	input wire [9:0] l2r_hit_cache_idx;
+	input wire [8:0] l2r_hit_cache_idx;
 	input l2r_l2_fill;
 	input l2r_restarted_flush;
 	input wire [511:0] l2r_data_from_memory;
 	input l2r_store_sync_success;
 	input l2r_needs_writeback;
 	output wire l2u_write_en;
-	output wire [9:0] l2u_write_addr;
+	output wire [8:0] l2u_write_addr;
 	output wire [511:0] l2u_write_data;
 	output reg l2_response_valid;
 	output reg [548:0] l2_response;
@@ -7413,30 +7413,30 @@ module l2_cache_read_stage (
 	localparam defines_CACHE_LINE_BITS = 512;
 	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
 	input wire [611:0] l2t_request;
-	input [0:3] l2t_valid;
-	input wire [71:0] l2t_tag;
-	input [0:3] l2t_dirty;
+	input [0:1] l2t_valid;
+	input wire [35:0] l2t_tag;
+	input [0:1] l2t_dirty;
 	input l2t_l2_fill;
 	input l2t_restarted_flush;
-	input wire [1:0] l2t_fill_way;
+	input wire [0:0] l2t_fill_way;
 	input wire [511:0] l2t_data_from_memory;
-	output wire [3:0] l2r_update_dirty_en;
+	output wire [1:0] l2r_update_dirty_en;
 	output wire [7:0] l2r_update_dirty_set;
 	output wire l2r_update_dirty_value;
-	output wire [3:0] l2r_update_tag_en;
+	output wire [1:0] l2r_update_tag_en;
 	output wire [7:0] l2r_update_tag_set;
 	output wire l2r_update_tag_valid;
 	output wire [17:0] l2r_update_tag_value;
 	output wire l2r_update_lru_en;
-	output wire [1:0] l2r_update_lru_hit_way;
+	output wire [0:0] l2r_update_lru_hit_way;
 	input l2u_write_en;
-	input [9:0] l2u_write_addr;
+	input [8:0] l2u_write_addr;
 	input wire [511:0] l2u_write_data;
 	output reg l2r_request_valid;
 	output reg [611:0] l2r_request;
 	output wire [511:0] l2r_data;
 	output reg l2r_cache_hit;
-	output reg [9:0] l2r_hit_cache_idx;
+	output reg [8:0] l2r_hit_cache_idx;
 	output reg l2r_l2_fill;
 	output reg l2r_restarted_flush;
 	output reg [511:0] l2r_data_from_memory;
@@ -7450,19 +7450,19 @@ module l2_cache_read_stage (
 	reg [25:0] load_sync_address [0:3];
 	reg load_sync_address_valid [0:3];
 	wire can_store_sync;
-	wire [3:0] hit_way_oh;
+	wire [1:0] hit_way_oh;
 	wire cache_hit;
-	wire [1:0] hit_way_idx;
-	wire [9:0] read_address;
+	wire [0:0] hit_way_idx;
+	wire [8:0] read_address;
 	wire load;
 	wire store;
 	wire update_dirty;
 	wire update_tag;
 	wire flush_first_pass;
-	wire [1:0] writeback_way;
+	wire [0:0] writeback_way;
 	wire hit_or_miss;
 	wire dinvalidate;
-	wire [1:0] tag_update_way;
+	wire [0:0] tag_update_way;
 	wire [1:0] request_sync_slot;
 	assign load = (l2t_request[605-:3] == 3'd0) || (l2t_request[605-:3] == 3'd1);
 	assign store = (l2t_request[605-:3] == 3'd2) || (l2t_request[605-:3] == 3'd3);
@@ -7470,20 +7470,20 @@ module l2_cache_read_stage (
 	assign dinvalidate = l2t_request[605-:3] == 3'd6;
 	genvar _gv_way_idx_8;
 	generate
-		for (_gv_way_idx_8 = 0; _gv_way_idx_8 < 4; _gv_way_idx_8 = _gv_way_idx_8 + 1) begin : hit_way_gen
+		for (_gv_way_idx_8 = 0; _gv_way_idx_8 < 2; _gv_way_idx_8 = _gv_way_idx_8 + 1) begin : hit_way_gen
 			localparam way_idx = _gv_way_idx_8;
-			assign hit_way_oh[way_idx] = (l2t_request[601-:18] == l2t_tag[0 + ((3 - way_idx) * 18)+:18]) && l2t_valid[way_idx];
+			assign hit_way_oh[way_idx] = (l2t_request[601-:18] == l2t_tag[0 + ((1 - way_idx) * 18)+:18]) && l2t_valid[way_idx];
 		end
 	endgenerate
 	assign cache_hit = |hit_way_oh && l2t_request_valid;
-	oh_to_idx #(.NUM_SIGNALS(4)) oh_to_idx_hit_way(
+	oh_to_idx #(.NUM_SIGNALS(2)) oh_to_idx_hit_way(
 		.one_hot(hit_way_oh),
 		.index(hit_way_idx)
 	);
 	assign read_address = {(l2t_l2_fill ? l2t_fill_way : hit_way_idx), l2t_request[583-:8]};
-	fakeram_1r1w_512x1024 #(
+	fakeram_1r1w_512x512 #(
 		.DATA_WIDTH(defines_CACHE_LINE_BITS),
-		.SIZE(1024),
+		.SIZE(512),
 		.READ_DURING_WRITE("NEW_DATA")
 	) sram_l2_data(
 		.read_en(l2t_request_valid && (cache_hit || l2t_l2_fill)),
@@ -7499,23 +7499,23 @@ module l2_cache_read_stage (
 	assign l2r_update_dirty_set = l2t_request[583-:8];
 	assign l2r_update_dirty_value = store;
 	genvar _gv_dirty_update_idx_1;
-	function automatic [1:0] sv2v_cast_2;
-		input reg [1:0] inp;
-		sv2v_cast_2 = inp;
+	function automatic [0:0] sv2v_cast_1;
+		input reg [0:0] inp;
+		sv2v_cast_1 = inp;
 	endfunction
 	generate
-		for (_gv_dirty_update_idx_1 = 0; _gv_dirty_update_idx_1 < 4; _gv_dirty_update_idx_1 = _gv_dirty_update_idx_1 + 1) begin : dirty_update_gen
+		for (_gv_dirty_update_idx_1 = 0; _gv_dirty_update_idx_1 < 2; _gv_dirty_update_idx_1 = _gv_dirty_update_idx_1 + 1) begin : dirty_update_gen
 			localparam dirty_update_idx = _gv_dirty_update_idx_1;
-			assign l2r_update_dirty_en[dirty_update_idx] = update_dirty && (l2t_l2_fill ? l2t_fill_way == sv2v_cast_2(dirty_update_idx) : hit_way_oh[dirty_update_idx]);
+			assign l2r_update_dirty_en[dirty_update_idx] = update_dirty && (l2t_l2_fill ? l2t_fill_way == sv2v_cast_1(dirty_update_idx) : hit_way_oh[dirty_update_idx]);
 		end
 	endgenerate
 	assign update_tag = l2t_l2_fill || (cache_hit && dinvalidate);
 	assign tag_update_way = (l2t_l2_fill ? l2t_fill_way : hit_way_idx);
 	genvar _gv_tag_idx_1;
 	generate
-		for (_gv_tag_idx_1 = 0; _gv_tag_idx_1 < 4; _gv_tag_idx_1 = _gv_tag_idx_1 + 1) begin : tag_update_gen
+		for (_gv_tag_idx_1 = 0; _gv_tag_idx_1 < 2; _gv_tag_idx_1 = _gv_tag_idx_1 + 1) begin : tag_update_gen
 			localparam tag_idx = _gv_tag_idx_1;
-			assign l2r_update_tag_en[tag_idx] = update_tag && (tag_update_way == sv2v_cast_2(tag_idx));
+			assign l2r_update_tag_en[tag_idx] = update_tag && (tag_update_way == sv2v_cast_1(tag_idx));
 		end
 	endgenerate
 	assign l2r_update_tag_set = l2t_request[583-:8];
@@ -7523,6 +7523,10 @@ module l2_cache_read_stage (
 	assign l2r_update_tag_value = l2t_request[601-:18];
 	assign l2r_update_lru_en = cache_hit && (load || store);
 	assign l2r_update_lru_hit_way = hit_way_idx;
+	function automatic [1:0] sv2v_cast_2;
+		input reg [1:0] inp;
+		sv2v_cast_2 = inp;
+	endfunction
 	assign request_sync_slot = sv2v_cast_2({l2t_request[611-:4], l2t_request[607-:2]});
 	assign can_store_sync = ((load_sync_address[request_sync_slot] == {l2t_request[601-:18], l2t_request[583-:8]}) && load_sync_address_valid[request_sync_slot]) && (l2t_request[605-:3] == 3'd3);
 	assign hit_or_miss = (l2t_request_valid && (((l2t_request[605-:3] == 3'd2) || can_store_sync) || (l2t_request[605-:3] == 3'd0))) && !l2t_l2_fill;
@@ -7530,7 +7534,7 @@ module l2_cache_read_stage (
 		l2r_request <= l2t_request;
 		l2r_cache_hit <= cache_hit;
 		l2r_l2_fill <= l2t_l2_fill;
-		l2r_writeback_tag <= l2t_tag[0 + ((3 - writeback_way) * 18)+:18];
+		l2r_writeback_tag <= l2t_tag[0 + ((1 - writeback_way) * 18)+:18];
 		l2r_needs_writeback <= l2t_dirty[writeback_way] && l2t_valid[writeback_way];
 		l2r_data_from_memory <= l2t_data_from_memory;
 		l2r_hit_cache_idx <= read_address;

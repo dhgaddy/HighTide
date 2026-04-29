@@ -190,7 +190,7 @@
      // Cache memory
      //
 -    sram_1r1w #(
-+    fakeram_1r1w_512x1024 #(
++    fakeram_1r1w_512x512 #(
          .DATA_WIDTH(CACHE_LINE_BITS),
          .SIZE(`L2_WAYS * `L2_SETS),
          .READ_DURING_WRITE("NEW_DATA")
@@ -201,7 +201,7 @@
      end
 
 -    cache_lru #(
-+    cache_lru_4x256 #(
++    cache_lru_2x256 #(
          .NUM_SETS(`L2_SETS),
          .NUM_WAYS(`L2_WAYS)
      ) cache_lru(
@@ -287,7 +287,7 @@
  `define L1I_WAYS 4
  `define L1I_SETS 64        // 16k
 -`define L2_WAYS 8
-+`define L2_WAYS 4
++`define L2_WAYS 2
  `define L2_SETS 256        // 128k
  `define AXI_DATA_WIDTH 32
  `define USE_LDG_FOR_DDR 1

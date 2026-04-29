@@ -15,6 +15,12 @@ _ARGS.update({
     # macros via macros.tcl so rtl_macro_placer skips the failing pipe_fma
     # cluster.
     "MACRO_PLACEMENT_TCL": "$(location :macros.tcl)",
+    # Workaround for OpenROAD ODB-1200 crash in post-CTS hold-repair
+    # (VLSIDA/HighTide#75). RSZ-0100's move sequence orphans a load pin
+    # during repair_timing, then InsertBufferBeforeLoads trips an ODB
+    # consistency check. Skipping the CTS repair_timing pass bypasses
+    # it; downstream GRT/route still run their own hold-repair passes.
+    "SKIP_CTS_REPAIR_TIMING": "1",
 })
 
 hightide_design(

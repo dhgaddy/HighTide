@@ -9,6 +9,7 @@ hightide_design(
         "SDC_FILE": [":constraint.sdc"],
         "IO_CONSTRAINTS": [":io.tcl"],
         "FOOTPRINT_TCL": [":io.tcl"],
+        "PRE_CTS_TCL": [":pre_cts.tcl"],
         "ADDITIONAL_LEFS": ["//designs/src/snitch_cluster:sram_lefs"],
         "ADDITIONAL_LIBS": ["//designs/src/snitch_cluster:sram_libs"],
     },

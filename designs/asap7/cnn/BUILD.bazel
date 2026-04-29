@@ -11,8 +11,7 @@ hightide_design(
     },
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
-        "DIE_AREA": "0 0 600 600",
-        "CORE_AREA": "10 10 590 590",
+        "CORE_UTILIZATION": "55",
         "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
         "MACRO_PLACE_HALO": "6 6",
         "MACRO_BLOCKAGE_HALO": "0.5",

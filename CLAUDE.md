@@ -8,22 +8,20 @@ HighTide is a VLSI design benchmark suite built on OpenROAD-flow-scripts (ORFS).
 
 ## Setup
 
-There are two build flows: the original **Make flow** (Docker-based) and the newer **Bazel flow** (native).
-
-### Make Flow Setup
-
-```bash
-./setup.sh            # Init ORFS submodule, create symlinks (scripts/, util/, platforms/)
-./runorfs.sh           # Launch Docker container with OpenROAD tools
-```
+There are two build flows: the **Bazel flow** (native, recommended) and the **Make flow** (Docker-based, *deprecated and scheduled for removal — [#100](https://github.com/VLSIDA/HighTide/issues/100)*).
 
 ### Bazel Flow Setup
 
-Requires an Ubuntu machine with:
-- [Bazelisk](https://github.com/bazelbuild/bazelisk) (or Bazel 7.6.1+)
-- Docker (for bazel-orfs tool extraction from ORFS image)
+Requires an Ubuntu machine with [Bazelisk](https://github.com/bazelbuild/bazelisk) (or Bazel 7.6.1+).  No additional setup needed — Bazel fetches everything via `MODULE.bazel` and the pinned `bazel-orfs` submodule.
 
-No additional setup needed — Bazel fetches ORFS and bazel-orfs automatically via `MODULE.bazel`.
+### Make Flow Setup (deprecated)
+
+> The Make flow is no longer maintained.  Since the bazel-orfs upgrade (#71) the Docker image tag is no longer tracked in `MODULE.bazel`, so `setup.sh` / `runorfs.sh` / `runorfs_ni.sh` are broken until the image is wired back manually.  Use the Bazel flow.
+
+```bash
+./setup.sh            # Init ORFS submodule, create symlinks (scripts/, util/, platforms/)
+./runorfs.sh          # Launch Docker container with OpenROAD tools
+```
 
 ## Build Commands
 
@@ -54,7 +52,7 @@ bazel build //designs/asap7/lfsr:lfsr_place
 
 Note: `hightide_design()` exposes only the per-stage `orfs_flow` targets (`_synth` … `_final`) plus `_generate_abstract` / `_generate_metadata`. There is no aggregate `:<design>` target — use `:<design>_final` for the full flow.
 
-### Make Flow (legacy)
+### Make Flow (deprecated, scheduled for removal)
 
 ```bash
 # Run full flow for a design (default: asap7/lfsr)

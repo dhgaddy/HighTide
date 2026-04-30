@@ -26,6 +26,33 @@ def _gallery_image(name, src):
         script = "//tools/gallery:final_image.tcl",
     )
 
+# Stages for which we emit a <name>_gui_<stage> bazel-run launcher.
+# Mirrors orfs_flow's per-stage output targets (synth … final).
+_GUI_STAGES = ("synth", "floorplan", "place", "cts", "grt", "route", "final")
+
+def _gui_launcher(name, stage):
+    """Emit a `bazel run :<name>_gui_<stage>` shortcut.
+
+    Loads the stage ODB (and matching SDC, if any) into the OpenROAD GUI
+    directly — no ORFS Makefile, no `bazel run @bazel-orfs//:deps -- …`
+    incantation. The launcher works as long as the stage target has been
+    built (or is buildable as a runfiles dep).
+    """
+    native.sh_binary(
+        name = name + "_gui_" + stage,
+        srcs = ["//tools/gui:launch_gui.sh"],
+        data = [
+            ":" + name + "_" + stage,
+            "//tools/gui:open_db.tcl",
+            "@openroad//:openroad",
+        ],
+        args = [
+            "$(rootpath @openroad//:openroad)",
+            "$(rootpath //tools/gui:open_db.tcl)",
+        ],
+        tags = ["manual"],
+    )
+
 def hightide_design(name, platform, verilog_files, top = None, arguments = {}, sources = {}, **kwargs):
     """Wraps orfs_flow with HighTide defaults.
 
@@ -62,3 +89,6 @@ def hightide_design(name, platform, verilog_files, top = None, arguments = {}, s
         name = name + "_gallery",
         src = ":" + name + "_final",
     )
+
+    for stage in _GUI_STAGES:
+        _gui_launcher(name, stage)

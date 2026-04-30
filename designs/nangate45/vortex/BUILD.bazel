@@ -1,0 +1,46 @@
+load("//:defs.bzl", "hightide_design")
+load(
+    "//designs/src/vortex:srcs.bzl",
+    "VORTEX_INCLUDE_DIRS_DEV_STR",
+    "VORTEX_INCLUDE_DIRS_RELEASE_STR",
+)
+
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
+_INCLUDE_DIRS = VORTEX_INCLUDE_DIRS_RELEASE_STR + " " + VORTEX_INCLUDE_DIRS_DEV_STR
+
+# Mirrors designs/asap7/vortex/BUILD.bazel; per-platform tuning:
+#   - clock period scales 1100 ps → 3.0 ns (~2.7x, calibrated against
+#     NyuziProcessor 1600 ps → 4.5 ns)
+#   - utilization eased from 50 → 35 to give nangate45 placer headroom
+#   - macro halo grown to 40 40 for the 45 nm feature pitch
+hightide_design(
+    name = "vortex",
+    platform = "nangate45",
+    verilog_files = ["//designs/src/vortex:rtl"],
+    top = "Vortex",
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HDL_FRONTEND": "slang",
+        "SYNTH_HIERARCHICAL": "0",
+        "VERILOG_DEFINES": "-DSYNTHESIS -DSV_DPI -DMEM_BLOCK_SIZE=16 -DMAX_FANOUT=32 -DLATENCY_IMUL=5",
+        "VERILOG_INCLUDE_DIRS": _INCLUDE_DIRS,
+        "CORE_UTILIZATION": "35",
+        "PLACE_DENSITY_LB_ADDON": "0.20",
+        "MACRO_PLACE_HALO": "40 40",
+        "TNS_END_PERCENT": "100",
+    },
+    stage_data = {"synth": ["//designs/src/vortex:rtl_data"]},
+)

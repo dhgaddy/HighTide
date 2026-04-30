@@ -1,6 +1,15 @@
 # Legacy Make Flow
 
-The original HighTide build flow uses GNU Make and Docker. It is still functional but the **Bazel flow is recommended** for new work — see the [Quick Start Guide](quickstart.md).
+> **⚠️ DEPRECATED — scheduled for removal ([#100](https://github.com/VLSIDA/HighTide/issues/100)).**
+>
+> The Make flow is no longer maintained.  Since the bazel-orfs upgrade
+> ([#71](https://github.com/VLSIDA/HighTide/pull/71)) the Docker image
+> tag is no longer tracked in `MODULE.bazel`, so `setup.sh` /
+> `runorfs.sh` / `runorfs_ni.sh` will fail until that's wired back
+> manually.  All new work should use the [Bazel flow](quickstart.md);
+> this document is kept for reference until the Make flow is removed.
+
+The original HighTide build flow uses GNU Make and Docker.
 
 ## Setup
 

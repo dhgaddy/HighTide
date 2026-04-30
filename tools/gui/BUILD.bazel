@@ -1,0 +1,4 @@
+exports_files([
+    "launch_gui.sh",
+    "open_db.tcl",
+])

@@ -134,12 +134,12 @@ Dev mode requires: `git submodule update --init designs/src/<design>/dev/repo` b
 Designs reaching `_final` (cached on remote build cache):
 - **asap7**: coralnpu, gemmini, lfsr, minimax, sha3, vortex, all 6 liteeth variants, NVDLA partitions a/m/o
 - **nangate45**: coralnpu, gemmini, lfsr, minimax, NyuziProcessor, sha3, all 6 liteeth variants
-- **sky130hd**: gemmini, lfsr, minimax, sha3, liteeth mac_axi_mii / mac_wb_mii / udp_stream_rgmii / udp_usp_gth_sgmii
+- **sky130hd**: gemmini, lfsr, minimax, sha3, liteeth mac_axi_mii / mac_wb_mii / udp_raw_rgmii / udp_stream_rgmii / udp_usp_gth_sgmii
 
 Not yet finishing (not cached):
 - **asap7**: cnn, floonoc, NyuziProcessor, snitch_cluster, bp_processor (bp_uno, bp_quad), NVDLA partitions c, p
 - **nangate45**: cnn, bp_processor (bp_uno, bp_quad)
-- **sky130hd**: cnn, liteeth udp_raw_rgmii, liteeth udp_stream_sgmii
+- **sky130hd**: cnn, liteeth udp_stream_sgmii
 
 Use `tools/fetch_cache.sh` to pull cached `_final` results from the remote cache; designs marked NOT CACHED there are the not-yet-finishing set above.
 

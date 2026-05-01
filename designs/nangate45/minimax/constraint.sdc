@@ -1,7 +1,7 @@
 current_design minimax
 
 set clk_name clk
-set clk_period 0.8
+set clk_period 1.6
 set clk_io_pct 0.2
 
 set clk_port [get_ports $clk_name]

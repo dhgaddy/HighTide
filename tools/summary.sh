@@ -96,7 +96,10 @@ echo "Incomplete builds:"
 find "$BIN_DIR/designs" -path "*/results/*/1_synth.odb" -not -path "*.runfiles*" 2>/dev/null | sort -u | while read -r synth; do
     dir=$(dirname "$synth")
     if [ ! -f "${dir}/6_final.gds" ] && [ ! -f "${dir}/6_final.odb" ]; then
-        rel="${synth#$BIN_DIR/designs/}"
+        # Parse from the inner results subtree so per-variant names
+        # (e.g. liteeth_mac_axi_mii) are preserved instead of collapsing
+        # to the parent dir (liteeth).  Mirrors the success loop above.
+        rel="${synth##*/results/}"
         platform="${rel%%/*}"
         rel="${rel#*/}"
         design="${rel%%/*}"

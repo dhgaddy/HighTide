@@ -19,7 +19,7 @@ set -uo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_DIR"
 
-REMOTE_CACHE="https://storage.googleapis.com/hightide-bazel-cache"
+REMOTE_CACHE="https://cache.hightide-benchmarks.dev"
 TIMEOUT=30
 STAGE="final"
 FILTER_PLATFORM=""

@@ -3,9 +3,12 @@
 # submodule not being checked out doesn't break bazel invocations.
 try-import %workspace%/bazel-orfs/.bazelrc
 
-# Remote cache (Google Cloud Storage) — publicly readable, auth required to write.
-# To enable writes: gcloud auth application-default login
-build --remote_cache=https://storage.googleapis.com/hightide-bazel-cache
+# Remote cache (self-hosted bazel-remote on donut, fronted by Cloudflare Tunnel) —
+# publicly readable, auth required to write.  To enable writes, add to .bazelrc.user
+# (gitignored):
+#   build --remote_cache=https://USER:TOKEN@cache.hightide-benchmarks.dev
+#   build --remote_upload_local_results=true
+build --remote_cache=https://cache.hightide-benchmarks.dev
 build --remote_upload_local_results=false
 
 # Local disk cache as fallback

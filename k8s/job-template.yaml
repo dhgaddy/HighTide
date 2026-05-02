@@ -61,13 +61,16 @@ spec:
 
           cd /repo
 
-          # Build the design with remote cache (upload if credentials available)
-          CACHE_FLAGS="--remote_cache=https://storage.googleapis.com/hightide-bazel-cache"
-          if [ -f /secrets/gcs/key.json ]; then
-            echo "GCS credentials found, enabling cache upload"
-            CACHE_FLAGS="$CACHE_FLAGS --remote_upload_local_results=true --google_credentials=/secrets/gcs/key.json"
+          # Build the design with remote cache (upload if credentials available).
+          # BAZEL_CACHE_URL is injected from the bazel-cache-creds Secret in the form
+          # https://USER:TOKEN@cache.hightide-benchmarks.dev.  When unset (Secret missing
+          # or readers without write access), fall back to the public read-only URL.
+          if [ -n "${BAZEL_CACHE_URL:-}" ]; then
+            echo "Cache credentials found, enabling cache upload"
+            CACHE_FLAGS="--remote_cache=$BAZEL_CACHE_URL --remote_upload_local_results=true"
           else
-            echo "WARNING: GCS credentials not found, cache is read-only"
+            echo "WARNING: cache credentials not found, cache is read-only"
+            CACHE_FLAGS="--remote_cache=https://cache.hightide-benchmarks.dev"
           fi
 
           # When uploading artifacts, force download of all intermediate
@@ -106,12 +109,16 @@ spec:
           fi
 
           exit $BUILD_RC
+        env:
+        - name: BAZEL_CACHE_URL
+          valueFrom:
+            secretKeyRef:
+              name: bazel-cache-creds
+              key: url
+              optional: true
         volumeMounts:
         - name: repo
           mountPath: /repo
-        - name: gcs-key
-          mountPath: /secrets/gcs
-          readOnly: true
         - name: artifacts
           mountPath: /artifacts
         resources:
@@ -124,10 +131,6 @@ spec:
       volumes:
       - name: repo
         emptyDir: {}
-      - name: gcs-key
-        secret:
-          secretName: gcs-bazel-cache
-          optional: true
       - name: artifacts
         persistentVolumeClaim:
           claimName: hightide-artifacts

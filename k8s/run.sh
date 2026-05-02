@@ -16,7 +16,7 @@
 #   --branch BRANCH    Git branch to build (default: current branch)
 #   --cpu NUM          CPU request per job (default: 8)
 #   --mem SIZE         Memory request per job (default: 64Gi)
-#   --upload-artifacts Upload build artifacts (bazel-bin) to GCS for debug
+#   --upload-artifacts Save build artifacts (bazel-bin) to the hightide-artifacts PVC for debug
 #   --dry-run          Print generated YAML without submitting
 #   --status           Show status of submitted jobs
 #   --delete           Delete jobs (filtered by platform/design args)

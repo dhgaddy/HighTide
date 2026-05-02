@@ -1,11 +1,11 @@
 # Kubernetes Builds on NRP Nautilus
 
-HighTide uses the [National Research Platform (NRP) Nautilus](https://nationalresearchplatform.org/nautilus/) Kubernetes cluster to build designs at scale. Each design is submitted as a separate K8s Job, and build results are uploaded to a shared GCS remote cache.
+HighTide uses the [National Research Platform (NRP) Nautilus](https://nationalresearchplatform.org/nautilus/) Kubernetes cluster to build designs at scale. Each design is submitted as a separate K8s Job, and build results are uploaded to a shared `bazel-remote` HTTP cache hosted at `cache.hightide-benchmarks.dev`.
 
 ## Prerequisites
 
 - `kubectl` configured with access to the NRP Nautilus cluster
-- Namespace `vlsida` with the `gcs-bazel-cache` secret for cache uploads
+- Namespace `vlsida` with the `bazel-cache-creds` secret for cache uploads (key `url` = `https://USER:TOKEN@cache.hightide-benchmarks.dev`).  Without it, jobs run with anonymous read-only access to the cache.
 
 See the [NRP Nautilus documentation](https://docs.nrp-nautilus.io/) for cluster access and configuration.
 
@@ -37,7 +37,7 @@ Each invocation of `run.sh` creates one K8s Job per matching design. Jobs clone 
 | `--branch BRANCH` | `main` | Git branch to build |
 | `--cpu NUM` | `8` | CPU request per job |
 | `--mem SIZE` | `64Gi` | Memory request per job (limit is 2x) |
-| `--upload-artifacts` | off | Upload `bazel-bin` artifacts to GCS for debug (see below) |
+| `--upload-artifacts` | off | Save `bazel-bin` artifacts to the `hightide-artifacts` PVC for debug (see below) |
 | `--dry-run` | | Print YAML without submitting |
 
 ## Monitoring Jobs
@@ -72,7 +72,7 @@ Jobs can be deleted by platform, design, or both. Deletion uses Kubernetes label
 
 ## Remote Cache
 
-Jobs are configured with a GCS remote cache (`--remote_cache`). When the `gcs-bazel-cache` secret is present in the namespace, jobs upload build results after completion. This enables:
+Jobs are configured with a self-hosted `bazel-remote` HTTP cache (`--remote_cache=https://cache.hightide-benchmarks.dev`).  Reads are public/anonymous; uploads require the `bazel-cache-creds` secret in the namespace.  When the secret is present, jobs upload build results after completion.  This enables:
 
 1. **Faster rebuilds** — subsequent jobs for the same design hit the cache
 2. **Local fetching** — developers can pull baseline results without building locally
@@ -172,5 +172,4 @@ Jobs have `backoffLimit: 1` (one retry on failure) and `ttlSecondsAfterFinished:
 | Volume | Type | Purpose |
 |--------|------|---------|
 | `repo` | emptyDir | Cloned repo (ephemeral) |
-| `gcs-key` | Secret (`gcs-bazel-cache`, optional) | GCS credentials for remote cache |
 | `artifacts` | PVC (`hightide-artifacts`) | Persistent artifact storage for debug |

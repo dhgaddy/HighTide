@@ -140,27 +140,36 @@ DONE_FAIL=0
 # don't double-count or re-detect them.
 declare -A FINAL_STATE    # job_name -> "succ"|"fail"
 
-# Returns lines: <jobname>|<succ>|<fail> for tracked jobs only.
+# Returns lines: <jobname>|<complete_cond>|<failed_cond> for tracked jobs only.
+#
+# `complete_cond` / `failed_cond` are the Job-level terminal conditions from
+# .status.conditions[?(@.type=="Complete"|"Failed")].status — `True`, `False`
+# or `<none>`.  We deliberately do NOT use .status.{succeeded,failed} (per-pod
+# counts) because those flip as soon as a single pod terminates, even when
+# backoffLimit lets the Job retry.  Reading them as terminal would mark a
+# design failed the moment its first pod hit a transient error (e.g.
+# GitHub 502 fetching boost archives), even though the retry pod went on
+# to succeed.
 poll_tracked_status() {
     [[ ${#TRACKED[@]} -eq 0 ]] && return 0
 
     # One kubectl call; filter to tracked jobs.
     local lines
     lines=$(kubectl get jobs -n "$NAMESPACE" -l "app=hightide,user=$USER_LABEL" \
-        -o custom-columns='NAME:.metadata.name,S:.status.succeeded,F:.status.failed' \
+        -o custom-columns='NAME:.metadata.name,C:.status.conditions[?(@.type=="Complete")].status,F:.status.conditions[?(@.type=="Failed")].status' \
         --no-headers 2>/dev/null || true)
 
     local n
     while IFS= read -r line; do
         [[ -z "$line" ]] && continue
         n=$(awk '{print $1}' <<<"$line")
-        local s f
-        s=$(awk '{print $2}' <<<"$line")
+        local c f
+        c=$(awk '{print $2}' <<<"$line")
         f=$(awk '{print $3}' <<<"$line")
         # Is this one of ours?
         for tj in "${TRACKED[@]}"; do
             if [[ "$tj" == "$n" ]]; then
-                echo "$n|$s|$f"
+                echo "$n|$c|$f"
                 break
             fi
         done
@@ -191,22 +200,24 @@ while :; do
     active=0
     new_done_ok=0
     new_done_fail=0
-    while IFS='|' read -r jn s f; do
+    while IFS='|' read -r jn c f; do
         [[ -z "$jn" ]] && continue
-        if [[ "$s" == "<none>" && "$f" == "<none>" ]]; then
-            active=$((active + 1))
-        elif [[ "$s" != "<none>" ]]; then
+        if [[ "$c" == "True" ]]; then
             if [[ -z "${FINAL_STATE[$jn]:-}" ]]; then
                 FINAL_STATE[$jn]="succ"
                 new_done_ok=$((new_done_ok + 1))
                 echo "[$(date +%H:%M:%S)] DONE  ${JOB_DESIGN[$jn]:-$jn}"
             fi
-        elif [[ "$f" != "<none>" ]]; then
+        elif [[ "$f" == "True" ]]; then
             if [[ -z "${FINAL_STATE[$jn]:-}" ]]; then
                 FINAL_STATE[$jn]="fail"
                 new_done_fail=$((new_done_fail + 1))
                 echo "[$(date +%H:%M:%S)] FAIL  ${JOB_DESIGN[$jn]:-$jn}"
             fi
+        else
+            # Active: not yet terminal — pod may have failed and be retrying
+            # within backoffLimit, but the Job itself isn't done.
+            active=$((active + 1))
         fi
     done < <(poll_tracked_status)
     DONE_OK=$((DONE_OK + new_done_ok))

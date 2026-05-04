@@ -12,5 +12,8 @@ hightide_design(
     },
     arguments = {
         "CORE_UTILIZATION": "35",
+        # Drop split_load from repair_timing's move sequence to avoid
+        # OpenROAD CTS ODB-1200 (see CLAUDE.md "Known bug workarounds").
+        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
     },
 )

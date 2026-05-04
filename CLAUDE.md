@@ -174,6 +174,29 @@ When reporting or comparing cell counts across designs or platforms, **exclude f
 
 Use the per-class fields in `6_report.json` (e.g. `class:sequential_cell`, `class:multi_input_combinational_cell`, `class:inverter`, `class:clock_buffer`, `class:timing_repair_buffer`) — not the top-level `instance__count` — when comparing designs.
 
+## Known OpenROAD / yosys-slang bug workarounds
+
+Designs in this repo carry workarounds for upstream tool bugs. Update this table whenever a new workaround lands, and remove rows once the upstream bug is fixed and the workaround can be reverted.
+
+| Bug | Affected designs | Workaround | First commit | Issue |
+|-----|------------------|------------|--------------|-------|
+| **CTS-0105** false skip — yosys hierarchical synthesis output port buffers arrive in ODB with `dbSourceType::TIMING` instead of `NETLIST`; CTS skips them as pre-existing clock buffers and leaves the clock net unbuffered | asap7 NyuziProcessor; asap7/nangate45/sky130hd `bp_quad`, `bp_uno` | `PRE_CTS_TCL` script resets affected buffers' `dbSourceType` from `TIMING` → `NETLIST` before CTS runs | `81b0ed4b` | [OpenROAD#10177](https://github.com/The-OpenROAD-Project/OpenROAD/issues/10177) |
+| **MPL-0040** — `rtl_macro_placer` annealing failure on certain macro clusters | asap7 `bp_quad` (pipe_fma cluster), asap7 `cnn` | Hand-place fakeram macros in left-edge columns at FIRM status via `macros.tcl` so RTLMP only sees pre-placed macros; for cnn also drop `CORE_UTILIZATION` 65→60 | `09542e19` | [OpenROAD#9985](https://github.com/The-OpenROAD-Project/OpenROAD/issues/9985) |
+| **ODB-1200** in `repair_timing` — `InsertBufferBeforeLoads` iterates a stale load list and aborts the flow with `Load pin '...' is not connected to net '...'`. Triggered by the resizer's `SplitLoadMove` step in CTS-time repair_timing | asap7 `liteeth_udp_stream_sgmii`, `liteeth_udp_usp_gth_sgmii`; sky130hd `NyuziProcessor`; asap7 `bp_quad`; asap7 `gemmini` (this PR) | Most designs: `SKIP_CTS_REPAIR_TIMING = 1` (skips the whole repair pass; route still does its own hold-repair). Gemmini: drop `split_load` from `SETUP_MOVE_SEQUENCE` (`"unbuffer,sizeup,swap,buffer,clone"`) — keeps the rest of repair_timing working | `87829fdb` | [HighTide#75](https://github.com/VLSIDA/HighTide/issues/75) |
+| **DPL-0036** in CTS-internal `detailed_placement` — `cts.tcl` builds its own `dpl_args` ignoring `DETAIL_PLACEMENT_ARGS`, so CTS-inserted leaf clock buffers can land too far from a legal stdcell row | asap7 `snitch_cluster` | `PRE_CTS_TCL` wraps `detailed_placement` to inject `-max_displacement {2000 400}` for the CTS call | `0af20020` | None (ORFS layering issue; no upstream issue filed yet) |
+| **yosys-slang** phantom 1'x drivers on interface-array modport ports — extra driver wins at `opt_clean`, real driver silently dropped | asap7 `vortex` | Bumped `yosys-slang` 4e53d77 → eabdfd1 (vendored via `MODULE.bazel`) | `cb488bea` | [yosys-slang#304](https://github.com/povik/yosys-slang/issues/304) |
+| **`repair_timing` non-convergence** — repair loop spends iterations on the same RTL-bounded endpoint without making progress. Not a bug per se, but a flow pathology when the clock target is too tight for the design | asap7 `snitch_cluster` | `SKIP_INCREMENTAL_REPAIR = 1` to skip post-GRT `repair_timing` | `39ca8670` | None |
+
+### Useful ORFS env vars for these workarounds
+
+- **`PRE_CTS_TCL`** / **`PRE_GRT_TCL`** / etc — point at a Tcl script that runs before the named stage. Used for the CTS-0105 reset and DPL-0036 displacement injection.
+- **`SETUP_MOVE_SEQUENCE`** — comma-separated list of moves passed to `repair_timing -sequence`. Default sequence is `unbuffer,sizeup,swap,buffer,clone,split_load`. Drop `split_load` to dodge ODB-1200 while keeping the rest of repair_timing active.
+- **`SKIP_CTS_REPAIR_TIMING = 1`** — skip the entire `repair_timing_helper` call inside `cts.tcl`. Heavier hammer than dropping a single move; route's own hold-repair still runs.
+- **`SKIP_INCREMENTAL_REPAIR = 1`** — skip post-GRT `repair_timing`. Use when the loop never converges (RTL-bounded critical paths).
+- **`SKIP_LAST_GASP = 1`** — skip the final repair_timing pass.
+
+In the Bazel flow these go into `arguments = { ... }` of `hightide_design()`. In the Make flow they're plain `export` lines in `config.mk`.
+
 ## Shared Machine
 
 - This is a shared multi-user machine. When checking process status (e.g., `ps aux | grep openroad`), always filter to the current user's processes or check for bazel sandbox paths (`external/bazel-orfs`) to avoid confusing other users' builds with ours.

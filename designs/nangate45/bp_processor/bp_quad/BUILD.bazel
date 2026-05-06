@@ -8,6 +8,10 @@ _ARGS.update({
     "CORE_UTILIZATION": "35",
     "PLACE_DENSITY_LB_ADDON": "0.10",
     "MACRO_PLACE_HALO": "40 40",
+    # Workaround for OpenROAD #9985 (MPL-0040): hand-place all fakeram_*
+    # macros via macros.tcl so rtl_macro_placer skips the failing
+    # inter-core router cluster (same approach as asap7 bp_quad).
+    "MACRO_PLACEMENT_TCL": "$(location :macros.tcl)",
 })
 
 hightide_design(
@@ -19,6 +23,7 @@ hightide_design(
     ],
     sources = {
         "SDC_FILE": [":constraint.sdc"],
+        "MACRO_PLACEMENT_TCL": [":macros.tcl"],
         "ADDITIONAL_LEFS": ["//designs/nangate45/bp_processor:sram_lefs"],
         "ADDITIONAL_LIBS": ["//designs/nangate45/bp_processor:sram_libs"],
     },

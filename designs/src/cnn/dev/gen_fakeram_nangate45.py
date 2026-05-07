@@ -42,8 +42,11 @@ def gen_lef(name, width, depth, outdir):
     # Estimate macro size
     bits = width * depth
     area = max(bits * AREA_PER_BIT, MIN_AREA)
-    h = math.sqrt(area / 2.0)
-    w = area / h
+    # Portrait aspect (h > w): the cnn floorplan places the four large
+    # fakerams in a 4x1 horizontal row, so they must be narrow enough that
+    # 4 fit side-by-side in the core. Width = sqrt(area/2), height = 2*width.
+    w = math.sqrt(area / 2.0)
+    h = area / w
     w = math.ceil(w / SNAP_W) * SNAP_W
     h = math.ceil(h / SNAP_H) * SNAP_H
 

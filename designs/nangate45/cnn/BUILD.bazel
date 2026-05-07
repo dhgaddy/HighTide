@@ -18,6 +18,7 @@ hightide_design(
         "SDC_FILE": [":constraint.sdc"],
         "ADDITIONAL_LEFS": [":sram_lefs"],
         "ADDITIONAL_LIBS": [":sram_libs"],
+        "MACRO_PLACEMENT_TCL": [":macro_placement.tcl"],
     },
     arguments = {
         "SYNTH_HIERARCHICAL": "1",

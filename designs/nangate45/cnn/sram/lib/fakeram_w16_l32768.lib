@@ -62,7 +62,7 @@ library(fakeram_w16_l32768) {
         bit_width : 15; bit_from : 14; bit_to : 0; downto : true;
     }
     cell(fakeram_w16_l32768) {
-        area : 1992736.606;
+        area : 1992926.264;
         interface_timing : true;
         dont_use : true;
         dont_touch : true;

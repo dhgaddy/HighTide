@@ -125,9 +125,11 @@ spec:
           requests:
             memory: __MEM_REQUEST__
             cpu: __CPU_REQUEST__
+            ephemeral-storage: __EPH_REQUEST__
           limits:
             memory: __MEM_LIMIT__
             cpu: __CPU_LIMIT__
+            ephemeral-storage: __EPH_LIMIT__
       volumes:
       - name: repo
         emptyDir: {}

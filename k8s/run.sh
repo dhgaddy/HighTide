@@ -14,31 +14,55 @@
 #
 # Options:
 #   --branch BRANCH    Git branch to build (default: current branch)
-#   --cpu NUM          CPU request per job (default: 8)
-#   --mem SIZE         Memory request per job (default: 64Gi)
+#   --cpu NUM          CPU request per job (overrides design_resources.conf)
+#   --mem SIZE         Memory request per job (overrides design_resources.conf)
 #   --upload-artifacts Save build artifacts (bazel-bin) to the hightide-artifacts PVC for debug
 #   --dry-run          Print generated YAML without submitting
 #   --status           Show status of submitted jobs
 #   --delete           Delete jobs (filtered by platform/design args)
+#
+# Per-design resource sizing lives in k8s/design_resources.conf (CPU, memory,
+# and ephemeral-storage). --cpu / --mem are job-wide overrides; for one-off
+# resource bumps just edit the conf file.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 TEMPLATE="$SCRIPT_DIR/job-template.yaml"
+RESOURCES_CONF="$SCRIPT_DIR/design_resources.conf"
 NAMESPACE="vlsida"
 
 # Defaults
 BRANCH="main"
-CPU_REQUEST="4"
-CPU_LIMIT="16"
-MEM_REQUEST="32Gi"
-MEM_LIMIT="128Gi"
+CLI_CPU=""             # --cpu N (empty = use design_resources.conf)
+CLI_MEM=""             # --mem N (empty = use design_resources.conf)
 DRY_RUN=false
 MODE="submit"
 UPLOAD_ARTIFACTS="false"
 FILTER_PLATFORM=""
 FILTER_DESIGN=""
+
+# Resolve a resource value from design_resources.conf for the given design.
+# Tries <platform>/<design>, falls back to "defaults", then to the supplied
+# default. Reads from $RESOURCES_CONF.
+read_resource() {
+  local key="$1" design_id="$2" fallback="$3"
+  if [[ -f "$RESOURCES_CONF" ]]; then
+    local val
+    for tag in "$design_id" defaults; do
+      val=$(awk -v t="$tag" -v k="$key" '
+        $1 == t {
+          for (i = 2; i <= NF; i++) {
+            n = split($i, a, "=")
+            if (n == 2 && a[1] == k) { print a[2]; exit }
+          }
+        }' "$RESOURCES_CONF")
+      [[ -n "$val" ]] && { echo "$val"; return; }
+    done
+  fi
+  echo "$fallback"
+}
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -48,14 +72,11 @@ while [[ $# -gt 0 ]]; do
     shift 2
     ;;
   --cpu)
-    CPU_REQUEST="$2"
-    CPU_LIMIT="$((${2} * 2))"
+    CLI_CPU="$2"
     shift 2
     ;;
   --mem)
-    MEM_REQUEST="$2"
-    MEM_LIMIT="${2%Gi}"
-    MEM_LIMIT="$((MEM_LIMIT * 2))Gi"
+    CLI_MEM="$2"
     shift 2
     ;;
   --upload-artifacts)
@@ -220,7 +241,10 @@ fi
 
 echo "Submitting ${#DESIGNS[@]} job(s) to NRP Nautilus ($NAMESPACE)..."
 echo "  Branch: $BRANCH"
-echo "  Resources: ${CPU_REQUEST} CPU / ${MEM_REQUEST} memory"
+if [[ -n "$CLI_CPU" || -n "$CLI_MEM" ]]; then
+  echo "  CLI overrides: ${CLI_CPU:+CPU=$CLI_CPU} ${CLI_MEM:+memory=$CLI_MEM}"
+fi
+echo "  Per-design resources from: $RESOURCES_CONF"
 echo ""
 
 # Generate and submit jobs
@@ -232,16 +256,39 @@ for entry in "${DESIGNS[@]}"; do
   job_name="${USER}-hightide-${platform}-${leaf_name}"
   job_name=$(echo "$job_name" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | cut -c1-63)
 
+  # Resolve resources: CLI flag > design entry > defaults entry > fallback.
+  design_id="$platform/$leaf_name"
+  if [[ -n "$CLI_CPU" ]]; then
+    cpu_request="$CLI_CPU"
+    cpu_limit="$((CLI_CPU * 2))"
+  else
+    cpu_request=$(read_resource cpu_req "$design_id" 4)
+    cpu_limit=$(read_resource cpu_lim "$design_id" "$((cpu_request * 2))")
+  fi
+  if [[ -n "$CLI_MEM" ]]; then
+    mem_request="$CLI_MEM"
+    mem_num="${CLI_MEM%Gi}"
+    mem_limit="$((mem_num * 2))Gi"
+  else
+    mem_request=$(read_resource mem_req "$design_id" 32Gi)
+    mem_default_lim="${mem_request%Gi}"
+    mem_limit=$(read_resource mem_lim "$design_id" "$((mem_default_lim * 2))Gi")
+  fi
+  eph_request=$(read_resource eph_req "$design_id" 50Gi)
+  eph_limit=$(read_resource eph_lim "$design_id" 100Gi)
+
   # Generate YAML from template
   yaml=$(sed \
     -e "s|__JOB_NAME__|${job_name}|g" \
     -e "s|__BRANCH__|${BRANCH}|g" \
     -e "s|__BAZEL_TARGET__|${target}|g" \
     -e "s|__UPLOAD_ARTIFACTS__|${UPLOAD_ARTIFACTS}|g" \
-    -e "s|__CPU_REQUEST__|${CPU_REQUEST}|g" \
-    -e "s|__CPU_LIMIT__|${CPU_LIMIT}|g" \
-    -e "s|__MEM_REQUEST__|${MEM_REQUEST}|g" \
-    -e "s|__MEM_LIMIT__|${MEM_LIMIT}|g" \
+    -e "s|__CPU_REQUEST__|${cpu_request}|g" \
+    -e "s|__CPU_LIMIT__|${cpu_limit}|g" \
+    -e "s|__MEM_REQUEST__|${mem_request}|g" \
+    -e "s|__MEM_LIMIT__|${mem_limit}|g" \
+    -e "s|__EPH_REQUEST__|${eph_request}|g" \
+    -e "s|__EPH_LIMIT__|${eph_limit}|g" \
     "$TEMPLATE")
 
   # Add labels for filtering

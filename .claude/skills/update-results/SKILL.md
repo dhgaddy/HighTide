@@ -1,6 +1,6 @@
 ---
 name: update-results
-description: Refresh webpage/results.html and webpage/figures/ to reflect each (platform, design) pair's latest cached build. Detects stale rows by comparing a per-row data-commit attribute to the design's most recent commit, refetches the cached 6_report.json via tools/fetch_cache.sh, regenerates the gallery image at <design>_<platform>_<sha>.png, deletes the previous versioned image, and rewrites the table between RESULTS_START / RESULTS_END markers. Also handles the one-time migration from canonical filenames (cnn_asap7.png) to commit-versioned ones. Use after a build sweep lands new artifacts in the remote cache.
+description: Refresh webpage/results.html, webpage/index.html (Design Portfolio platform badges), webpage/gallery.html, and webpage/figures/ to reflect each (platform, design) pair's latest cached build. Detects stale rows by comparing a per-row data-commit attribute to the design's most recent commit, refetches the cached 6_report.json via tools/fetch_cache.sh, regenerates the gallery image at <design>_<platform>_<sha>.png, deletes the previous versioned image, and rewrites the table between RESULTS_START / RESULTS_END markers. Also handles the one-time migration from canonical filenames (cnn_asap7.png) to commit-versioned ones. Use after a build sweep lands new artifacts in the remote cache.
 argument-hint: "[platform] [design]"
 ---
 
@@ -148,7 +148,43 @@ If a (platform, design) is currently NOT CACHED (Step 5 skipped it), preserve an
 
 `webpage/gallery.html` references the same images.  Replace its `<img src="figures/<old>.png">` references to point at the new versioned filenames.  Same migration rule applies on first run.
 
-## Step 8: Show the diff and stop
+## Step 8: Update the Design Portfolio platform badges in index.html
+
+`webpage/index.html` has a "Design Portfolio" table (`<section id="designs">`) where each row's last column is a list of `<span class="platform-badge badge-<platform>">…</span>` tags.  Those badges must reflect which platforms each design *actually* reaches `_final` on, derived from the same per-(platform, design) sweep used above.
+
+### Display-name → design-family mapping
+
+Index rows use display names; the sweep produces leaf names.  Map them like this (rows not in the sweep are left untouched):
+
+| Display name      | Design family (any variant qualifies)                |
+|-------------------|------------------------------------------------------|
+| BlackParrot       | bp_uno, bp_quad                                      |
+| Gemmini           | gemmini                                              |
+| SHA3              | sha3                                                 |
+| CNN               | cnn                                                  |
+| NyuziProcessor    | NyuziProcessor                                       |
+| Minimax           | minimax                                              |
+| LiteEth           | liteeth_* (any of the 6 variants)                    |
+| CoralNPU          | coralnpu                                             |
+| NVDLA             | partition_a … partition_p (any of the 5 partitions)  |
+| FlooNoC           | floonoc                                              |
+| Snitch Cluster    | snitch_cluster                                       |
+| Vortex            | vortex                                               |
+
+For a family design, a platform badge appears if **any** family member has a cached `_final` for that platform.  This matches how the gallery card aggregates variants on a single design entry.
+
+### Update procedure
+
+For each `<tr>` whose `<td><strong>…</strong></td>` matches a row in the table above:
+
+1. Compute the active-platforms set for that family from the Step 5 results: `{platform : ∃ design ∈ family with cached _final on platform}`.
+2. Re-emit the badge `<td>` with one `<span class="platform-badge badge-<platform>">…</span>` per active platform, ordered asap7 → nangate45 → sky130hd, indented to match the surrounding HTML.
+3. If the active set is empty, leave the row's badges as-is and emit `<!-- skipped: no cached _final on YYYY-MM-DD -->` next to the badges so a future sweep can re-evaluate.
+4. Don't touch any other column (description, language) — those are hand-curated and have no machine-readable source of truth.
+
+This step is idempotent: running the skill twice in a row produces no diff if the cache state hasn't changed.
+
+## Step 9: Show the diff and stop
 
 ```bash
 git -C "$WT" status --short
@@ -181,7 +217,9 @@ Surface the change set to the user, list any designs that were skipped because t
 >   …
 > Rewrote results.html (56 rows, 1 skipped → preserved as comment).
 > Rewrote gallery.html (38 image references updated).
+> Updated index.html design portfolio: 12 rows, 3 platform badges added (cnn nangate45, gemmini sky130hd, sha3 sky130hd), 1 removed (floonoc nangate45 → cache cold).
 > Diff:
+>     index.html   |  18 +++++++++--------
 >     results.html | 412 ++++++++++++++++++++++++++++++++++++++++++--------------
 >     gallery.html |  84 +++++-----
 >     figures/     | 38 deletions, 38 creations (renames)

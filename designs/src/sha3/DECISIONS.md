@@ -6,7 +6,7 @@ Mid-size combinational-heavy core (~20k stdcells, no macros).
 
 ## asap7
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-03-19 (commit `187ef139`)
 
 ### Configuration
@@ -22,7 +22,7 @@ Mid-size combinational-heavy core (~20k stdcells, no macros).
 
 ## nangate45
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-03-21 (commit `205e9ff0`)
 
 ### Configuration
@@ -38,7 +38,7 @@ Mid-size combinational-heavy core (~20k stdcells, no macros).
 
 ## sky130hd
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-04-25 (commit `caba4c83`)
 
 ### Configuration

@@ -21,7 +21,7 @@ FakeRAM macros are shared across variants per platform under `designs/<platform>
 
 ## asap7
 
-**Status**: all 6 variants closing
+**Status**: all 6 variants finishing
 **Last updated**: variants land between `518c6e03` (2026-03-19) and `c8d96617` (2026-04-30)
 
 ### Per-variant configuration
@@ -41,7 +41,7 @@ FakeRAM macros are shared across variants per platform under `designs/<platform>
 
 ## nangate45
 
-**Status**: all 6 variants closing
+**Status**: all 6 variants finishing
 **Last updated**: 2026-03-19 (commit `518c6e03`)
 
 ### Per-variant configuration
@@ -60,7 +60,7 @@ FakeRAM macros are shared across variants per platform under `designs/<platform>
 
 ## sky130hd
 
-**Status**: all 6 variants closing
+**Status**: all 6 variants finishing
 **Last updated**: variants land between `518c6e03` and `c8d96617`
 
 ### Per-variant configuration

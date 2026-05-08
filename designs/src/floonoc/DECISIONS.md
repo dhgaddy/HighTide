@@ -6,7 +6,7 @@ Network-on-chip with std-cell-only logic; the only physical-design knobs are clo
 
 ## asap7
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-04-29 (commit `ec7be591`)
 
 ### Configuration
@@ -22,7 +22,7 @@ Network-on-chip with std-cell-only logic; the only physical-design knobs are clo
 
 ## nangate45
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-04-29 (commit `ec7be591`)
 
 ### Configuration

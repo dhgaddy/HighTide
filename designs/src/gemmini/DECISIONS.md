@@ -10,7 +10,7 @@ Large macro-heavy ML accelerator with FakeRAM black-boxes for the accumulator an
 
 ## asap7
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-05-03 (commit `45b54bd1`)
 
 ### Configuration
@@ -27,7 +27,7 @@ Large macro-heavy ML accelerator with FakeRAM black-boxes for the accumulator an
 
 ## nangate45
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-05-03 (commit `45b54bd1`)
 
 ### Configuration
@@ -43,7 +43,7 @@ Large macro-heavy ML accelerator with FakeRAM black-boxes for the accumulator an
 
 ## sky130hd
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-05-03 (commit `45b54bd1`)
 
 ### Configuration

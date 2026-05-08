@@ -6,7 +6,7 @@ A small RISC-V core (~10–20k stdcells, no macros).  Used as a real-RTL smoke t
 
 ## asap7
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-05-01 (commit `49c7aee5`)
 
 ### Configuration
@@ -23,7 +23,7 @@ A small RISC-V core (~10–20k stdcells, no macros).  Used as a real-RTL smoke t
 
 ## nangate45
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-05-01 (commit `49c7aee5`)
 
 ### Configuration
@@ -40,7 +40,7 @@ A small RISC-V core (~10–20k stdcells, no macros).  Used as a real-RTL smoke t
 
 ## sky130hd
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-05-01 (commit `49c7aee5`)
 
 ### Configuration

@@ -6,7 +6,7 @@ This is a small std-cell-only design (~200 cells, no macros) used as a smoke tes
 
 ## asap7
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-05-01 (commit `6511fb56`)
 
 ### Configuration
@@ -22,7 +22,7 @@ This is a small std-cell-only design (~200 cells, no macros) used as a smoke tes
 
 ## nangate45
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-03-21 (commit `fb6ec1d4`)
 
 ### Configuration
@@ -39,7 +39,7 @@ This is a small std-cell-only design (~200 cells, no macros) used as a smoke tes
 
 ## sky130hd
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-05-01 (commit `6511fb56`)
 
 ### Configuration

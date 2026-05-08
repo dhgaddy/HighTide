@@ -11,7 +11,7 @@ Mid-large NPU with several FakeRAM macros.  Hierarchical synthesis required for 
 
 ## asap7
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-04-26 (commit `643ba623`)
 
 ### Configuration
@@ -28,7 +28,7 @@ Mid-large NPU with several FakeRAM macros.  Hierarchical synthesis required for 
 
 ## nangate45
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-04-26 (commit `643ba623`)
 
 ### Configuration
@@ -45,7 +45,7 @@ Mid-large NPU with several FakeRAM macros.  Hierarchical synthesis required for 
 
 ## sky130hd
 
-**Status**: closing
+**Status**: finishing
 **Last updated**: 2026-04-26 (commit `6d6f2dc2`)
 
 ### Configuration

@@ -107,7 +107,7 @@ upstream-bug index; this file cross-links to it.
 
 ## asap7
 
-**Status**: closing | not finishing | failing-timing | partial
+**Status**: finishing | not finishing | failing-timing | partial
 **Last updated**: 2026-05-08 (commit a1b2c3d)
 
 ### Configuration

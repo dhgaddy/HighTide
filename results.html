@@ -301,7 +301,7 @@
         <input type="text" class="filter-input" id="design-filter" placeholder="filter by name…">
       </div>
       <div class="filter-group">
-        <label>Cells</label>
+        <label>Total Cells</label>
         <input type="number" class="filter-input numeric" id="cells-min" placeholder="min">
         <input type="number" class="filter-input numeric" id="cells-max" placeholder="max">
       </div>
@@ -319,15 +319,17 @@
             <th data-sort="num" data-col="3">Core Area<span class="unit">μm²</span><span class="sort-arrow">⇅</span></th>
             <th data-sort="num" data-col="4">Inst Area<span class="unit">μm²</span><span class="sort-arrow">⇅</span></th>
             <th data-sort="num" data-col="5">Util<span class="unit">%</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="6">Cells<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="7">Macros<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="8">IOs<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="9">WNS<span class="unit">ns</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="10">TNS<span class="unit">ns</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="11">Fmax<span class="unit">GHz</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="12">Power<span class="unit">mW</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="13">DRCs<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="text" data-col="14">Commit<span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="6">Sequential<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="7">Combinational<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="8">Buf/Inv<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="9">Macros<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="10">IOs<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="11">Slack<span class="unit">ps</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="12">Skew<span class="unit">ps</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="13">Fmax<span class="unit">GHz</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="14">Power<span class="unit">mW</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="15">Clk Power<span class="unit">mW</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="text" data-col="16">Commit<span class="sort-arrow">⇅</span></th>
           </tr>
         </thead>
         <tbody>
@@ -339,14 +341,16 @@
             <td>60421.6</td>
             <td>12376.1</td>
             <td>20.5</td>
-            <td>100383</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
             <td>0</td>
             <td>6397</td>
-            <td>1084.50</td>
-            <td>0.00</td>
-            <td>1.09</td>
-            <td>41.429</td>
-            <td>0</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/ec7be591">ec7be591</a></td>
           </tr>
           <tr data-design="gemmini" data-platform="asap7" data-commit="45b54bd1">
@@ -354,33 +358,37 @@
             <td>gemmini</td>
             <td>196717.0</td>
             <td>194759.0</td>
-            <td>71913.8</td>
-            <td>36.9</td>
-            <td>697704</td>
+            <td>73990.7</td>
+            <td>38.0</td>
+            <td>40000</td>
+            <td>329328</td>
+            <td>339801</td>
             <td>0</td>
             <td>2756</td>
-            <td>34.39</td>
-            <td>0.00</td>
-            <td>0.68</td>
-            <td>4231.890</td>
-            <td>0</td>
+            <td>-170.64</td>
+            <td>71.82</td>
+            <td>0.85</td>
+            <td>5589.880</td>
+            <td>68.702</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/45b54bd1">45b54bd1</a></td>
           </tr>
           <tr data-design="lfsr" data-platform="asap7" data-commit="6511fb56">
             <td><span class="platform-badge badge-asap7">asap7</span></td>
             <td>lfsr</td>
-            <td>81.7</td>
-            <td>47.0</td>
-            <td>21.8</td>
-            <td>46.4</td>
-            <td>205</td>
+            <td>63.7</td>
+            <td>33.7</td>
+            <td>21.6</td>
+            <td>64.0</td>
+            <td>31</td>
+            <td>101</td>
+            <td>23</td>
             <td>0</td>
             <td>13</td>
-            <td>56.91</td>
-            <td>0.00</td>
-            <td>5.78</td>
-            <td>0.381</td>
-            <td>0</td>
+            <td>12.38</td>
+            <td>2.99</td>
+            <td>1.45</td>
+            <td>0.125</td>
+            <td>0.040</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/6511fb56">6511fb56</a></td>
           </tr>
           <tr data-design="liteeth_mac_axi_mii" data-platform="asap7" data-commit="518c6e03">
@@ -390,14 +398,16 @@
             <td>15932.7</td>
             <td>2364.9</td>
             <td>40.6</td>
-            <td>18437</td>
+            <td>3309</td>
+            <td>11468</td>
+            <td>2036</td>
             <td>4</td>
             <td>175</td>
             <td>62.99</td>
-            <td>0.00</td>
+            <td>61.28</td>
             <td>1.83</td>
             <td>52.594</td>
-            <td>0</td>
+            <td>4.630</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="liteeth_mac_wb_mii" data-platform="asap7" data-commit="518c6e03">
@@ -407,14 +417,16 @@
             <td>21297.0</td>
             <td>2411.8</td>
             <td>30.6</td>
-            <td>20282</td>
+            <td>3273</td>
+            <td>11480</td>
+            <td>2065</td>
             <td>4</td>
             <td>131</td>
             <td>250.00</td>
-            <td>0.00</td>
+            <td>51.14</td>
             <td>1.33</td>
             <td>31.701</td>
-            <td>0</td>
+            <td>2.940</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="liteeth_udp_raw_rgmii" data-platform="asap7" data-commit="518c6e03">
@@ -424,14 +436,16 @@
             <td>5279.0</td>
             <td>410.5</td>
             <td>37.0</td>
-            <td>4574</td>
+            <td>393</td>
+            <td>1537</td>
+            <td>948</td>
             <td>5</td>
             <td>497</td>
             <td>78.11</td>
-            <td>0.00</td>
+            <td>38.03</td>
             <td>1.95</td>
             <td>50.906</td>
-            <td>0</td>
+            <td>1.480</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="liteeth_udp_stream_rgmii" data-platform="asap7" data-commit="518c6e03">
@@ -441,14 +455,16 @@
             <td>9505.7</td>
             <td>1904.2</td>
             <td>36.3</td>
-            <td>15411</td>
+            <td>2562</td>
+            <td>8708</td>
+            <td>2141</td>
             <td>5</td>
             <td>210</td>
             <td>81.30</td>
-            <td>0.00</td>
+            <td>63.66</td>
             <td>1.62</td>
             <td>55.572</td>
-            <td>0</td>
+            <td>4.820</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="liteeth_udp_stream_sgmii" data-platform="asap7" data-commit="87829fdb">
@@ -458,14 +474,16 @@
             <td>36552.5</td>
             <td>2837.0</td>
             <td>40.7</td>
-            <td>24788</td>
+            <td>3313</td>
+            <td>13038</td>
+            <td>3063</td>
             <td>5</td>
             <td>245</td>
             <td>207.24</td>
-            <td>0.00</td>
+            <td>71.29</td>
             <td>1.26</td>
             <td>39.724</td>
-            <td>0</td>
+            <td>5.410</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/87829fdb">87829fdb</a></td>
           </tr>
           <tr data-design="liteeth_udp_usp_gth_sgmii" data-platform="asap7" data-commit="c8d96617">
@@ -473,16 +491,18 @@
             <td>liteeth_udp_usp_gth_sgmii</td>
             <td>41896.4</td>
             <td>41028.1</td>
-            <td>2593.6</td>
-            <td>35.7</td>
-            <td>23339</td>
+            <td>2633.3</td>
+            <td>35.8</td>
+            <td>2896</td>
+            <td>12058</td>
+            <td>3338</td>
             <td>5</td>
             <td>245</td>
-            <td>202.98</td>
-            <td>0.00</td>
-            <td>1.25</td>
-            <td>37.874</td>
-            <td>0</td>
+            <td>155.03</td>
+            <td>79.08</td>
+            <td>1.18</td>
+            <td>38.155</td>
+            <td>5.480</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/c8d96617">c8d96617</a></td>
           </tr>
           <tr data-design="minimax" data-platform="asap7" data-commit="49c7aee5">
@@ -492,14 +512,16 @@
             <td>3153.9</td>
             <td>2080.1</td>
             <td>66.0</td>
-            <td>17206</td>
+            <td>2251</td>
+            <td>11522</td>
+            <td>2806</td>
             <td>0</td>
             <td>135</td>
             <td>4.78</td>
-            <td>0.00</td>
+            <td>19.94</td>
             <td>1.12</td>
             <td>8.778</td>
-            <td>0</td>
+            <td>3.680</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/49c7aee5">49c7aee5</a></td>
           </tr>
           <tr data-design="sha3" data-platform="asap7" data-commit="187ef139">
@@ -509,14 +531,16 @@
             <td>3319.8</td>
             <td>2401.8</td>
             <td>72.3</td>
-            <td>18883</td>
+            <td>1600</td>
+            <td>14153</td>
+            <td>2489</td>
             <td>0</td>
             <td>338</td>
             <td>115.39</td>
-            <td>0.00</td>
+            <td>15.46</td>
             <td>1.13</td>
             <td>27.888</td>
-            <td>0</td>
+            <td>2.560</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/187ef139">187ef139</a></td>
           </tr>
           <tr data-design="floonoc" data-platform="nangate45" data-commit="ec7be591">
@@ -526,14 +550,16 @@
             <td>791006.0</td>
             <td>143217.0</td>
             <td>18.1</td>
-            <td>74591</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
             <td>0</td>
             <td>6397</td>
-            <td>1.79</td>
-            <td>0.00</td>
-            <td>0.31</td>
-            <td>42.317</td>
-            <td>0</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/ec7be591">ec7be591</a></td>
           </tr>
           <tr data-design="gemmini" data-platform="nangate45" data-commit="45b54bd1">
@@ -541,16 +567,18 @@
             <td>gemmini</td>
             <td>2601270.0</td>
             <td>2593110.0</td>
-            <td>927586.0</td>
-            <td>35.8</td>
-            <td>384744</td>
+            <td>933583.0</td>
+            <td>36.0</td>
+            <td>40000</td>
+            <td>294964</td>
+            <td>45682</td>
             <td>0</td>
             <td>2756</td>
-            <td>0.15</td>
-            <td>0.00</td>
-            <td>0.35</td>
-            <td>3143.690</td>
-            <td>0</td>
+            <td>-105.43</td>
+            <td>39.54</td>
+            <td>0.38</td>
+            <td>3721.830</td>
+            <td>84.045</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/45b54bd1">45b54bd1</a></td>
           </tr>
           <tr data-design="liteeth_mac_axi_mii" data-platform="nangate45" data-commit="518c6e03">
@@ -560,14 +588,16 @@
             <td>448324.0</td>
             <td>30256.4</td>
             <td>33.5</td>
-            <td>16415</td>
+            <td>3309</td>
+            <td>7736</td>
+            <td>2161</td>
             <td>4</td>
             <td>175</td>
-            <td>7.13</td>
-            <td>0.00</td>
+            <td>7125.71</td>
+            <td>102.56</td>
             <td>0.35</td>
             <td>14.399</td>
-            <td>0</td>
+            <td>1.139</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="liteeth_mac_wb_mii" data-platform="nangate45" data-commit="518c6e03">
@@ -577,14 +607,16 @@
             <td>422234.0</td>
             <td>30052.9</td>
             <td>35.5</td>
-            <td>16274</td>
+            <td>3273</td>
+            <td>7633</td>
+            <td>2317</td>
             <td>4</td>
             <td>131</td>
-            <td>7.03</td>
-            <td>0.00</td>
+            <td>7029.20</td>
+            <td>103.91</td>
             <td>0.34</td>
             <td>14.362</td>
-            <td>0</td>
+            <td>1.181</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="liteeth_udp_raw_rgmii" data-platform="nangate45" data-commit="518c6e03">
@@ -594,14 +626,16 @@
             <td>198613.0</td>
             <td>5291.0</td>
             <td>35.6</td>
-            <td>5186</td>
+            <td>393</td>
+            <td>2097</td>
+            <td>672</td>
             <td>5</td>
             <td>497</td>
-            <td>5.53</td>
-            <td>0.00</td>
+            <td>5531.30</td>
+            <td>71.64</td>
             <td>0.22</td>
             <td>10.734</td>
-            <td>0</td>
+            <td>0.290</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="liteeth_udp_stream_rgmii" data-platform="nangate45" data-commit="518c6e03">
@@ -611,14 +645,16 @@
             <td>203852.0</td>
             <td>27796.7</td>
             <td>45.7</td>
-            <td>16669</td>
+            <td>2795</td>
+            <td>9514</td>
+            <td>2262</td>
             <td>5</td>
             <td>210</td>
-            <td>7.02</td>
-            <td>0.00</td>
+            <td>7017.63</td>
+            <td>45.96</td>
             <td>0.34</td>
             <td>14.010</td>
-            <td>0</td>
+            <td>1.227</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="liteeth_udp_stream_sgmii" data-platform="nangate45" data-commit="518c6e03">
@@ -628,14 +664,16 @@
             <td>561413.0</td>
             <td>36094.6</td>
             <td>60.3</td>
-            <td>23517</td>
+            <td>3361</td>
+            <td>13740</td>
+            <td>2672</td>
             <td>5</td>
             <td>245</td>
-            <td>5.95</td>
-            <td>0.00</td>
+            <td>5949.68</td>
+            <td>114.61</td>
             <td>0.25</td>
             <td>26.865</td>
-            <td>0</td>
+            <td>1.292</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="liteeth_udp_usp_gth_sgmii" data-platform="nangate45" data-commit="518c6e03">
@@ -645,14 +683,16 @@
             <td>741881.0</td>
             <td>33443.4</td>
             <td>45.3</td>
-            <td>22725</td>
+            <td>3011</td>
+            <td>12722</td>
+            <td>2664</td>
             <td>5</td>
             <td>245</td>
-            <td>5.95</td>
-            <td>0.00</td>
+            <td>5949.64</td>
+            <td>176.20</td>
             <td>0.25</td>
             <td>27.016</td>
-            <td>0</td>
+            <td>1.519</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="minimax" data-platform="nangate45" data-commit="49c7aee5">
@@ -662,14 +702,16 @@
             <td>43755.9</td>
             <td>27360.0</td>
             <td>62.5</td>
-            <td>15742</td>
+            <td>2251</td>
+            <td>10978</td>
+            <td>2140</td>
             <td>0</td>
             <td>135</td>
-            <td>0.01</td>
-            <td>0.00</td>
+            <td>9.92</td>
+            <td>19.14</td>
             <td>0.63</td>
             <td>23.252</td>
-            <td>0</td>
+            <td>6.205</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/49c7aee5">49c7aee5</a></td>
           </tr>
           <tr data-design="sha3" data-platform="nangate45" data-commit="205e9ff0">
@@ -679,14 +721,16 @@
             <td>61630.3</td>
             <td>27988.5</td>
             <td>45.4</td>
-            <td>18650</td>
+            <td>1600</td>
+            <td>13367</td>
+            <td>3150</td>
             <td>0</td>
             <td>338</td>
-            <td>0.46</td>
-            <td>0.00</td>
+            <td>464.83</td>
+            <td>24.94</td>
             <td>0.49</td>
             <td>132.050</td>
-            <td>0</td>
+            <td>3.423</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/205e9ff0">205e9ff0</a></td>
           </tr>
           <tr data-design="gemmini" data-platform="sky130hd" data-commit="45b54bd1">
@@ -694,16 +738,18 @@
             <td>gemmini</td>
             <td>14496600.0</td>
             <td>14467400.0</td>
-            <td>4882810.0</td>
-            <td>33.8</td>
-            <td>522488</td>
+            <td>4912670.0</td>
+            <td>34.0</td>
+            <td>40000</td>
+            <td>258975</td>
+            <td>29821</td>
             <td>0</td>
             <td>2756</td>
-            <td>0.43</td>
-            <td>0.00</td>
-            <td>0.08</td>
-            <td>4206.340</td>
-            <td>0</td>
+            <td>-1574.78</td>
+            <td>258.50</td>
+            <td>0.09</td>
+            <td>5391.400</td>
+            <td>193.300</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/45b54bd1">45b54bd1</a></td>
           </tr>
           <tr data-design="liteeth_mac_axi_mii" data-platform="sky130hd" data-commit="518c6e03">
@@ -713,14 +759,16 @@
             <td>3054030.0</td>
             <td>184581.0</td>
             <td>46.8</td>
-            <td>34553</td>
+            <td>3309</td>
+            <td>5329</td>
+            <td>1921</td>
             <td>4</td>
             <td>175</td>
-            <td>3.24</td>
-            <td>0.00</td>
+            <td>3238.83</td>
+            <td>156.81</td>
             <td>0.24</td>
             <td>63.898</td>
-            <td>0</td>
+            <td>12.260</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="liteeth_mac_wb_mii" data-platform="sky130hd" data-commit="518c6e03">
@@ -730,14 +778,16 @@
             <td>3426240.0</td>
             <td>185270.0</td>
             <td>41.8</td>
-            <td>38596</td>
+            <td>3273</td>
+            <td>4400</td>
+            <td>1756</td>
             <td>4</td>
             <td>131</td>
-            <td>2.26</td>
-            <td>0.00</td>
+            <td>2258.25</td>
+            <td>205.00</td>
             <td>0.23</td>
             <td>60.098</td>
-            <td>0</td>
+            <td>10.730</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="liteeth_udp_raw_rgmii" data-platform="sky130hd" data-commit="c8d96617">
@@ -747,14 +797,16 @@
             <td>1678920.0</td>
             <td>118880.0</td>
             <td>37.0</td>
-            <td>23839</td>
+            <td>1994</td>
+            <td>4741</td>
+            <td>1219</td>
             <td>5</td>
             <td>497</td>
-            <td>2.59</td>
-            <td>0.00</td>
+            <td>2593.58</td>
+            <td>343.48</td>
             <td>0.14</td>
             <td>55.582</td>
-            <td>0</td>
+            <td>8.030</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/c8d96617">c8d96617</a></td>
           </tr>
           <tr data-design="liteeth_udp_stream_rgmii" data-platform="sky130hd" data-commit="518c6e03">
@@ -762,16 +814,18 @@
             <td>liteeth_udp_stream_rgmii</td>
             <td>1538170.0</td>
             <td>1528040.0</td>
-            <td>139407.0</td>
-            <td>42.0</td>
-            <td>23449</td>
+            <td>140398.0</td>
+            <td>42.1</td>
+            <td>2562</td>
+            <td>6116</td>
+            <td>1270</td>
             <td>5</td>
             <td>210</td>
-            <td>2.43</td>
-            <td>0.00</td>
-            <td>0.13</td>
-            <td>62.683</td>
-            <td>0</td>
+            <td>2931.24</td>
+            <td>211.74</td>
+            <td>0.14</td>
+            <td>63.473</td>
+            <td>10.330</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="liteeth_udp_stream_sgmii" data-platform="sky130hd" data-commit="518c6e03">
@@ -781,14 +835,16 @@
             <td>5544560.0</td>
             <td>243845.0</td>
             <td>36.6</td>
-            <td>66593</td>
+            <td>3313</td>
+            <td>10726</td>
+            <td>2311</td>
             <td>5</td>
             <td>245</td>
-            <td>-0.19</td>
-            <td>-0.38</td>
+            <td>-191.90</td>
+            <td>407.90</td>
             <td>0.10</td>
             <td>88.047</td>
-            <td>0</td>
+            <td>15.640</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="liteeth_udp_usp_gth_sgmii" data-platform="sky130hd" data-commit="518c6e03">
@@ -798,14 +854,16 @@
             <td>3850230.0</td>
             <td>195777.0</td>
             <td>51.5</td>
-            <td>41993</td>
+            <td>2896</td>
+            <td>9815</td>
+            <td>1902</td>
             <td>5</td>
             <td>245</td>
-            <td>2.74</td>
-            <td>0.00</td>
+            <td>2738.25</td>
+            <td>295.26</td>
             <td>0.14</td>
             <td>87.210</td>
-            <td>0</td>
+            <td>14.140</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/518c6e03">518c6e03</a></td>
           </tr>
           <tr data-design="minimax" data-platform="sky130hd" data-commit="49c7aee5">
@@ -815,14 +873,16 @@
             <td>274103.0</td>
             <td>127255.0</td>
             <td>46.4</td>
-            <td>10515</td>
+            <td>2251</td>
+            <td>3450</td>
+            <td>1116</td>
             <td>0</td>
             <td>135</td>
-            <td>0.31</td>
-            <td>0.00</td>
+            <td>309.69</td>
+            <td>103.33</td>
             <td>0.13</td>
             <td>27.840</td>
-            <td>0</td>
+            <td>10.700</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/49c7aee5">49c7aee5</a></td>
           </tr>
           <tr data-design="sha3" data-platform="sky130hd" data-commit="caba4c83">
@@ -832,14 +892,16 @@
             <td>513671.0</td>
             <td>172821.0</td>
             <td>33.6</td>
-            <td>24817</td>
+            <td>1600</td>
+            <td>12979</td>
+            <td>3074</td>
             <td>0</td>
             <td>338</td>
-            <td>0.82</td>
-            <td>0.00</td>
+            <td>823.39</td>
+            <td>70.80</td>
             <td>0.11</td>
             <td>163.926</td>
-            <td>0</td>
+            <td>9.500</td>
             <td><a href="https://github.com/VLSIDA/HighTide/commit/caba4c83">caba4c83</a></td>
           </tr>
           <!-- RESULTS_END -->
@@ -897,7 +959,10 @@
         for (const row of allRows) {
           const platform = row.dataset.platform;
           const design = row.dataset.design.toLowerCase();
-          const cells = parseFloat(row.children[6].textContent) || 0;
+          // Total cells = Sequential + Combinational + Buf/Inv (cols 6,7,8).
+          const cells = (parseFloat(row.children[6].textContent) || 0)
+                      + (parseFloat(row.children[7].textContent) || 0)
+                      + (parseFloat(row.children[8].textContent) || 0);
           const visible =
             activePlatforms.has(platform) &&
             (nameQuery === '' || design.includes(nameQuery)) &&

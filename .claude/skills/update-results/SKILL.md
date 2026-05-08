@@ -101,20 +101,37 @@ git -C "$WT" add "$new_img"
 ```
 
 Capture QoR from the JSON using the same metric keys `tools/summary.sh` reads:
+
+**Areas / utilization:**
 - `finish__design__die__area`
 - `finish__design__core__area`
 - `finish__design__instance__area__stdcell`
 - `finish__design__instance__utilization` (× 100 for %)
-- `finish__design__instance__count__stdcell`
-- `finish__design__instance__count__macros`
-- `finish__design__io`
-- `finish__timing__setup__ws` (WNS)
-- `finish__timing__setup__tns` (TNS)
-- `finish__timing__fmax` (÷ 1e9 for GHz)
-- `finish__power__total` (× 1000 for mW)
-- `finish__flow__errors__count` (DRCs)
 
-Format with the same precision as `tools/summary.sh:53-84` (areas / cells / counts: 1 decimal; timing / fmax: 2 decimals; power: 3 decimals; util: 1 decimal).
+**Cell-class breakdown** (the table replaces the old single "Cells" column with three: Sequential / Combinational / Buf-Inv):
+- `finish__design__instance__count__class:sequential_cell` → **Sequential**
+- `finish__design__instance__count__class:multi_input_combinational_cell` → **Combinational** (does not include buf/inv)
+- Sum these for **Buf/Inv**:
+  - `finish__design__instance__count__class:inverter`
+  - `finish__design__instance__count__class:clock_buffer`
+  - `finish__design__instance__count__class:clock_inverter`
+  - `finish__design__instance__count__class:timing_repair_buffer`
+  - `finish__design__instance__count__class:timing_repair_inverter`
+- `finish__design__instance__count__class:macro` (fall back to `finish__design__instance__count__macros` if not present)
+- `finish__design__io`
+
+**Timing — convert all platforms to picoseconds.**  asap7 Liberty uses ps natively; nangate45 / sky130hd use ns, so multiply their values by 1000:
+- `finish__timing__setup__ws` → **Slack** (signed; positive is good)
+- `finish__clock__skew__setup` → **Skew**
+- `finish__timing__fmax` (÷ 1e9 for GHz)
+
+**Power:**
+- `finish__power__total` (× 1000 for mW)
+- **Clock power is not in the JSON** — parse it from `reports/<platform>/<design>/base/6_finish.rpt`.  Find the `report_power` section, then the `Clock` row; sum its 2nd / 3rd / 4th whitespace fields (Internal + Switching + Leakage Watts) and multiply by 1000 for mW.
+
+**Removed columns**: TNS (always 0 for closing designs; redundant with Slack) and DRCs (always 0 in this benchmark suite).
+
+Format with the same precision as `tools/summary.sh` (areas / counts: 1 decimal or integer; timing / fmax: 2 decimals; power: 3 decimals; util: 1 decimal).
 
 ## Step 6: Rewrite the table between markers
 
@@ -124,23 +141,27 @@ Find `<!-- RESULTS_START -->` and `<!-- RESULTS_END -->` in `webpage/results.htm
 <tr data-design="cnn" data-platform="asap7" data-commit="a1b2c3d">
   <td><span class="platform-badge badge-asap7">asap7</span></td>
   <td>cnn</td>
-  <td>360000.0</td>
-  <td>336166.0</td>
-  <td>23936.7</td>
-  <td>40.1</td>
-  <td>212257</td>
-  <td>65</td>
-  <td>367</td>
-  <td>-44.30</td>
-  <td>-149.87</td>
-  <td>0.96</td>
-  <td>456.091</td>
-  <td>0</td>
+  <td>360000.0</td>            <!-- Die Area μm² -->
+  <td>336166.0</td>            <!-- Core Area μm² -->
+  <td>23936.7</td>             <!-- Inst Area μm² -->
+  <td>40.1</td>                <!-- Util % -->
+  <td>28507</td>               <!-- Sequential -->
+  <td>106616</td>              <!-- Combinational -->
+  <td>36463</td>               <!-- Buf/Inv -->
+  <td>65</td>                  <!-- Macros -->
+  <td>367</td>                 <!-- IOs -->
+  <td>-44.30</td>              <!-- Slack ps -->
+  <td>118.16</td>              <!-- Skew ps -->
+  <td>0.96</td>                <!-- Fmax GHz -->
+  <td>456.091</td>             <!-- Power mW -->
+  <td>47.501</td>              <!-- Clk Power mW -->
   <td><a href="https://github.com/VLSIDA/HighTide/commit/a1b2c3d">a1b2c3d</a></td>
 </tr>
 ```
 
-The first time the skill runs the table needs a new `<th>Commit</th>` column at the right end of the `<thead>` row — add it once, idempotent.
+Column order in `<thead>` (17 columns total): Platform, Design, Die Area, Core Area, Inst Area, Util%, Sequential, Combinational, Buf/Inv, Macros, IOs, Slack ps, Skew ps, Fmax GHz, Power mW, Clk Power mW, Commit.  Keep `data-col` indices on the `<th>` matching the column position so the JS sort/filter logic stays in sync.
+
+The "Total Cells" filter input in the page sums columns 6+7+8 (Sequential + Combinational + Buf/Inv).
 
 If a (platform, design) is currently NOT CACHED (Step 5 skipped it), preserve any existing row in the table (don't drop the design from the page just because the user's local cache is empty).  Use `<!-- skipped: not cached on YYYY-MM-DD -->` as a comment marker to make stale-data sources visible.
 

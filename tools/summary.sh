@@ -17,9 +17,9 @@ echo "HighTide commit: $COMMIT"
 echo ""
 
 # Header
-printf "%-12s %-25s %10s %10s %10s %8s %8s %6s %5s %10s %10s %12s %12s %6s\n" \
-    "Platform" "Design" "Die Area" "Core Area" "Inst Area" "Util%" "Cells" "Macr" "IOs" "WNS" "TNS" "Fmax(GHz)" "Power(mW)" "DRCs"
-printf "%s\n" "$(printf '=%.0s' {1..160})"
+printf "%-12s %-25s %10s %10s %10s %8s %6s %6s %7s %5s %5s %10s %8s %12s %12s %12s\n" \
+    "Platform" "Design" "Die Area" "Core Area" "Inst Area" "Util%" "Seq" "Comb" "BufInv" "Macr" "IOs" "Slack(ps)" "Skew(ps)" "Fmax(GHz)" "Pwr(mW)" "ClkPwr(mW)"
+printf "%s\n" "$(printf '=%.0s' {1..170})"
 
 # Find all 6_report.json files (indicates a completed final stage)
 # Deduplicate by platform/design since multiple targets may share the same output
@@ -40,14 +40,30 @@ find "$BIN_DIR/designs" -path "*/logs/*/base/6_report.json" -not -path "*.runfil
     core_area=$(get_metric "finish__design__core__area")
     inst_area=$(get_metric "finish__design__instance__area__stdcell")
     util=$(get_metric "finish__design__instance__utilization")
-    wns=$(get_metric "finish__timing__setup__ws")
-    tns=$(get_metric "finish__timing__setup__tns")
-    cells=$(get_metric "finish__design__instance__count__stdcell")
-    macros=$(get_metric "finish__design__instance__count__macros")
+    slack=$(get_metric "finish__timing__setup__ws")
+    skew=$(get_metric "finish__clock__skew__setup")
+    seq=$(get_metric "finish__design__instance__count__class:sequential_cell")
+    comb=$(get_metric "finish__design__instance__count__class:multi_input_combinational_cell")
+    inv=$(get_metric "finish__design__instance__count__class:inverter")
+    clk_buf=$(get_metric "finish__design__instance__count__class:clock_buffer")
+    clk_inv=$(get_metric "finish__design__instance__count__class:clock_inverter")
+    trep_buf=$(get_metric "finish__design__instance__count__class:timing_repair_buffer")
+    trep_inv=$(get_metric "finish__design__instance__count__class:timing_repair_inverter")
+    buf_inv=$((${inv:-0} + ${clk_buf:-0} + ${clk_inv:-0} + ${trep_buf:-0} + ${trep_inv:-0}))
+    macros=$(get_metric "finish__design__instance__count__class:macro")
+    [[ -z "$macros" ]] && macros=$(get_metric "finish__design__instance__count__macros")
     ios=$(get_metric "finish__design__io")
     fmax=$(get_metric "finish__timing__fmax")
     power=$(get_metric "finish__power__total")
-    errors=$(get_metric "finish__flow__errors__count")
+
+    # Clock-power lives only in 6_finish.rpt's report_power "Group" table
+    # (not in 6_report.json).  Pull the 5th whitespace field of the "Clock"
+    # row — internal/switching/leakage/total in Watts.  Scope to the
+    # report_power section so we don't grab the "Clock <name>" lines from
+    # the clock-skew section earlier in the file.
+    rpt="${json/logs/reports}"
+    rpt="${rpt/6_report.json/6_finish.rpt}"
+    clk_power=$(awk '/report_power/{f=1} f && /^Clock +[0-9]/{print $2+$3+$4; exit}' "$rpt" 2>/dev/null)
 
     # Format utilization as percentage
     if [ -n "$util" ]; then
@@ -65,12 +81,18 @@ find "$BIN_DIR/designs" -path "*/logs/*/base/6_report.json" -not -path "*.runfil
         inst_area=$(awk "BEGIN {printf \"%.1f\", $inst_area}")
     fi
 
-    # Format timing to 2 decimals
-    if [ -n "$wns" ]; then
-        wns=$(awk "BEGIN {printf \"%.2f\", $wns}")
+    # Format timing/skew to 2 decimals in picoseconds (signed; positive
+    # slack is good).  asap7 Liberty uses ps; nangate45 / sky130hd use
+    # ns — multiply by 1000 to land everything on a common ps axis.
+    case "$platform" in
+        asap7) time_scale=1 ;;
+        *)     time_scale=1000 ;;
+    esac
+    if [ -n "$slack" ]; then
+        slack=$(awk "BEGIN {printf \"%.2f\", $slack * $time_scale}")
     fi
-    if [ -n "$tns" ]; then
-        tns=$(awk "BEGIN {printf \"%.2f\", $tns}")
+    if [ -n "$skew" ]; then
+        skew=$(awk "BEGIN {printf \"%.2f\", $skew * $time_scale}")
     fi
 
     # Format fmax to GHz with 2 decimals
@@ -82,12 +104,15 @@ find "$BIN_DIR/designs" -path "*/logs/*/base/6_report.json" -not -path "*.runfil
     if [ -n "$power" ]; then
         power=$(awk "BEGIN {printf \"%.3f\", $power * 1000}")
     fi
+    if [ -n "$clk_power" ]; then
+        clk_power=$(awk "BEGIN {printf \"%.3f\", $clk_power * 1000}")
+    fi
 
-    printf "%-12s %-25s %10s %10s %10s %8s %8s %6s %5s %10s %10s %12s %12s %6s\n" \
+    printf "%-12s %-25s %10s %10s %10s %8s %6s %6s %7s %5s %5s %10s %8s %12s %12s %12s\n" \
         "${platform:-?}" "${design:-?}" \
         "${die_area:--}" "${core_area:--}" "${inst_area:--}" "${util:--}" \
-        "${cells:--}" "${macros:--}" "${ios:--}" \
-        "${wns:--}" "${tns:--}" "${fmax:--}" "${power:--}" "${errors:--}"
+        "${seq:--}" "${comb:--}" "${buf_inv:--}" "${macros:--}" "${ios:--}" \
+        "${slack:--}" "${skew:--}" "${fmax:--}" "${power:--}" "${clk_power:--}"
 done
 
 # Show designs that failed (have synth but no final report)

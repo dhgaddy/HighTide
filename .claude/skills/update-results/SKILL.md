@@ -122,17 +122,19 @@ Capture QoR from the JSON using the same metric keys `tools/summary.sh` reads:
 - `finish__design__instance__area__stdcell`
 - `finish__design__instance__utilization` (× 100 for %)
 
-**Cell-class breakdown** (the table replaces the old single "Cells" column with three: Sequential / Combinational / Buf-Inv):
-- `finish__design__instance__count__class:sequential_cell` → **Sequential**
-- `finish__design__instance__count__class:multi_input_combinational_cell` → **Combinational** (does not include buf/inv)
-- Sum these for **Buf/Inv**:
+**Cell counts** — the table has both a total Cells column and a per-class breakdown (Sequential / Combinational / Buf-Inv).  Total Cells is the sum of the three breakdown columns; it deliberately excludes tap, tie, fill, antenna, and macro instances so the count reflects "real" logic-doing cells:
+
+- **Cells** = Sequential + Combinational + Buf/Inv (computed; do **not** read `finish__design__instance__count__stdcell` because that aggregate also includes tap+tie)
+- **Sequential** = `finish__design__instance__count__class:sequential_cell`
+- **Combinational** = `finish__design__instance__count__class:multi_input_combinational_cell` (does not include buf/inv)
+- **Buf/Inv** = sum of:
   - `finish__design__instance__count__class:inverter`
   - `finish__design__instance__count__class:clock_buffer`
   - `finish__design__instance__count__class:clock_inverter`
   - `finish__design__instance__count__class:timing_repair_buffer`
   - `finish__design__instance__count__class:timing_repair_inverter`
-- `finish__design__instance__count__class:macro` (fall back to `finish__design__instance__count__macros` if not present)
-- `finish__design__io`
+- **Macros** = `finish__design__instance__count__class:macro` (fall back to `finish__design__instance__count__macros` if not present)
+- **IOs** = `finish__design__io`
 
 **Timing — convert all platforms to picoseconds.**  asap7 Liberty uses ps natively; nangate45 / sky130hd use ns, so multiply their values by 1000:
 - `finish__timing__setup__ws` → **Slack** (signed; positive is good)
@@ -159,6 +161,7 @@ Find `<!-- RESULTS_START -->` and `<!-- RESULTS_END -->` in `webpage/results.htm
   <td>336166.0</td>            <!-- Core Area μm² -->
   <td>23936.7</td>             <!-- Inst Area μm² -->
   <td>40.1</td>                <!-- Util % -->
+  <td>171586</td>              <!-- Cells (= Sequential + Combinational + Buf/Inv) -->
   <td>28507</td>               <!-- Sequential -->
   <td>106616</td>              <!-- Combinational -->
   <td>36463</td>               <!-- Buf/Inv -->
@@ -173,9 +176,9 @@ Find `<!-- RESULTS_START -->` and `<!-- RESULTS_END -->` in `webpage/results.htm
 </tr>
 ```
 
-Column order in `<thead>` (17 columns total): Platform, Design, Die Area, Core Area, Inst Area, Util%, Sequential, Combinational, Buf/Inv, Macros, IOs, Slack ps, Skew ps, Fmax GHz, Power mW, Clk Power mW, Commit.  Keep `data-col` indices on the `<th>` matching the column position so the JS sort/filter logic stays in sync.
+Column order in `<thead>` (18 columns total): Platform, Design, Die Area, Core Area, Inst Area, Util%, Cells, Sequential, Combinational, Buf/Inv, Macros, IOs, Slack ps, Skew ps, Fmax GHz, Power mW, Clk Power mW, Commit.  Keep `data-col` indices on the `<th>` matching the column position so the JS sort/filter logic stays in sync.
 
-The "Total Cells" filter input in the page sums columns 6+7+8 (Sequential + Combinational + Buf/Inv).
+The "Cells" filter input reads column 6 (the total).
 
 If a (platform, design) is currently NOT CACHED (Step 5 skipped it), preserve any existing row in the table (don't drop the design from the page just because the user's local cache is empty).  Use `<!-- skipped: not cached on YYYY-MM-DD -->` as a comment marker to make stale-data sources visible.
 

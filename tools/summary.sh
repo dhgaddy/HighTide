@@ -17,9 +17,9 @@ echo "HighTide commit: $COMMIT"
 echo ""
 
 # Header
-printf "%-12s %-25s %10s %10s %10s %8s %6s %6s %7s %5s %5s %10s %8s %12s %12s %12s\n" \
-    "Platform" "Design" "Die Area" "Core Area" "Inst Area" "Util%" "Seq" "Comb" "BufInv" "Macr" "IOs" "Slack(ps)" "Skew(ps)" "Fmax(GHz)" "Pwr(mW)" "ClkPwr(mW)"
-printf "%s\n" "$(printf '=%.0s' {1..170})"
+printf "%-12s %-25s %10s %10s %10s %8s %8s %6s %6s %7s %5s %5s %10s %8s %12s %12s %12s\n" \
+    "Platform" "Design" "Die Area" "Core Area" "Inst Area" "Util%" "Cells" "Seq" "Comb" "BufInv" "Macr" "IOs" "Slack(ps)" "Skew(ps)" "Fmax(GHz)" "Pwr(mW)" "ClkPwr(mW)"
+printf "%s\n" "$(printf '=%.0s' {1..180})"
 
 # Find all 6_report.json files (indicates a completed final stage)
 # Deduplicate by platform/design since multiple targets may share the same output
@@ -50,6 +50,10 @@ find "$BIN_DIR/designs" -path "*/logs/*/base/6_report.json" -not -path "*.runfil
     trep_buf=$(get_metric "finish__design__instance__count__class:timing_repair_buffer")
     trep_inv=$(get_metric "finish__design__instance__count__class:timing_repair_inverter")
     buf_inv=$((${inv:-0} + ${clk_buf:-0} + ${clk_inv:-0} + ${trep_buf:-0} + ${trep_inv:-0}))
+    # Total cells = sequential + combinational + buf/inv.  Excludes
+    # tap, tie, fill, antenna, and macro — we want the count of "real"
+    # logic-doing instances, not infrastructure cells.
+    cells=$((${seq:-0} + ${comb:-0} + ${buf_inv:-0}))
     macros=$(get_metric "finish__design__instance__count__class:macro")
     [[ -z "$macros" ]] && macros=$(get_metric "finish__design__instance__count__macros")
     ios=$(get_metric "finish__design__io")
@@ -108,10 +112,10 @@ find "$BIN_DIR/designs" -path "*/logs/*/base/6_report.json" -not -path "*.runfil
         clk_power=$(awk "BEGIN {printf \"%.3f\", $clk_power * 1000}")
     fi
 
-    printf "%-12s %-25s %10s %10s %10s %8s %6s %6s %7s %5s %5s %10s %8s %12s %12s %12s\n" \
+    printf "%-12s %-25s %10s %10s %10s %8s %8s %6s %6s %7s %5s %5s %10s %8s %12s %12s %12s\n" \
         "${platform:-?}" "${design:-?}" \
         "${die_area:--}" "${core_area:--}" "${inst_area:--}" "${util:--}" \
-        "${seq:--}" "${comb:--}" "${buf_inv:--}" "${macros:--}" "${ios:--}" \
+        "${cells:--}" "${seq:--}" "${comb:--}" "${buf_inv:--}" "${macros:--}" "${ios:--}" \
         "${slack:--}" "${skew:--}" "${fmax:--}" "${power:--}" "${clk_power:--}"
 done
 

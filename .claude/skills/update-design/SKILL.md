@@ -1,12 +1,14 @@
 ---
 name: update-design
-description: Check for upstream updates to existing HighTide designs and tools, summarize what changed, and apply updates. Use when a design needs to be refreshed, or with no arguments to audit all designs for available updates.
+description: Check for upstream updates to existing HighTide designs and tools, summarize what changed, apply updates, and keep the per-design DECISIONS.md (designs/src/<design>/DECISIONS.md) in sync — recording bug workarounds, manual macro/IO placement, timing-constraint choices, utilization tuning, and any other non-obvious decisions, with one section per technology. Use when a design needs to be refreshed, with no arguments to audit all designs for available updates, or with `--init-decisions <design>` to bootstrap a new DECISIONS.md from existing git history + BUILD.bazel + SDC.
 argument-hint: "[design-name or 'all'] [platform]"
 ---
 
 # Update an Existing Design
 
 If `$ARGUMENTS` is empty or `all`, run the **Upstream Audit** first. Otherwise, you are updating the design `$0` on platform `$1` — determine what kind of update is needed by asking the user or inferring from context.
+
+**Always** also keep `designs/src/$0/DECISIONS.md` in sync — see the **Decisions Document** section below for the file shape, where to record what, and the bootstrap workflow for designs that don't have one yet.
 
 ## Upstream Audit
 
@@ -70,6 +72,108 @@ Format the results as a table:
 ```
 
 Let the user decide which updates to apply. Small changes that don't affect RTL generation (docs, tests, CI) are usually not worth updating for. Major changes that affect RTL output, fix synthesis bugs, or add new features are worth considering.
+
+## Decisions Document
+
+Every design has a long-form decisions log at `designs/src/<design>/DECISIONS.md` (one file per design — variants share it via sub-sections).  This is the place where non-obvious tuning choices, workaround rationale, and platform-specific gotchas live.  The file complements but **does not duplicate**:
+
+- **CLAUDE.md "Known OpenROAD / yosys-slang bug workarounds" table** — the canonical bug index.  DECISIONS.md cross-links to specific rows there rather than restating the bug.
+- **BUILD.bazel `arguments = { … }`** — the live config.  DECISIONS.md records *why* an argument has the value it does, not the value itself.
+- **`constraint.sdc` comments** — the live constraints.  DECISIONS.md records *why* a clock period or `set_false_path` was chosen.
+
+### When to record a decision
+
+Update `designs/src/<design>/DECISIONS.md` whenever any of these change:
+
+- A bug workaround lands in BUILD.bazel (`PRE_CTS_TCL`, `SKIP_*`, `SETUP_MOVE_SEQUENCE` trim, etc.) — link to the CLAUDE.md row.
+- The clock period changes — record before/after Fmax and the period_min that motivated the change.
+- A `macros.tcl`, `io.tcl`, `pdn.tcl`, or `*_pre_*.tcl` is added.
+- Utilization, density addon, or macro halo gets a non-default value.
+- A platform-specific FakeRAM tweak is needed.
+- Synthesis is hierarchical / uses `SYNTH_HIERARCHICAL`, with a reason.
+- A platform is marked "not yet finishing" (record what's been tried and what blocks closure).
+- An optimization-PPA pass moves the QoR more than ~5% in any axis.
+
+The other HighTide skills (`/debug-design`, `/optimize-ppa`, `/port-design`, `/track-bug`) should each append to this file when their work touches one of the above triggers.
+
+### File shape
+
+```markdown
+# <design> Design Decisions
+
+Per-platform notes on tuning, workarounds, and platform-specific
+quirks for <design>.  See CLAUDE.md (root) for the canonical
+upstream-bug index; this file cross-links to it.
+
+## asap7
+
+**Status**: closing | not finishing | failing-timing | partial
+**Last updated**: 2026-05-08 (commit a1b2c3d)
+
+### Configuration
+- `CORE_UTILIZATION = N` — <one-line why this value>
+- `PLACE_DENSITY_LB_ADDON = X` — <reason>
+- Clock: `<N> ns` (Fmax `<X>` MHz) — <reason>
+- Active workarounds: link to CLAUDE.md rows by error code
+
+### Decisions
+- **YYYY-MM-DD `<short-sha>`**: one-line summary of the decision and its motivation, with PR or issue reference where applicable.
+- **YYYY-MM-DD `<short-sha>`**: …
+
+### Known issues / open questions
+- One bullet per known limitation, e.g. "DRC-clean but Fmax limited by macro→macro cross-die paths; manual macros.tcl might unlock further."
+
+## nangate45
+
+…
+
+## sky130hd
+
+…
+```
+
+For multi-variant designs (NVDLA, liteeth, bp_processor), each platform's section gets variant sub-sections:
+
+```markdown
+## sky130hd
+
+### partition_a
+…
+### partition_c
+**Status**: not finishing — GP overflow plateaus at 0.31, see CLAUDE.md.
+…
+```
+
+### Bootstrap workflow (`--init-decisions <design>`)
+
+If the file doesn't exist yet, build it from already-committed history rather than asking the user from scratch:
+
+1. **Find the design's commits**:
+   ```bash
+   git log --oneline --reverse -- "designs/*/$design/" "designs/src/$design/"
+   ```
+
+2. **For each platform**, derive the live configuration:
+   - Read `designs/<platform>/<design>/BUILD.bazel` → `arguments`, `sources`.
+   - Read `designs/<platform>/<design>/constraint.sdc` → clock period, `set_false_path` lines, IO delay constants.
+   - Note any `pdn.tcl` / `io.tcl` / `macros.tcl` / `*pre*.tcl` files that exist.
+
+3. **Pull bug links from CLAUDE.md**: any row in the workarounds table whose "Affected designs" cell mentions this design becomes a "Active workarounds" bullet in the matching platform section, with the issue link copied verbatim.
+
+4. **Pull historical decisions from git log**: scan commit messages on files in `designs/<platform>/<design>/` and `designs/src/<design>/`.  Promote commits that match these patterns to "Decisions" entries:
+   - "Relax", "Tighten", "Bump", "Drop", "Switch", "Disable", "Enable" + clock/util/density/halo terms.
+   - Anything tagged `Fix`, `Workaround`, `Skip`.
+   - Initial port commits (first `Add … on <platform>` for each platform).
+
+5. **Drop decisions older than 1 year** unless they're still load-bearing (e.g. the clock period chosen at port still in effect).  The doc is a working memory, not a changelog.
+
+6. **Show the user the proposed file before writing**, especially when the inferred reasoning is uncertain — they may have context that didn't make it into commit messages.
+
+### Updating an existing decisions file
+
+Each invocation of `/update-design <design> <platform>` that touches the live config should also append (or replace) entries under that platform's **Decisions** list with the current commit short-sha.  Don't rewrite history — append a new dated bullet, and update the platform section's `**Last updated**` line.
+
+If the only change is regenerating RTL from upstream with no flow-config impact, no DECISIONS.md update is needed (the upstream audit table is enough).
 
 ## Types of Updates
 

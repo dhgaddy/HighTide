@@ -15,6 +15,28 @@ You are optimizing the PPA (power, performance, area) of the design at `designs/
 
 **Key lesson: utilization and clock period are coupled.** Tighter clock constraints cause synthesis and repair_timing to insert more buffers, increasing the effective cell area. A design that fits at 80% utilization with a relaxed clock may overflow at 80% with an aggressive clock. Optimize utilization first at the current clock, then tighten the clock and re-check utilization.
 
+## Step 0: Check prior art — CLAUDE.md bugs and other designs' DECISIONS.md
+
+Before measuring or tuning anything, spend 60 seconds looking at how similar designs were optimized:
+
+1. **CLAUDE.md "Known OpenROAD / yosys-slang bug workarounds"** at the repo root — if a row's "Affected designs" cell mentions this design or a structurally-similar one, the workaround may already be active in `arguments={…}`.  Don't re-introduce a knob the bug-table already controls.
+
+2. **Other designs' DECISIONS.md** at `designs/src/<design>/DECISIONS.md`.  These capture *why* each design's util / density / halo / clock landed where it did.  Before tightening any knob, check whether a similarly-shaped design (same platform, same macro count, same gate type — e.g., another sky130hd ML-accelerator with N macros) already explored the same axis:
+
+   ```bash
+   # Same platform, similar size or shape — read all of them
+   grep -rln '^## sky130hd' designs/src/*/DECISIONS.md
+   # Specific knobs people have written about
+   grep -rE 'CORE_UTILIZATION|PLACE_DENSITY|MACRO_PLACE_HALO|clk_period' designs/src/*/DECISIONS.md
+   ```
+
+   The reusable pattern is usually:
+   - **Floor on `CORE_UTILIZATION`** for a given (platform, macro-count) — if every macro-heavy design on sky130hd has a util ceiling around 25%, this design probably can't push past it without a manual macros.tcl.
+   - **Floor on clock period** — period_min vs target ratios that converged elsewhere generalize.
+   - **Halo trade-off shape** — what halo value each platform's working designs settled on.
+
+   Reusing prior art beats re-discovering it: when this skill makes the final DECISIONS.md update in Step 6, note which other design's experience informed the decision.
+
 ## Step 1: Establish Baseline
 
 First, gather the current metrics from the most recent build.

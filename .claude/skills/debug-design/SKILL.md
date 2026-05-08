@@ -10,6 +10,23 @@ You are debugging the design at `designs/$0`. The user may have specified a stag
 
 **Important:** HighTide is a benchmark suite — the RTL is a fixed input. Never suggest modifying the upstream Verilog/RTL. All fixes must be scoped to flow parameters (config.mk), timing constraints (constraint.sdc), physical design files (io.tcl, pdn.tcl), and FakeRAM configuration.
 
+## Step 0: Check prior art — CLAUDE.md bugs and other designs' DECISIONS.md
+
+Before reading logs, spend 60 seconds looking for someone who already solved this:
+
+1. **CLAUDE.md "Known OpenROAD / yosys-slang bug workarounds"** at the repo root.  Grep for the error code (`grep -E "MPL-0040|CTS-0105|ODB-1200" CLAUDE.md`) or the failing stage name.  If a row matches, the **Workaround** column points at the exact fix and the **Issue** column links the upstream tracker.
+
+2. **Other designs' DECISIONS.md**.  These live at `designs/src/<design>/DECISIONS.md` and capture per-(design, platform) tuning rationale, manual placement strategies, and timing-constraint reasoning.  A design with a similar shape (macro-heavy, deep pipeline, same platform) often hit the same problem first:
+
+   ```bash
+   # Search every DECISIONS.md for the symptom — error code, stage name, or keyword
+   grep -rn -E "<error-code>|<stage-name>|<symptom>" designs/src/*/DECISIONS.md
+   ```
+
+   When grep hits, read the full **Decisions** entry on the matching platform — the why is what generalizes, even if the exact fix doesn't.  Common reusable patterns: `MACRO_PLACE_HALO` for sky130hd macro-heavy designs, `TNS_END_PERCENT = 100` vs lower for repair_timing budget, `clk_io_pct` bumps for nangate45 long IO paths, `PRE_CTS_TCL` for CTS-0105.
+
+If a similar problem turned up in another design and the workaround applies, propose it as the candidate fix in Step 5 — and note in the DECISIONS.md update which design's experience you reused.
+
 ## Step 1: Locate Build Artifacts
 
 Check for artifacts in three locations, in order of preference:

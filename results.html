@@ -301,7 +301,7 @@
         <input type="text" class="filter-input" id="design-filter" placeholder="filter by name…">
       </div>
       <div class="filter-group">
-        <label>Total Cells</label>
+        <label>Cells</label>
         <input type="number" class="filter-input numeric" id="cells-min" placeholder="min">
         <input type="number" class="filter-input numeric" id="cells-max" placeholder="max">
       </div>
@@ -319,17 +319,18 @@
             <th data-sort="num" data-col="3">Core Area<span class="unit">μm²</span><span class="sort-arrow">⇅</span></th>
             <th data-sort="num" data-col="4">Inst Area<span class="unit">μm²</span><span class="sort-arrow">⇅</span></th>
             <th data-sort="num" data-col="5">Util<span class="unit">%</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="6">Sequential<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="7">Combinational<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="8">Buf/Inv<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="9">Macros<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="10">IOs<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="11">Slack<span class="unit">ps</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="12">Skew<span class="unit">ps</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="13">Fmax<span class="unit">GHz</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="14">Power<span class="unit">mW</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="num" data-col="15">Clk Power<span class="unit">mW</span><span class="sort-arrow">⇅</span></th>
-            <th data-sort="text" data-col="16">Commit<span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="6">Cells<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="7">Sequential<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="8">Combinational<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="9">Buf/Inv<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="10">Macros<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="11">IOs<span class="unit">count</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="12">Slack<span class="unit">ps</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="13">Skew<span class="unit">ps</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="14">Fmax<span class="unit">GHz</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="15">Power<span class="unit">mW</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="num" data-col="16">Clk Power<span class="unit">mW</span><span class="sort-arrow">⇅</span></th>
+            <th data-sort="text" data-col="17">Commit<span class="sort-arrow">⇅</span></th>
           </tr>
         </thead>
         <tbody>
@@ -341,6 +342,7 @@
             <td>69884.6</td>
             <td>19077.5</td>
             <td>40.2</td>
+            <td>172492</td>
             <td>8269</td>
             <td>126212</td>
             <td>22402</td>
@@ -363,6 +365,7 @@
             <td>—</td>
             <td>—</td>
             <td>—</td>
+            <td>—</td>
             <td>0</td>
             <td>6397</td>
             <td>—</td>
@@ -379,6 +382,7 @@
             <td>194759.0</td>
             <td>73990.7</td>
             <td>38.0</td>
+            <td>726303</td>
             <td>40000</td>
             <td>329328</td>
             <td>339801</td>
@@ -398,6 +402,7 @@
             <td>33.7</td>
             <td>21.6</td>
             <td>64.0</td>
+            <td>197</td>
             <td>31</td>
             <td>101</td>
             <td>23</td>
@@ -417,6 +422,7 @@
             <td>15932.7</td>
             <td>2364.9</td>
             <td>40.6</td>
+            <td>18437</td>
             <td>3309</td>
             <td>11468</td>
             <td>2036</td>
@@ -436,6 +442,7 @@
             <td>21297.0</td>
             <td>2411.8</td>
             <td>30.6</td>
+            <td>20282</td>
             <td>3273</td>
             <td>11480</td>
             <td>2065</td>
@@ -455,6 +462,7 @@
             <td>5279.0</td>
             <td>410.5</td>
             <td>37.0</td>
+            <td>4574</td>
             <td>393</td>
             <td>1537</td>
             <td>948</td>
@@ -474,6 +482,7 @@
             <td>9505.7</td>
             <td>1904.2</td>
             <td>36.3</td>
+            <td>15411</td>
             <td>2562</td>
             <td>8708</td>
             <td>2141</td>
@@ -493,6 +502,7 @@
             <td>36552.5</td>
             <td>2837.0</td>
             <td>40.7</td>
+            <td>24788</td>
             <td>3313</td>
             <td>13038</td>
             <td>3063</td>
@@ -512,6 +522,7 @@
             <td>41028.1</td>
             <td>2633.3</td>
             <td>35.8</td>
+            <td>23837</td>
             <td>2896</td>
             <td>12058</td>
             <td>3338</td>
@@ -531,6 +542,7 @@
             <td>3153.9</td>
             <td>2080.1</td>
             <td>66.0</td>
+            <td>17206</td>
             <td>2251</td>
             <td>11522</td>
             <td>2806</td>
@@ -550,6 +562,7 @@
             <td>3319.8</td>
             <td>2401.8</td>
             <td>72.3</td>
+            <td>18883</td>
             <td>1600</td>
             <td>14153</td>
             <td>2489</td>
@@ -569,6 +582,7 @@
             <td>808947.0</td>
             <td>228428.0</td>
             <td>40.5</td>
+            <td>147367</td>
             <td>8076</td>
             <td>110137</td>
             <td>25265</td>
@@ -591,6 +605,7 @@
             <td>—</td>
             <td>—</td>
             <td>—</td>
+            <td>—</td>
             <td>0</td>
             <td>6397</td>
             <td>—</td>
@@ -607,6 +622,7 @@
             <td>2593110.0</td>
             <td>933583.0</td>
             <td>36.0</td>
+            <td>390434</td>
             <td>40000</td>
             <td>294964</td>
             <td>45682</td>
@@ -626,6 +642,7 @@
             <td>448324.0</td>
             <td>30256.4</td>
             <td>33.5</td>
+            <td>16415</td>
             <td>3309</td>
             <td>7736</td>
             <td>2161</td>
@@ -645,6 +662,7 @@
             <td>422234.0</td>
             <td>30052.9</td>
             <td>35.5</td>
+            <td>16274</td>
             <td>3273</td>
             <td>7633</td>
             <td>2317</td>
@@ -664,6 +682,7 @@
             <td>198613.0</td>
             <td>5291.0</td>
             <td>35.6</td>
+            <td>5186</td>
             <td>393</td>
             <td>2097</td>
             <td>672</td>
@@ -683,6 +702,7 @@
             <td>203852.0</td>
             <td>27796.7</td>
             <td>45.7</td>
+            <td>16669</td>
             <td>2795</td>
             <td>9514</td>
             <td>2262</td>
@@ -702,6 +722,7 @@
             <td>561413.0</td>
             <td>36094.6</td>
             <td>60.3</td>
+            <td>23517</td>
             <td>3361</td>
             <td>13740</td>
             <td>2672</td>
@@ -721,6 +742,7 @@
             <td>741881.0</td>
             <td>33443.4</td>
             <td>45.3</td>
+            <td>22725</td>
             <td>3011</td>
             <td>12722</td>
             <td>2664</td>
@@ -740,6 +762,7 @@
             <td>43755.9</td>
             <td>27360.0</td>
             <td>62.5</td>
+            <td>15742</td>
             <td>2251</td>
             <td>10978</td>
             <td>2140</td>
@@ -759,6 +782,7 @@
             <td>61630.3</td>
             <td>27988.5</td>
             <td>45.4</td>
+            <td>18650</td>
             <td>1600</td>
             <td>13367</td>
             <td>3150</td>
@@ -778,6 +802,7 @@
             <td>9625130.0</td>
             <td>1549690.0</td>
             <td>24.2</td>
+            <td>282870</td>
             <td>8333</td>
             <td>111568</td>
             <td>30462</td>
@@ -797,6 +822,7 @@
             <td>14467400.0</td>
             <td>4912670.0</td>
             <td>34.0</td>
+            <td>524559</td>
             <td>40000</td>
             <td>258975</td>
             <td>29821</td>
@@ -816,6 +842,7 @@
             <td>3054030.0</td>
             <td>184581.0</td>
             <td>46.8</td>
+            <td>34553</td>
             <td>3309</td>
             <td>5329</td>
             <td>1921</td>
@@ -835,6 +862,7 @@
             <td>3426240.0</td>
             <td>185270.0</td>
             <td>41.8</td>
+            <td>38596</td>
             <td>3273</td>
             <td>4400</td>
             <td>1756</td>
@@ -854,6 +882,7 @@
             <td>1678920.0</td>
             <td>118880.0</td>
             <td>37.0</td>
+            <td>23839</td>
             <td>1994</td>
             <td>4741</td>
             <td>1219</td>
@@ -873,6 +902,7 @@
             <td>1528040.0</td>
             <td>140398.0</td>
             <td>42.1</td>
+            <td>23631</td>
             <td>2562</td>
             <td>6116</td>
             <td>1270</td>
@@ -892,6 +922,7 @@
             <td>5544560.0</td>
             <td>243845.0</td>
             <td>36.6</td>
+            <td>66593</td>
             <td>3313</td>
             <td>10726</td>
             <td>2311</td>
@@ -911,6 +942,7 @@
             <td>3850230.0</td>
             <td>195777.0</td>
             <td>51.5</td>
+            <td>41993</td>
             <td>2896</td>
             <td>9815</td>
             <td>1902</td>
@@ -930,6 +962,7 @@
             <td>274103.0</td>
             <td>127255.0</td>
             <td>46.4</td>
+            <td>10515</td>
             <td>2251</td>
             <td>3450</td>
             <td>1116</td>
@@ -949,6 +982,7 @@
             <td>513671.0</td>
             <td>172821.0</td>
             <td>33.6</td>
+            <td>24817</td>
             <td>1600</td>
             <td>12979</td>
             <td>3074</td>
@@ -1016,10 +1050,7 @@
         for (const row of allRows) {
           const platform = row.dataset.platform;
           const design = row.dataset.design.toLowerCase();
-          // Total cells = Sequential + Combinational + Buf/Inv (cols 6,7,8).
-          const cells = (parseFloat(row.children[6].textContent) || 0)
-                      + (parseFloat(row.children[7].textContent) || 0)
-                      + (parseFloat(row.children[8].textContent) || 0);
+          const cells = parseFloat(row.children[6].textContent) || 0;
           const visible =
             activePlatforms.has(platform) &&
             (nameQuery === '' || design.includes(nameQuery)) &&

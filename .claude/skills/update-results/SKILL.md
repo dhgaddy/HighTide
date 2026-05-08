@@ -1,6 +1,6 @@
 ---
 name: update-results
-description: Refresh webpage/results.html and webpage/figures/ to reflect each (platform, design) pair's latest cached build. Detects stale rows by comparing a per-row data-commit attribute to the design's most recent commit, refetches the cached 6_report.json via tools/fetch_cache.sh, regenerates the gallery image at <design>_<platform>_<sha>.png, deletes the previous versioned image, and rewrites the table between RESULTS_START / RESULTS_END markers. Also handles the one-time migration from canonical filenames (cnn_asap7.png) to commit-versioned ones. Use after a build sweep lands new artifacts in the remote cache.
+description: Refresh webpage/results.html, webpage/index.html (Design Portfolio platform badges), webpage/gallery.html, and webpage/figures/ to reflect each (platform, design) pair's latest cached build. Detects stale rows by comparing a per-row data-commit attribute to the design's most recent commit, refetches the cached 6_report.json via tools/fetch_cache.sh, regenerates the gallery image at <design>_<platform>_<sha>.png, deletes the previous versioned image, and rewrites the table between RESULTS_START / RESULTS_END markers. Also handles the one-time migration from canonical filenames (cnn_asap7.png) to commit-versioned ones. Use after a build sweep lands new artifacts in the remote cache.
 argument-hint: "[platform] [design]"
 ---
 
@@ -30,12 +30,17 @@ git -C "$WT" pull --ff-only
 
 ## Step 2: Detect first-time migration
 
-Look for canonical filenames (no SHA component).  These predate this skill and need a one-time rename to the new convention:
+Look for canonical filenames (no SHA component) in **both** the full-resolution PNGs and the JPEG thumbnails — they migrate together so `<img src=…>` and `<a href=…>` always reference the same SHA.  Either may predate this skill and need a one-time rename to the versioned convention:
 
 ```bash
+# full-res PNGs
 ls "$WT"/figures/*.png 2>/dev/null \
     | grep -vE '_[0-9a-f]{7,}\.png$' \
     | grep -vE '/(HighTideFLOW|lighthouse|final_placement_)'   # exclude infra figures, not per-design
+
+# JPEG thumbnails
+ls "$WT"/figures/thumbs/*.jpg 2>/dev/null \
+    | grep -vE '_[0-9a-f]{7,}\.jpg$'
 ```
 
 Anything that comes back is on the canonical-name convention.  For each, decode `<design>_<platform>` from the filename, compute the design's current SHA (Step 4 below), then:
@@ -43,9 +48,11 @@ Anything that comes back is on the canonical-name convention.  For each, decode 
 ```bash
 git mv "$WT"/figures/<design>_<platform>.png \
        "$WT"/figures/<design>_<platform>_<sha>.png
+git mv "$WT"/figures/thumbs/<design>_<platform>.jpg \
+       "$WT"/figures/thumbs/<design>_<platform>_<sha>.jpg
 ```
 
-Use `git mv` so the rename history is preserved.
+Use `git mv` so the rename history is preserved.  Both renames must use the *same* SHA for a given (design, platform) — if either side already has a versioned name, use that SHA for the other side rather than recomputing.
 
 After all migrations, the existing single `<tr>` in results.html (currently a hardcoded lfsr row) should be replaced with a freshly-generated row in Step 6.  Don't try to migrate the row in place — just regenerate it.
 
@@ -92,12 +99,19 @@ For each stale (platform, design):
 # Build only this design's gallery target.
 bazel build "$gallery_target"
 
-# Copy versioned image, delete the previous one.
+# Copy versioned full-res image, delete the previous one.
 new_img="$WT/figures/${leaf}_${platform}_${sha}.png"
 old_img=$(ls "$WT"/figures/${leaf}_${platform}_*.png 2>/dev/null | grep -v "_${sha}.png$" | head -1)
 cp "bazel-bin/designs/$design_dir/${leaf}_gallery.png" "$new_img"
 [[ -n "$old_img" ]] && git -C "$WT" rm -f "$old_img"
 git -C "$WT" add "$new_img"
+
+# Generate the versioned thumbnail, delete the previous one.
+python3 tools/gallery/make_thumbnails.py "$WT/figures"   # rebuilds thumbs/ for any new PNG
+new_thumb="$WT/figures/thumbs/${leaf}_${platform}_${sha}.jpg"
+old_thumb=$(ls "$WT"/figures/thumbs/${leaf}_${platform}_*.jpg "$WT"/figures/thumbs/${leaf}_${platform}.jpg 2>/dev/null | grep -v "_${sha}.jpg$" | head -1)
+[[ -n "$old_thumb" ]] && git -C "$WT" rm -f "$old_thumb"
+git -C "$WT" add "$new_thumb"
 ```
 
 Capture QoR from the JSON using the same metric keys `tools/summary.sh` reads:
@@ -167,9 +181,52 @@ If a (platform, design) is currently NOT CACHED (Step 5 skipped it), preserve an
 
 ## Step 7: Update gallery.html thumbnails
 
-`webpage/gallery.html` references the same images.  Replace its `<img src="figures/<old>.png">` references to point at the new versioned filenames.  Same migration rule applies on first run.
+`webpage/gallery.html` references the same images.  Both reference families need to point at the versioned names from Step 5:
 
-## Step 8: Show the diff and stop
+- `<a class="thumb-link" href="figures/<design>_<platform>_<sha>.png">` — full-res click target
+- `<img src="figures/thumbs/<design>_<platform>_<sha>.jpg">` — visible thumbnail
+
+The full-res `href` and the thumbnail `src` MUST share the same SHA — they describe the same routed view; mismatched SHAs means the user clicks a thumb of one build and lands on a different build's full image.
+
+Same migration rule applies on first run for both the `.png` and `.jpg` references.
+
+## Step 8: Update the Design Portfolio platform badges in index.html
+
+`webpage/index.html` has a "Design Portfolio" table (`<section id="designs">`) where each row's last column is a list of `<span class="platform-badge badge-<platform>">…</span>` tags.  Those badges must reflect which platforms each design *actually* reaches `_final` on, derived from the same per-(platform, design) sweep used above.
+
+### Display-name → design-family mapping
+
+Index rows use display names; the sweep produces leaf names.  Map them like this (rows not in the sweep are left untouched):
+
+| Display name      | Design family (any variant qualifies)                |
+|-------------------|------------------------------------------------------|
+| BlackParrot       | bp_uno, bp_quad                                      |
+| Gemmini           | gemmini                                              |
+| SHA3              | sha3                                                 |
+| CNN               | cnn                                                  |
+| NyuziProcessor    | NyuziProcessor                                       |
+| Minimax           | minimax                                              |
+| LiteEth           | liteeth_* (any of the 6 variants)                    |
+| CoralNPU          | coralnpu                                             |
+| NVDLA             | partition_a … partition_p (any of the 5 partitions)  |
+| FlooNoC           | floonoc                                              |
+| Snitch Cluster    | snitch_cluster                                       |
+| Vortex            | vortex                                               |
+
+For a family design, a platform badge appears if **any** family member has a cached `_final` for that platform.  This matches how the gallery card aggregates variants on a single design entry.
+
+### Update procedure
+
+For each `<tr>` whose `<td><strong>…</strong></td>` matches a row in the table above:
+
+1. Compute the active-platforms set for that family from the Step 5 results: `{platform : ∃ design ∈ family with cached _final on platform}`.
+2. Re-emit the badge `<td>` with one `<span class="platform-badge badge-<platform>">…</span>` per active platform, ordered asap7 → nangate45 → sky130hd, indented to match the surrounding HTML.
+3. If the active set is empty, leave the row's badges as-is and emit `<!-- skipped: no cached _final on YYYY-MM-DD -->` next to the badges so a future sweep can re-evaluate.
+4. Don't touch any other column (description, language) — those are hand-curated and have no machine-readable source of truth.
+
+This step is idempotent: running the skill twice in a row produces no diff if the cache state hasn't changed.
+
+## Step 9: Show the diff and stop
 
 ```bash
 git -C "$WT" status --short
@@ -202,7 +259,9 @@ Surface the change set to the user, list any designs that were skipped because t
 >   …
 > Rewrote results.html (56 rows, 1 skipped → preserved as comment).
 > Rewrote gallery.html (38 image references updated).
+> Updated index.html design portfolio: 12 rows, 3 platform badges added (cnn nangate45, gemmini sky130hd, sha3 sky130hd), 1 removed (floonoc nangate45 → cache cold).
 > Diff:
+>     index.html   |  18 +++++++++--------
 >     results.html | 412 ++++++++++++++++++++++++++++++++++++++++++--------------
 >     gallery.html |  84 +++++-----
 >     figures/     | 38 deletions, 38 creations (renames)

@@ -5,8 +5,11 @@ _ARGS = dict(BP_COMMON_ARGS)
 
 _ARGS.update({
     "VERILOG_TOP_PARAMS": "bp_params_p 11",
-    "CORE_UTILIZATION": "35",
-    "PLACE_DENSITY_LB_ADDON": "0.10",
+    # Lowered CORE_UTILIZATION 35 -> 25 and bumped PLACE_DENSITY_LB_ADDON
+    # 0.10 -> 0.20 to give DPL legalization slack; the prior config hit
+    # DPL-0036 in 4_1_cts post-CTS DPL on clkload40/41 on two retries.
+    "CORE_UTILIZATION": "25",
+    "PLACE_DENSITY_LB_ADDON": "0.20",
     "MACRO_PLACE_HALO": "40 40",
     # Workaround for OpenROAD #9985 (MPL-0040): hand-place all fakeram_*
     # macros via macros.tcl so rtl_macro_placer skips the failing

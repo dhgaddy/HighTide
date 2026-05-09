@@ -56,8 +56,8 @@ Designs range from small (lfsr, ~200 cells) to large (gemmini, bp_quad with thou
 | NyuziProcessor | Large (~20K cells) | x | |
 | cnn | Large (~15K cells) | x | |
 | gemmini | Very large (~50K cells) | | |
-| bp_uno | Large (~30K cells) | x | x |
-| bp_quad | Very large (~100K+ cells) | x | x |
+| bp_uno | Very large (~470K logic cells, 140 macros, 40K flops) | x | x |
+| bp_quad | Very large (~2M+ logic cells, 560 macros, 340K flops) | x | x |
 
 ## Build Targets
 

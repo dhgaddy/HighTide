@@ -47,3 +47,9 @@
 [submodule "bazel-orfs"]
 	path = bazel-orfs
 	url = https://github.com/The-OpenROAD-Project/bazel-orfs.git
+[submodule "designs/src/ternip/dev/repo"]
+	path = designs/src/ternip/dev/repo
+	url = https://github.com/sifferman/ternip
+[submodule "designs/src/ternip/dev/basejump_stl"]
+	path = designs/src/ternip/dev/basejump_stl
+	url = https://github.com/bespoke-silicon-group/basejump_stl

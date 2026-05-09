@@ -1,0 +1,37 @@
+load("//:defs.bzl", "hightide_design")
+
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
+hightide_design(
+    name = "ternip",
+    platform = "asap7",
+    top = "ternip_core",
+    verilog_files = [
+        "//designs/src/ternip:rtl",
+        ":ternip_pipelined_mem_fakeram7.v",
+    ],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HDL_FRONTEND": "slang",
+        "SYNTH_HIERARCHICAL": "0",
+        "VERILOG_INCLUDE_DIRS": "designs/src/ternip designs/src/ternip/dev/repo/rtl designs/src/ternip/dev/basejump_stl/bsg_misc designs/src/ternip/dev/basejump_stl/bsg_dataflow designs/src/ternip/dev/basejump_stl/bsg_mem",
+        "VERILOG_DEFINES": "-DCONFIG_FILENAME=\\\"config/hightide.svh\\\" -DSYNTHESIS",
+        "CORE_UTILIZATION": "25",
+        "PLACE_DENSITY": "0.55",
+        "MACRO_PLACE_HALO": "12 12",
+        "TNS_END_PERCENT": "100",
+    },
+    stage_data = {"synth": ["//designs/src/ternip:rtl_data"]},
+)

@@ -18,10 +18,12 @@ hightide_design(
         "SDC_FILE": [":constraint.sdc"],
         "ADDITIONAL_LEFS": [":sram_lefs"],
         "ADDITIONAL_LIBS": [":sram_libs"],
+        "MACRO_PLACEMENT_TCL": [":macro_placement.tcl"],
     },
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
-        "CORE_UTILIZATION": "30",
+        "DIE_AREA": "0 0 7168 7000",
+        "CORE_AREA": "5 5 7163 6995",
         "PLACE_DENSITY_LB_ADDON": "0.10",
         "MACRO_PLACE_HALO": "60 60",
         "MACRO_BLOCKAGE_HALO": "0.5",

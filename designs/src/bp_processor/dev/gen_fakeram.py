@@ -70,7 +70,11 @@ PLATFORM_PARAMS = {
         "op_cond_name": "tt_1.0_25.0",
     },
     "sky130hd": {
-        "pin_w": 0.170,
+        # pin_w must be >= met3 minimum width for the router to find an
+        # access point (DRT-0073 on every wd_in pin otherwise). Both
+        # sky130hd/cnn (0.300) and sky130hd/vortex (0.900) pin RECTs use
+        # >= 0.300 wide; matches our observed-working values.
+        "pin_w": 0.300,
         "pin_pitch": 2.720,
         "snap_w": 0.460,
         "snap_h": 2.720,

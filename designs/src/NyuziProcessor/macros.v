@@ -158,7 +158,7 @@ module fakeram_1r1w_20x64 (
    		.w0_ce_in	   (1'b1)
 	);
 endmodule
-module fakeram_1r1w_512x256 (
+module fakeram_1r1w_256x256 (
 	clk,
 	read_en,
 	read_addr,
@@ -167,7 +167,7 @@ module fakeram_1r1w_512x256 (
 	write_addr,
 	write_data
 );
-	parameter DATA_WIDTH = 512;
+	parameter DATA_WIDTH = 256;
 	parameter SIZE = 256;
 	parameter READ_DURING_WRITE = "NEW_DATA";
 	parameter ADDR_WIDTH = $clog2(SIZE);
@@ -178,7 +178,7 @@ module fakeram_1r1w_512x256 (
 	input write_en;
 	input [ADDR_WIDTH - 1:0] write_addr;
 	input [DATA_WIDTH - 1:0] write_data;
-	fakeram_512x256_1r1w sram (
+	fakeram_256x256_1r1w sram (
 		.r0_clk       (clk),
 		.w0_clk       (clk),
 		.r0_rd_out    (read_data),
@@ -190,7 +190,7 @@ module fakeram_1r1w_512x256 (
    		.w0_ce_in	  (1'b1)
 	);
 endmodule
-module fakeram_1r1w_512x512 (
+module fakeram_1r1w_256x512 (
 	clk,
 	read_en,
 	read_addr,
@@ -199,7 +199,7 @@ module fakeram_1r1w_512x512 (
 	write_addr,
 	write_data
 );
-	parameter DATA_WIDTH = 512;
+	parameter DATA_WIDTH = 256;
 	parameter SIZE = 512;
 	parameter READ_DURING_WRITE = "NEW_DATA";
 	parameter ADDR_WIDTH = $clog2(SIZE);
@@ -210,7 +210,7 @@ module fakeram_1r1w_512x512 (
 	input write_en;
 	input [ADDR_WIDTH - 1:0] write_addr;
 	input [DATA_WIDTH - 1:0] write_data;
-	fakeram_512x512_1r1w sram (
+	fakeram_256x512_1r1w sram (
 		.r0_clk       (clk),
 		.w0_clk       (clk),
 		.r0_rd_out    (read_data),

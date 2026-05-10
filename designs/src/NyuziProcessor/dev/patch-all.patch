@@ -5,7 +5,7 @@
          .index(way_hit_idx));
  
 -    sram_1r1w #(
-+    fakeram_1r1w_512x256 #(
++    fakeram_1r1w_256x256 #(
          .DATA_WIDTH(CACHE_LINE_BITS),
          .SIZE(`L1D_WAYS * `L1D_SETS),
          .READ_DURING_WRITE("NEW_DATA")
@@ -36,7 +36,7 @@
      // Cache data
      //
 -    sram_1r1w #(
-+    fakeram_1r1w_512x256 #(
++    fakeram_1r1w_256x256 #(
          .DATA_WIDTH(CACHE_LINE_BITS),
          .SIZE(`L1I_WAYS * `L1I_SETS),
          .READ_DURING_WRITE("NEW_DATA")
@@ -190,7 +190,7 @@
      // Cache memory
      //
 -    sram_1r1w #(
-+    fakeram_1r1w_512x512 #(
++    fakeram_1r1w_256x512 #(
          .DATA_WIDTH(CACHE_LINE_BITS),
          .SIZE(`L2_WAYS * `L2_SETS),
          .READ_DURING_WRITE("NEW_DATA")
@@ -291,3 +291,14 @@
  `define L2_SETS 256        // 128k
  `define AXI_DATA_WIDTH 32
  `define USE_LDG_FOR_DDR 1
+--- defines.svh	2025-07-09 01:05:59.000000000 +0000
++++ defines_fix.svh	2025-07-09 01:05:59.000000000 +0000
+@@ -39,7 +39,7 @@
+ // Execution pipeline defines
+ //
+
+-parameter NUM_VECTOR_LANES = 16;
++parameter NUM_VECTOR_LANES = 8;
+ parameter NUM_REGISTERS = 32;
+ parameter TOTAL_THREADS = `THREADS_PER_CORE * `NUM_CORES;
+

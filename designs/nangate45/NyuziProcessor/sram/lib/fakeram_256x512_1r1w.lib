@@ -1,8 +1,8 @@
-library(fakeram_512x512_1r1w) {
+library(fakeram_256x512_1r1w) {
     technology (cmos);
     delay_model : table_lookup;
     revision : 1.0;
-    date : "2026-04-29 17:23:16Z";
+    date : "2026-05-10 23:46:16Z";
     comment : "SRAM";
     time_unit : "1ns";
     voltage_unit : "1V";
@@ -10,7 +10,7 @@ library(fakeram_512x512_1r1w) {
     leakage_power_unit : "1uW";
     nom_process : 1;
     nom_temperature : 25.000;
-    nom_voltage : 1.8;
+    nom_voltage : 1.1;
     capacitive_load_unit (1,pf);
 
     pulling_resistance_unit : "1kohm";
@@ -18,7 +18,7 @@ library(fakeram_512x512_1r1w) {
     operating_conditions(tt_1.0_25.0) {
         process : 1;
         temperature : 25.000;
-        voltage : 1.8;
+        voltage : 1.1;
         tree_type : balanced_tree;
     }
 
@@ -29,7 +29,7 @@ library(fakeram_512x512_1r1w) {
     default_input_pin_cap : 0.0;
     default_output_pin_cap : 0.0;
     default_input_pin_cap : 0.0;
-    default_max_transition : 1.110;
+    default_max_transition : 0.227;
 
     default_operating_conditions : tt_1.0_25.0;
     default_leakage_power_density : 0.0;
@@ -46,40 +46,40 @@ library(fakeram_512x512_1r1w) {
     output_threshold_pct_rise : 50.000;
 
 
-    lu_table_template(fakeram_512x512_1r1w_mem_out_delay_template) {
+    lu_table_template(fakeram_256x512_1r1w_mem_out_delay_template) {
         variable_1 : input_net_transition;
         variable_2 : total_output_net_capacitance;
             index_1 ("1000, 1001");
             index_2 ("1000, 1001");
     }
-    lu_table_template(fakeram_512x512_1r1w_mem_out_slew_template) {
+    lu_table_template(fakeram_256x512_1r1w_mem_out_slew_template) {
         variable_1 : total_output_net_capacitance;
             index_1 ("1000, 1001");
     }
-    lu_table_template(fakeram_512x512_1r1w_constraint_template) {
+    lu_table_template(fakeram_256x512_1r1w_constraint_template) {
         variable_1 : related_pin_transition;
         variable_2 : constrained_pin_transition;
             index_1 ("1000, 1001");
             index_2 ("1000, 1001");
     }
-    power_lut_template(fakeram_512x512_1r1w_energy_template_clkslew) {
+    power_lut_template(fakeram_256x512_1r1w_energy_template_clkslew) {
         variable_1 : input_transition_time;
             index_1 ("1000, 1001");
     }
-    power_lut_template(fakeram_512x512_1r1w_energy_template_sigslew) {
+    power_lut_template(fakeram_256x512_1r1w_energy_template_sigslew) {
         variable_1 : input_transition_time;
             index_1 ("1000, 1001");
     }
     library_features(report_delay_calculation);
-    type (fakeram_512x512_1r1w_DATA) {
+    type (fakeram_256x512_1r1w_DATA) {
         base_type : array ;
         data_type : bit ;
-        bit_width : 512;
-        bit_from : 511;
+        bit_width : 256;
+        bit_from : 255;
         bit_to : 0 ;
         downto : true ;
     }
-    type (fakeram_512x512_1r1w_ADDRESS) {
+    type (fakeram_256x512_1r1w_ADDRESS) {
         base_type : array ;
         data_type : bit ;
         bit_width : 9;
@@ -87,27 +87,27 @@ library(fakeram_512x512_1r1w) {
         bit_to : 0 ;
         downto : true ;
     }
-cell(fakeram_512x512_1r1w) {
-    area : 3550266.237;
+cell(fakeram_256x512_1r1w) {
+    area : 319832.814;
     interface_timing : true;
     memory() {
         type : ram;
         address_width : 9;
-        word_width : 512;
+        word_width : 256;
     }
     pin(r0_clk)   {
         direction : input;
         capacitance : 0.025;
         clock : true;
-        min_period           : 0.819 ;
+        min_period           : 0.449 ;
         internal_power(){
-            rise_power(fakeram_512x512_1r1w_energy_template_clkslew) {
-                index_1 ("0.044, 1.110");
-                values ("468.675, 468.675")
+            rise_power(fakeram_256x512_1r1w_energy_template_clkslew) {
+                index_1 ("0.009, 0.227");
+                values ("55.816, 55.816")
             }
-            fall_power(fakeram_512x512_1r1w_energy_template_clkslew) {
-                index_1 ("0.044, 1.110");
-                values ("468.675, 468.675")
+            fall_power(fakeram_256x512_1r1w_energy_template_clkslew) {
+                index_1 ("0.009, 0.227");
+                values ("55.816, 55.816")
             }
         }
     }
@@ -116,21 +116,21 @@ cell(fakeram_512x512_1r1w) {
         direction : input;
         capacitance : 0.025;
         clock : true;
-        min_period           : 0.819 ;
+        min_period           : 0.449 ;
         internal_power(){
-            rise_power(fakeram_512x512_1r1w_energy_template_clkslew) {
-                index_1 ("0.044, 1.110");
-                values ("468.675, 468.675")
+            rise_power(fakeram_256x512_1r1w_energy_template_clkslew) {
+                index_1 ("0.009, 0.227");
+                values ("55.816, 55.816")
             }
-            fall_power(fakeram_512x512_1r1w_energy_template_clkslew) {
-                index_1 ("0.044, 1.110");
-                values ("468.675, 468.675")
+            fall_power(fakeram_256x512_1r1w_energy_template_clkslew) {
+                index_1 ("0.009, 0.227");
+                values ("55.816, 55.816")
             }
         }
     }
 
     bus(r0_rd_out)   {
-        bus_type : fakeram_512x512_1r1w_DATA;
+        bus_type : fakeram_256x512_1r1w_DATA;
         direction : output;
         max_capacitance : 0.500;
         memory_read() {
@@ -140,29 +140,29 @@ cell(fakeram_512x512_1r1w) {
             related_pin : "r0_clk" ;
             timing_type : rising_edge;
             timing_sense : non_unate;
-            cell_rise(fakeram_512x512_1r1w_mem_out_delay_template) {
-                index_1 ("0.044, 1.110");
+            cell_rise(fakeram_256x512_1r1w_mem_out_delay_template) {
+                index_1 ("0.009, 0.227");
                 index_2 ("0.005, 0.500");
                 values ( \
-                  "0.930, 0.930", \
-                  "0.930, 0.930" \
+                  "0.631, 0.631", \
+                  "0.631, 0.631" \
                 )
             }
-            cell_fall(fakeram_512x512_1r1w_mem_out_delay_template) {
-                index_1 ("0.044, 1.110");
+            cell_fall(fakeram_256x512_1r1w_mem_out_delay_template) {
+                index_1 ("0.009, 0.227");
                 index_2 ("0.005, 0.500");
                 values ( \
-                  "0.930, 0.930", \
-                  "0.930, 0.930" \
+                  "0.631, 0.631", \
+                  "0.631, 0.631" \
                 )
             }
-            rise_transition(fakeram_512x512_1r1w_mem_out_slew_template) {
+            rise_transition(fakeram_256x512_1r1w_mem_out_slew_template) {
                 index_1 ("0.005, 0.500");
-                values ("0.044, 1.110")
+                values ("0.009, 0.227")
             }
-            fall_transition(fakeram_512x512_1r1w_mem_out_slew_template) {
+            fall_transition(fakeram_256x512_1r1w_mem_out_slew_template) {
                 index_1 ("0.005, 0.500");
-                values ("0.044, 1.110")
+                values ("0.009, 0.227")
             }
         }
     }
@@ -172,17 +172,17 @@ cell(fakeram_512x512_1r1w) {
         timing() {
             related_pin : w0_clk;
             timing_type : setup_rising ;
-            rise_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            rise_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
                 )
             }
-            fall_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            fall_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
@@ -192,17 +192,17 @@ cell(fakeram_512x512_1r1w) {
         timing() {
             related_pin : w0_clk;
             timing_type : hold_rising ;
-            rise_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            rise_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
                 )
             }
-            fall_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            fall_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
@@ -210,13 +210,13 @@ cell(fakeram_512x512_1r1w) {
             }
         }
         internal_power(){
-            rise_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            rise_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
-            fall_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            fall_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
         }
     }
@@ -226,17 +226,17 @@ cell(fakeram_512x512_1r1w) {
         timing() {
             related_pin : r0_clk;
             timing_type : setup_rising ;
-            rise_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            rise_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
                 )
             }
-            fall_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            fall_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
@@ -246,17 +246,17 @@ cell(fakeram_512x512_1r1w) {
         timing() {
             related_pin : r0_clk;
             timing_type : hold_rising ;
-            rise_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            rise_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
                 )
             }
-            fall_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            fall_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
@@ -264,13 +264,13 @@ cell(fakeram_512x512_1r1w) {
             }
         }
         internal_power(){
-            rise_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            rise_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
-            fall_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            fall_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
         }
     }
@@ -280,17 +280,17 @@ cell(fakeram_512x512_1r1w) {
         timing() {
             related_pin : w0_clk;
             timing_type : setup_rising ;
-            rise_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            rise_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
                 )
             }
-            fall_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            fall_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
@@ -300,17 +300,17 @@ cell(fakeram_512x512_1r1w) {
         timing() {
             related_pin : w0_clk;
             timing_type : hold_rising ;
-            rise_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            rise_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
                 )
             }
-            fall_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            fall_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
@@ -318,18 +318,18 @@ cell(fakeram_512x512_1r1w) {
             }
         }
         internal_power(){
-            rise_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            rise_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
-            fall_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            fall_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
         }
     }
     bus(w0_wd_in)   {
-        bus_type : fakeram_512x512_1r1w_DATA;
+        bus_type : fakeram_256x512_1r1w_DATA;
         memory_write() {
             address : w0_addr_in;
             clocked_on : "w0_clk";
@@ -339,17 +339,17 @@ cell(fakeram_512x512_1r1w) {
         timing() {
             related_pin     : w0_clk;
             timing_type     : setup_rising ;
-            rise_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            rise_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
                 )
             }
-            fall_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            fall_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
@@ -359,17 +359,17 @@ cell(fakeram_512x512_1r1w) {
         timing() {
             related_pin     : w0_clk;
             timing_type     : hold_rising ;
-            rise_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            rise_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
                 )
             }
-            fall_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            fall_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
@@ -378,45 +378,45 @@ cell(fakeram_512x512_1r1w) {
         }
         internal_power(){
             when : "(! (w0_we_in) )";
-            rise_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            rise_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
-            fall_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            fall_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
         }
         internal_power(){
             when : "(w0_we_in)";
-            rise_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            rise_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
-            fall_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            fall_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
         }
     }
     bus(r0_addr_in)   {
-        bus_type : fakeram_512x512_1r1w_ADDRESS;
+        bus_type : fakeram_256x512_1r1w_ADDRESS;
         direction : input;
         capacitance : 0.005;
         timing() {
             related_pin : r0_clk;
             timing_type : setup_rising ;
-            rise_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            rise_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
                 )
             }
-            fall_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            fall_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
@@ -426,17 +426,17 @@ cell(fakeram_512x512_1r1w) {
         timing() {
             related_pin : r0_clk;
             timing_type : hold_rising ;
-            rise_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            rise_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
                 )
             }
-            fall_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            fall_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
@@ -444,34 +444,34 @@ cell(fakeram_512x512_1r1w) {
             }
         }
         internal_power(){
-            rise_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            rise_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
-            fall_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            fall_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
         }
     }
     bus(w0_addr_in)   {
-        bus_type : fakeram_512x512_1r1w_ADDRESS;
+        bus_type : fakeram_256x512_1r1w_ADDRESS;
         direction : input;
         capacitance : 0.005;
         timing() {
             related_pin : w0_clk;
             timing_type : setup_rising ;
-            rise_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            rise_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
                 )
             }
-            fall_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            fall_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
@@ -481,17 +481,17 @@ cell(fakeram_512x512_1r1w) {
         timing() {
             related_pin : w0_clk;
             timing_type : hold_rising ;
-            rise_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            rise_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
                 )
             }
-            fall_constraint(fakeram_512x512_1r1w_constraint_template) {
-                index_1 ("0.044, 1.110");
-                index_2 ("0.044, 1.110");
+            fall_constraint(fakeram_256x512_1r1w_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
                 values ( \
                   "0.050, 0.050", \
                   "0.050, 0.050" \
@@ -499,17 +499,17 @@ cell(fakeram_512x512_1r1w) {
             }
         }
         internal_power(){
-            rise_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            rise_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
-            fall_power(fakeram_512x512_1r1w_energy_template_sigslew) {
-                index_1 ("0.044, 1.110");
-                values ("4.687, 4.687")
+            fall_power(fakeram_256x512_1r1w_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.558, 0.558")
             }
         }
     }
-    cell_leakage_power : 2817.180;
+    cell_leakage_power : 4707.060;
 }
 
 }

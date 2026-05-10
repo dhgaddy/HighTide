@@ -163,11 +163,11 @@ module NyuziProcessor (
 			wire clk;
 			wire reset;
 			wire [NUM_INTERRUPTS - 1:0] interrupt_req;
-			localparam defines_NUM_VECTOR_LANES = 16;
-			localparam defines_CACHE_LINE_BYTES = 64;
-			localparam defines_CACHE_LINE_BITS = 512;
-			localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-			wire [611:0] l2i_request;
+			localparam defines_NUM_VECTOR_LANES = 8;
+			localparam defines_CACHE_LINE_BYTES = 32;
+			localparam defines_CACHE_LINE_BITS = 256;
+			localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+			wire [324:0] l2i_request;
 			wire [0:0] l2i_request_valid;
 			wire [66:0] ior_request;
 			wire [0:0] ior_request_valid;
@@ -185,7 +185,7 @@ module NyuziProcessor (
 			wire [37:0] ii_response;
 			wire ii_response_valid;
 			wire [0:0] l2_ready;
-			wire [548:0] l2_response;
+			wire [293:0] l2_response;
 			wire l2_response_valid;
 			wire [3:0] ocd_core;
 			wire [31:0] ocd_data_from_host;
@@ -216,36 +216,36 @@ module NyuziProcessor (
 				wire clk;
 				wire reset;
 				wire [0:0] l2i_request_valid;
-				localparam defines_NUM_VECTOR_LANES = 16;
-				localparam defines_CACHE_LINE_BYTES = 64;
-				localparam defines_CACHE_LINE_BITS = 512;
-				localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-				wire [611:0] l2i_request;
+				localparam defines_NUM_VECTOR_LANES = 8;
+				localparam defines_CACHE_LINE_BYTES = 32;
+				localparam defines_CACHE_LINE_BITS = 256;
+				localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+				wire [324:0] l2i_request;
 				wire [0:0] l2_ready;
 				wire l2_response_valid;
-				wire [548:0] l2_response;
+				wire [293:0] l2_response;
 				localparam defines_L2_PERF_EVENTS = 3;
 				wire [2:0] l2_perf_events;
-				wire [511:0] l2a_data_from_memory;
+				wire [255:0] l2a_data_from_memory;
 				wire l2a_l2_fill;
-				wire [611:0] l2a_request;
+				wire [324:0] l2a_request;
 				wire l2a_request_valid;
 				wire l2a_restarted_flush;
 				wire l2bi_collided_miss;
-				wire [511:0] l2bi_data_from_memory;
+				wire [255:0] l2bi_data_from_memory;
 				wire l2bi_perf_l2_writeback;
-				wire [611:0] l2bi_request;
+				wire [324:0] l2bi_request;
 				wire l2bi_request_valid;
 				wire l2bi_stall;
 				wire l2r_cache_hit;
-				wire [511:0] l2r_data;
-				wire [511:0] l2r_data_from_memory;
+				wire [255:0] l2r_data;
+				wire [255:0] l2r_data_from_memory;
 				wire [8:0] l2r_hit_cache_idx;
 				wire l2r_l2_fill;
 				wire l2r_needs_writeback;
 				wire l2r_perf_l2_hit;
 				wire l2r_perf_l2_miss;
-				wire [611:0] l2r_request;
+				wire [324:0] l2r_request;
 				wire l2r_request_valid;
 				wire l2r_restarted_flush;
 				wire l2r_store_sync_success;
@@ -257,19 +257,19 @@ module NyuziProcessor (
 				wire [1:0] l2r_update_tag_en;
 				wire [7:0] l2r_update_tag_set;
 				wire l2r_update_tag_valid;
-				wire [17:0] l2r_update_tag_value;
-				wire [17:0] l2r_writeback_tag;
-				wire [511:0] l2t_data_from_memory;
+				wire [18:0] l2r_update_tag_value;
+				wire [18:0] l2r_writeback_tag;
+				wire [255:0] l2t_data_from_memory;
 				wire [0:1] l2t_dirty;
 				wire [0:0] l2t_fill_way;
 				wire l2t_l2_fill;
-				wire [611:0] l2t_request;
+				wire [324:0] l2t_request;
 				wire l2t_request_valid;
 				wire l2t_restarted_flush;
-				wire [35:0] l2t_tag;
+				wire [37:0] l2t_tag;
 				wire [0:1] l2t_valid;
 				wire [8:0] l2u_write_addr;
-				wire [511:0] l2u_write_data;
+				wire [255:0] l2u_write_data;
 				wire l2u_write_en;
 				l2_cache_arb_stage l2_cache_arb_stage(
 					.clk(clk),
@@ -377,34 +377,34 @@ module NyuziProcessor (
 					wire clk;
 					wire reset;
 					reg l2bi_request_valid;
-					localparam defines_NUM_VECTOR_LANES = 16;
-					localparam defines_CACHE_LINE_BYTES = 64;
-					localparam defines_CACHE_LINE_BITS = 512;
-					localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-					reg [611:0] l2bi_request;
-					wire [511:0] l2bi_data_from_memory;
+					localparam defines_NUM_VECTOR_LANES = 8;
+					localparam defines_CACHE_LINE_BYTES = 32;
+					localparam defines_CACHE_LINE_BITS = 256;
+					localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+					reg [324:0] l2bi_request;
+					wire [255:0] l2bi_data_from_memory;
 					wire l2bi_stall;
 					wire l2bi_collided_miss;
 					wire l2r_needs_writeback;
-					wire [17:0] l2r_writeback_tag;
-					wire [511:0] l2r_data;
+					wire [18:0] l2r_writeback_tag;
+					wire [255:0] l2r_data;
 					wire l2r_l2_fill;
 					wire l2r_restarted_flush;
 					wire l2r_cache_hit;
 					wire l2r_request_valid;
-					wire [611:0] l2r_request;
+					wire [324:0] l2r_request;
 					reg l2bi_perf_l2_writeback;
 					localparam FIFO_SIZE = 8;
 					localparam L2REQ_LATENCY = 4;
-					localparam BURST_BEATS = 16;
-					localparam BURST_OFFSET_WIDTH = 4;
-					wire [25:0] miss_addr;
-					wire [25:0] writeback_address;
+					localparam BURST_BEATS = 8;
+					localparam BURST_OFFSET_WIDTH = 3;
+					wire [26:0] miss_addr;
+					wire [26:0] writeback_address;
 					wire enqueue_writeback_request;
 					wire enqueue_fill_request;
 					wire duplicate_request;
-					wire [511:0] writeback_data;
-					wire [31:0] writeback_lanes [0:15];
+					wire [255:0] writeback_data;
+					wire [31:0] writeback_lanes [0:7];
 					wire writeback_fifo_empty;
 					wire fill_queue_empty;
 					wire fill_request_pending;
@@ -414,35 +414,35 @@ module NyuziProcessor (
 					wire fill_queue_almost_full;
 					reg [31:0] state_ff;
 					reg [31:0] state_nxt;
-					reg [3:0] burst_offset_ff;
-					reg [3:0] burst_offset_nxt;
-					reg [31:0] fill_buffer [0:15];
+					reg [2:0] burst_offset_ff;
+					reg [2:0] burst_offset_nxt;
+					reg [31:0] fill_buffer [0:7];
 					reg restart_flush_request;
 					reg fill_dequeue_en;
-					wire [611:0] lmq_out_request;
-					wire [544:0] writeback_fifo_in;
-					wire [544:0] writeback_fifo_out;
-					assign miss_addr = l2r_request[601-:26];
-					assign enqueue_writeback_request = (l2r_request_valid && l2r_needs_writeback) && ((((l2r_request[605-:3] == 3'd4) && l2r_cache_hit) && !l2r_restarted_flush) || l2r_l2_fill);
-					assign enqueue_fill_request = ((l2r_request_valid && !l2r_cache_hit) && !l2r_l2_fill) && ((((l2r_request[605-:3] == 3'd0) || (l2r_request[605-:3] == 3'd2)) || (l2r_request[605-:3] == 3'd1)) || (l2r_request[605-:3] == 3'd3));
+					wire [324:0] lmq_out_request;
+					wire [289:0] writeback_fifo_in;
+					wire [289:0] writeback_fifo_out;
+					assign miss_addr = l2r_request[314-:27];
+					assign enqueue_writeback_request = (l2r_request_valid && l2r_needs_writeback) && ((((l2r_request[318-:3] == 3'd4) && l2r_cache_hit) && !l2r_restarted_flush) || l2r_l2_fill);
+					assign enqueue_fill_request = ((l2r_request_valid && !l2r_cache_hit) && !l2r_l2_fill) && ((((l2r_request[318-:3] == 3'd0) || (l2r_request[318-:3] == 3'd2)) || (l2r_request[318-:3] == 3'd1)) || (l2r_request[318-:3] == 3'd3));
 					assign writeback_pending = !writeback_fifo_empty;
 					assign fill_request_pending = !fill_queue_empty;
 					l2_cache_pending_miss_cam l2_cache_pending_miss_cam(
 						.request_valid(l2r_request_valid),
-						.request_addr({miss_addr[25-:18], miss_addr[7-:8]}),
+						.request_addr({miss_addr[26-:19], miss_addr[7-:8]}),
 						.clk(clk),
 						.reset(reset),
 						.enqueue_fill_request(enqueue_fill_request),
 						.l2r_l2_fill(l2r_l2_fill),
 						.duplicate_request(duplicate_request)
 					);
-					assign writeback_fifo_in[544-:26] = {l2r_writeback_tag, miss_addr[7-:8]};
-					assign writeback_fifo_in[518-:512] = l2r_data;
-					assign writeback_fifo_in[6] = l2r_request[605-:3] == 3'd4;
-					assign writeback_fifo_in[5-:4] = l2r_request[611-:4];
-					assign writeback_fifo_in[1-:2] = l2r_request[607-:2];
+					assign writeback_fifo_in[289-:27] = {l2r_writeback_tag, miss_addr[7-:8]};
+					assign writeback_fifo_in[262-:256] = l2r_data;
+					assign writeback_fifo_in[6] = l2r_request[318-:3] == 3'd4;
+					assign writeback_fifo_in[5-:4] = l2r_request[324-:4];
+					assign writeback_fifo_in[1-:2] = l2r_request[320-:2];
 					sync_fifo #(
-						.WIDTH(545),
+						.WIDTH(290),
 						.SIZE(FIFO_SIZE),
 						.ALMOST_FULL_THRESHOLD(4)
 					) pending_writeback_fifo(
@@ -458,10 +458,10 @@ module NyuziProcessor (
 						.dequeue_value(writeback_fifo_out),
 						.full()
 					);
-					assign writeback_address = writeback_fifo_out[544-:26];
-					assign writeback_data = writeback_fifo_out[518-:512];
+					assign writeback_address = writeback_fifo_out[289-:27];
+					assign writeback_data = writeback_fifo_out[262-:256];
 					sync_fifo #(
-						.WIDTH(613),
+						.WIDTH(326),
 						.SIZE(FIFO_SIZE),
 						.ALMOST_FULL_THRESHOLD(4)
 					) pending_fill_fifo(
@@ -478,8 +478,8 @@ module NyuziProcessor (
 						.full()
 					);
 					assign l2bi_stall = fill_queue_almost_full || writeback_fifo_almost_full;
-					assign NyuziProcessor.axi_bus.m_awlen = 8'sd15;
-					assign NyuziProcessor.axi_bus.m_arlen = 8'sd15;
+					assign NyuziProcessor.axi_bus.m_awlen = 8'sd7;
+					assign NyuziProcessor.axi_bus.m_arlen = 8'sd7;
 					assign NyuziProcessor.axi_bus.m_bready = 1'b1;
 					assign NyuziProcessor.axi_bus.m_awprot = 3'b000;
 					assign NyuziProcessor.axi_bus.m_arprot = 3'b000;
@@ -507,7 +507,7 @@ module NyuziProcessor (
 										state_nxt = 32'd1;
 								end
 								else if (fill_request_pending) begin
-									if (l2bi_collided_miss || ((lmq_out_request[575-:64] == {defines_CACHE_LINE_BYTES {1'b1}}) && (lmq_out_request[605-:3] == 3'd2)))
+									if (l2bi_collided_miss || ((lmq_out_request[287-:32] == {defines_CACHE_LINE_BYTES {1'b1}}) && (lmq_out_request[318-:3] == 3'd2)))
 										state_nxt = 32'd5;
 									else
 										state_nxt = 32'd3;
@@ -524,7 +524,7 @@ module NyuziProcessor (
 										restart_flush_request = writeback_fifo_out[6];
 										state_nxt = 32'd0;
 									end
-									burst_offset_nxt = burst_offset_ff + 4'sd1;
+									burst_offset_nxt = burst_offset_ff + 3'sd1;
 								end
 							32'd3: begin
 								burst_offset_nxt = 0;
@@ -535,7 +535,7 @@ module NyuziProcessor (
 								if (NyuziProcessor.axi_bus.s_rvalid) begin
 									if (burst_offset_ff == {BURST_OFFSET_WIDTH {1'b1}})
 										state_nxt = 32'd5;
-									burst_offset_nxt = burst_offset_ff + 4'sd1;
+									burst_offset_nxt = burst_offset_ff + 3'sd1;
 								end
 							32'd5: begin
 								state_nxt = 32'd0;
@@ -554,10 +554,10 @@ module NyuziProcessor (
 						l2bi_request = lmq_out_request;
 						if (restart_flush_request) begin
 							l2bi_request_valid = 1'b1;
-							l2bi_request[605-:3] = 3'd4;
-							l2bi_request[611-:4] = writeback_fifo_out[5-:4];
-							l2bi_request[607-:2] = writeback_fifo_out[1-:2];
-							l2bi_request[602] = 1'd1;
+							l2bi_request[318-:3] = 3'd4;
+							l2bi_request[324-:4] = writeback_fifo_out[5-:4];
+							l2bi_request[320-:2] = writeback_fifo_out[1-:2];
+							l2bi_request[315] = 1'd1;
 						end
 						else
 							l2bi_request_valid = fill_dequeue_en;
@@ -585,14 +585,14 @@ module NyuziProcessor (
 							NyuziProcessor.axi_bus.m_rready <= state_nxt == 32'd4;
 							NyuziProcessor.axi_bus.m_awvalid <= state_nxt == 32'd1;
 							NyuziProcessor.axi_bus.m_wvalid <= state_nxt == 32'd2;
-							NyuziProcessor.axi_bus.m_wlast <= (state_nxt == 32'd2) && (burst_offset_nxt == 4'sd15);
+							NyuziProcessor.axi_bus.m_wlast <= (state_nxt == 32'd2) && (burst_offset_nxt == 3'sd7);
 							l2bi_perf_l2_writeback <= enqueue_writeback_request && !writeback_fifo_almost_full;
 						end
 					end
 					always @(posedge clk) begin
 						if ((state_ff == 32'd4) && NyuziProcessor.axi_bus.s_rvalid)
 							fill_buffer[burst_offset_ff] <= NyuziProcessor.axi_bus.s_rdata;
-						NyuziProcessor.axi_bus.m_araddr <= {l2bi_request[601-:26], {defines_CACHE_LINE_OFFSET_WIDTH {1'b0}}};
+						NyuziProcessor.axi_bus.m_araddr <= {l2bi_request[314-:27], {defines_CACHE_LINE_OFFSET_WIDTH {1'b0}}};
 						NyuziProcessor.axi_bus.m_awaddr <= {writeback_address, {defines_CACHE_LINE_OFFSET_WIDTH {1'b0}}};
 						NyuziProcessor.axi_bus.m_wdata <= writeback_lanes[~burst_offset_nxt];
 					end
@@ -908,7 +908,7 @@ module NyuziProcessor (
 					.RESET_PC(RESET_PC)
 				) core(
 					.l2i_request_valid(l2i_request_valid[core_idx]),
-					.l2i_request(l2i_request[core_idx * 612+:612]),
+					.l2i_request(l2i_request[core_idx * 325+:325]),
 					.l2_ready(l2_ready[core_idx]),
 					.thread_en(thread_en[core_idx * 4+:4]),
 					.ior_request_valid(ior_request_valid[core_idx]),
@@ -994,50 +994,50 @@ module fp_execute_stage2 (
 	input wire wb_rollback_en;
 	input wire [1:0] wb_rollback_thread_idx;
 	input wire [1:0] wb_rollback_pipeline;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	input wire [15:0] fx1_mask_value;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	input wire [7:0] fx1_mask_value;
 	input fx1_instruction_valid;
-	input wire [141:0] fx1_instruction;
+	input wire [140:0] fx1_instruction;
 	input wire [1:0] fx1_thread_idx;
-	input wire [3:0] fx1_subcycle;
-	input [15:0] fx1_result_inf;
-	input [15:0] fx1_result_nan;
-	input [15:0] fx1_equal;
-	input [95:0] fx1_ftoi_lshift;
-	input wire [511:0] fx1_significand_le;
-	input wire [511:0] fx1_significand_se;
-	input [15:0] fx1_logical_subtract;
-	input [95:0] fx1_se_align_shift;
-	input [127:0] fx1_add_exponent;
-	input [15:0] fx1_add_result_sign;
-	input [127:0] fx1_mul_exponent;
-	input [15:0] fx1_mul_sign;
-	input [511:0] fx1_multiplicand;
-	input [511:0] fx1_multiplier;
-	input [15:0] fx1_mul_underflow;
+	input wire [2:0] fx1_subcycle;
+	input [7:0] fx1_result_inf;
+	input [7:0] fx1_result_nan;
+	input [7:0] fx1_equal;
+	input [47:0] fx1_ftoi_lshift;
+	input wire [255:0] fx1_significand_le;
+	input wire [255:0] fx1_significand_se;
+	input [7:0] fx1_logical_subtract;
+	input [47:0] fx1_se_align_shift;
+	input [63:0] fx1_add_exponent;
+	input [7:0] fx1_add_result_sign;
+	input [63:0] fx1_mul_exponent;
+	input [7:0] fx1_mul_sign;
+	input [255:0] fx1_multiplicand;
+	input [255:0] fx1_multiplier;
+	input [7:0] fx1_mul_underflow;
 	output reg fx2_instruction_valid;
-	output reg [141:0] fx2_instruction;
-	output reg [15:0] fx2_mask_value;
+	output reg [140:0] fx2_instruction;
+	output reg [7:0] fx2_mask_value;
 	output reg [1:0] fx2_thread_idx;
-	output reg [3:0] fx2_subcycle;
-	output reg [15:0] fx2_result_inf;
-	output reg [15:0] fx2_result_nan;
-	output reg [15:0] fx2_equal;
-	output reg [95:0] fx2_ftoi_lshift;
-	output reg [15:0] fx2_logical_subtract;
-	output reg [15:0] fx2_add_result_sign;
-	output reg [511:0] fx2_significand_le;
-	output reg [511:0] fx2_significand_se;
-	output reg [127:0] fx2_add_exponent;
-	output reg [15:0] fx2_guard;
-	output reg [15:0] fx2_round;
-	output reg [15:0] fx2_sticky;
-	output reg [1023:0] fx2_significand_product;
-	output reg [127:0] fx2_mul_exponent;
-	output reg [15:0] fx2_mul_underflow;
-	output reg [15:0] fx2_mul_sign;
+	output reg [2:0] fx2_subcycle;
+	output reg [7:0] fx2_result_inf;
+	output reg [7:0] fx2_result_nan;
+	output reg [7:0] fx2_equal;
+	output reg [47:0] fx2_ftoi_lshift;
+	output reg [7:0] fx2_logical_subtract;
+	output reg [7:0] fx2_add_result_sign;
+	output reg [255:0] fx2_significand_le;
+	output reg [255:0] fx2_significand_se;
+	output reg [63:0] fx2_add_exponent;
+	output reg [7:0] fx2_guard;
+	output reg [7:0] fx2_round;
+	output reg [7:0] fx2_sticky;
+	output reg [511:0] fx2_significand_product;
+	output reg [63:0] fx2_mul_exponent;
+	output reg [7:0] fx2_mul_underflow;
+	output reg [7:0] fx2_mul_sign;
 	wire imulhs;
-	assign imulhs = fx1_instruction[70-:6] == 6'b011111;
+	assign imulhs = fx1_instruction[69-:6] == 6'b011111;
 	genvar _gv_lane_idx_1;
 	generate
 		for (_gv_lane_idx_1 = 0; _gv_lane_idx_1 < defines_NUM_VECTOR_LANES; _gv_lane_idx_1 = _gv_lane_idx_1 + 1) begin : lane_logic_gen
@@ -1123,44 +1123,44 @@ module fp_execute_stage1 (
 	input reset;
 	input wire wb_rollback_en;
 	input wire [1:0] wb_rollback_thread_idx;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	input wire [511:0] of_operand1;
-	input wire [511:0] of_operand2;
-	input wire [15:0] of_mask_value;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	input wire [255:0] of_operand1;
+	input wire [255:0] of_operand2;
+	input wire [7:0] of_mask_value;
 	input of_instruction_valid;
-	input wire [141:0] of_instruction;
+	input wire [140:0] of_instruction;
 	input wire [1:0] of_thread_idx;
-	input wire [3:0] of_subcycle;
+	input wire [2:0] of_subcycle;
 	output reg fx1_instruction_valid;
-	output reg [141:0] fx1_instruction;
-	output reg [15:0] fx1_mask_value;
+	output reg [140:0] fx1_instruction;
+	output reg [7:0] fx1_mask_value;
 	output reg [1:0] fx1_thread_idx;
-	output reg [3:0] fx1_subcycle;
-	output reg [15:0] fx1_result_inf;
-	output reg [15:0] fx1_result_nan;
-	output reg [15:0] fx1_equal;
-	output reg [95:0] fx1_ftoi_lshift;
-	output reg [511:0] fx1_significand_le;
-	output reg [511:0] fx1_significand_se;
-	output reg [95:0] fx1_se_align_shift;
-	output reg [127:0] fx1_add_exponent;
-	output reg [15:0] fx1_logical_subtract;
-	output reg [15:0] fx1_add_result_sign;
-	output reg [511:0] fx1_multiplicand;
-	output reg [511:0] fx1_multiplier;
-	output reg [127:0] fx1_mul_exponent;
-	output reg [15:0] fx1_mul_underflow;
-	output reg [15:0] fx1_mul_sign;
+	output reg [2:0] fx1_subcycle;
+	output reg [7:0] fx1_result_inf;
+	output reg [7:0] fx1_result_nan;
+	output reg [7:0] fx1_equal;
+	output reg [47:0] fx1_ftoi_lshift;
+	output reg [255:0] fx1_significand_le;
+	output reg [255:0] fx1_significand_se;
+	output reg [47:0] fx1_se_align_shift;
+	output reg [63:0] fx1_add_exponent;
+	output reg [7:0] fx1_logical_subtract;
+	output reg [7:0] fx1_add_result_sign;
+	output reg [255:0] fx1_multiplicand;
+	output reg [255:0] fx1_multiplier;
+	output reg [63:0] fx1_mul_exponent;
+	output reg [7:0] fx1_mul_underflow;
+	output reg [7:0] fx1_mul_sign;
 	wire fmul;
 	wire imul;
 	wire ftoi;
 	wire itof;
 	wire compare;
-	assign fmul = of_instruction[70-:6] == 6'b100010;
-	assign imul = ((of_instruction[70-:6] == 6'b000111) || (of_instruction[70-:6] == 6'b001000)) || (of_instruction[70-:6] == 6'b011111);
-	assign ftoi = of_instruction[70-:6] == 6'b011011;
-	assign itof = of_instruction[70-:6] == 6'b101010;
-	assign compare = (((((of_instruction[70-:6] == 6'b101100) || (of_instruction[70-:6] == 6'b101110)) || (of_instruction[70-:6] == 6'b101101)) || (of_instruction[70-:6] == 6'b101111)) || (of_instruction[70-:6] == 6'b110000)) || (of_instruction[70-:6] == 6'b110001);
+	assign fmul = of_instruction[69-:6] == 6'b100010;
+	assign imul = ((of_instruction[69-:6] == 6'b000111) || (of_instruction[69-:6] == 6'b001000)) || (of_instruction[69-:6] == 6'b011111);
+	assign ftoi = of_instruction[69-:6] == 6'b011011;
+	assign itof = of_instruction[69-:6] == 6'b101010;
+	assign compare = (((((of_instruction[69-:6] == 6'b101100) || (of_instruction[69-:6] == 6'b101110)) || (of_instruction[69-:6] == 6'b101101)) || (of_instruction[69-:6] == 6'b101111)) || (of_instruction[69-:6] == 6'b110000)) || (of_instruction[69-:6] == 6'b110001);
 	genvar _gv_lane_idx_2;
 	localparam defines_FLOAT32_EXP_WIDTH = 8;
 	localparam defines_FLOAT32_SIG_WIDTH = 23;
@@ -1202,7 +1202,7 @@ module fp_execute_stage1 (
 			assign op2_hidden_bit = fop2[30-:8] != 0;
 			assign full_significand1 = {op1_hidden_bit, fop1[22-:defines_FLOAT32_SIG_WIDTH]};
 			assign full_significand2 = {op2_hidden_bit, fop2[22-:defines_FLOAT32_SIG_WIDTH]};
-			assign subtract = of_instruction[70-:6] != 6'b100000;
+			assign subtract = of_instruction[69-:6] != 6'b100000;
 			assign fop1_inf = (fop1[30-:8] == 8'hff) && (fop1[22-:defines_FLOAT32_SIG_WIDTH] == 0);
 			assign fop1_nan = (fop1[30-:8] == 8'hff) && (fop1[22-:defines_FLOAT32_SIG_WIDTH] != 0);
 			assign fop2_inf = (fop2[30-:8] == 8'hff) && (fop2[22-:defines_FLOAT32_SIG_WIDTH] == 0);
@@ -1309,7 +1309,7 @@ module fp_execute_stage1 (
 		if (reset)
 			fx1_instruction_valid <= 1'sb0;
 		else
-			fx1_instruction_valid <= (of_instruction_valid && (!wb_rollback_en || (wb_rollback_thread_idx != of_thread_idx))) && (of_instruction[21-:2] == 2'd2);
+			fx1_instruction_valid <= (of_instruction_valid && (!wb_rollback_en || (wb_rollback_thread_idx != of_thread_idx))) && (of_instruction[20-:2] == 2'd2);
 	initial _sv2v_0 = 0;
 endmodule
 module dcache_tag_stage (
@@ -1368,31 +1368,31 @@ module dcache_tag_stage (
 	reg _sv2v_0;
 	input clk;
 	input reset;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	input wire [511:0] of_operand1;
-	input wire [15:0] of_mask_value;
-	input wire [511:0] of_store_value;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	input wire [255:0] of_operand1;
+	input wire [7:0] of_mask_value;
+	input wire [255:0] of_store_value;
 	input of_instruction_valid;
-	input wire [141:0] of_instruction;
+	input wire [140:0] of_instruction;
 	input wire [1:0] of_thread_idx;
-	input wire [3:0] of_subcycle;
+	input wire [2:0] of_subcycle;
 	input dd_update_lru_en;
 	input wire [1:0] dd_update_lru_way;
 	output reg dt_instruction_valid;
-	output reg [141:0] dt_instruction;
-	output reg [15:0] dt_mask_value;
+	output reg [140:0] dt_instruction;
+	output reg [7:0] dt_mask_value;
 	output reg [1:0] dt_thread_idx;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	localparam defines_DCACHE_TAG_BITS = 20;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	localparam defines_DCACHE_TAG_BITS = 21;
 	output wire [31:0] dt_request_vaddr;
 	output wire [31:0] dt_request_paddr;
 	output reg dt_tlb_hit;
 	output reg dt_tlb_writable;
-	output reg [511:0] dt_store_value;
-	output reg [3:0] dt_subcycle;
+	output reg [255:0] dt_store_value;
+	output reg [2:0] dt_subcycle;
 	output reg [0:3] dt_valid;
-	output wire [79:0] dt_tag;
+	output wire [83:0] dt_tag;
 	output reg dt_tlb_supervisor;
 	output reg dt_tlb_present;
 	output wire dt_invalidate_tlb_en;
@@ -1412,12 +1412,12 @@ module dcache_tag_stage (
 	input wire [5:0] l2i_dcache_lru_fill_set;
 	input [3:0] l2i_dtag_update_en_oh;
 	input wire [5:0] l2i_dtag_update_set;
-	input wire [19:0] l2i_dtag_update_tag;
+	input wire [20:0] l2i_dtag_update_tag;
 	input l2i_dtag_update_valid;
 	input l2i_snoop_en;
 	input wire [5:0] l2i_snoop_set;
 	output reg [0:3] dt_snoop_valid;
-	output wire [79:0] dt_snoop_tag;
+	output wire [83:0] dt_snoop_tag;
 	output wire [1:0] dt_fill_lru;
 	input [0:3] cr_mmu_en;
 	input wire [0:3] cr_supervisor_en;
@@ -1427,7 +1427,7 @@ module dcache_tag_stage (
 	wire [31:0] request_addr_nxt;
 	wire cache_load_en;
 	wire instruction_valid;
-	wire [3:0] scgath_lane;
+	wire [2:0] scgath_lane;
 	wire [defines_PAGE_NUM_BITS - 1:0] tlb_ppage_idx;
 	wire tlb_hit;
 	reg [defines_PAGE_NUM_BITS - 1:0] ppage_idx;
@@ -1439,11 +1439,11 @@ module dcache_tag_stage (
 	wire tlb_present;
 	wire tlb_supervisor;
 	wire [(defines_PAGE_NUM_BITS + (32 - (defines_PAGE_NUM_BITS + 5))) + 4:0] new_tlb_value;
-	assign instruction_valid = (of_instruction_valid && (!wb_rollback_en || (wb_rollback_thread_idx != of_thread_idx))) && (of_instruction[21-:2] == 2'd0);
+	assign instruction_valid = (of_instruction_valid && (!wb_rollback_en || (wb_rollback_thread_idx != of_thread_idx))) && (of_instruction[20-:2] == 2'd0);
 	assign valid_cache_control = instruction_valid && of_instruction[3];
-	assign cache_load_en = ((instruction_valid && (of_instruction[18-:4] != 4'b0110)) && of_instruction[19]) && of_instruction[14];
+	assign cache_load_en = ((instruction_valid && (of_instruction[17-:4] != 4'b0110)) && of_instruction[18]) && of_instruction[13];
 	assign scgath_lane = ~of_subcycle;
-	assign request_addr_nxt = of_operand1[scgath_lane * 32+:32] + of_instruction[58-:32];
+	assign request_addr_nxt = of_operand1[scgath_lane * 32+:32] + of_instruction[57-:32];
 	assign new_tlb_value = of_store_value[0+:32];
 	assign dt_invalidate_tlb_en = (valid_cache_control && (of_instruction[2-:3] == 3'b101)) && cr_supervisor_en[of_thread_idx];
 	assign dt_invalidate_tlb_all_en = (valid_cache_control && (of_instruction[2-:3] == 3'b110)) && cr_supervisor_en[of_thread_idx];
@@ -1452,7 +1452,7 @@ module dcache_tag_stage (
 	assign dt_update_itlb_supervisor = new_tlb_value[3];
 	assign dt_update_itlb_global = new_tlb_value[4];
 	assign dt_update_itlb_present = new_tlb_value[0];
-	assign tlb_lookup_en = (((instruction_valid && (of_instruction[18-:4] != 4'b0110)) && !update_dtlb_en) && !dt_invalidate_tlb_en) && !dt_invalidate_tlb_all_en;
+	assign tlb_lookup_en = (((instruction_valid && (of_instruction[17-:4] != 4'b0110)) && !update_dtlb_en) && !dt_invalidate_tlb_en) && !dt_invalidate_tlb_all_en;
 	assign dt_update_itlb_vpage_idx = of_operand1[31-:defines_PAGE_NUM_BITS];
 	assign dt_update_itlb_ppage_idx = new_tlb_value[defines_PAGE_NUM_BITS + (36 - (defines_PAGE_NUM_BITS + 5))-:((defines_PAGE_NUM_BITS + (36 - (defines_PAGE_NUM_BITS + 5))) >= (37 - (defines_PAGE_NUM_BITS + 5)) ? ((defines_PAGE_NUM_BITS + (36 - (defines_PAGE_NUM_BITS + 5))) - (37 - (defines_PAGE_NUM_BITS + 5))) + 1 : ((37 - (defines_PAGE_NUM_BITS + 5)) - (defines_PAGE_NUM_BITS + (36 - (defines_PAGE_NUM_BITS + 5)))) + 1)];
 	assign dt_update_itlb_executable = new_tlb_value[2];
@@ -1468,7 +1468,7 @@ module dcache_tag_stage (
 				.READ_DURING_WRITE("NEW_DATA")
 			) sram_tags(
 				.read1_en(cache_load_en),
-				.read1_addr(request_addr_nxt[11-:6]),
+				.read1_addr(request_addr_nxt[10-:6]),
 				.read1_data(dt_tag[(3 - way_idx) * defines_DCACHE_TAG_BITS+:defines_DCACHE_TAG_BITS]),
 				.read2_en(l2i_snoop_en),
 				.read2_addr(l2i_snoop_set),
@@ -1488,10 +1488,10 @@ module dcache_tag_stage (
 					line_valid[l2i_dtag_update_set] <= l2i_dtag_update_valid;
 			always @(posedge clk) begin
 				if (cache_load_en) begin
-					if (l2i_dtag_update_en_oh[way_idx] && (l2i_dtag_update_set == request_addr_nxt[11-:6]))
+					if (l2i_dtag_update_en_oh[way_idx] && (l2i_dtag_update_set == request_addr_nxt[10-:6]))
 						dt_valid[way_idx] <= l2i_dtag_update_valid;
 					else
-						dt_valid[way_idx] <= line_valid[request_addr_nxt[11-:6]];
+						dt_valid[way_idx] <= line_valid[request_addr_nxt[10-:6]];
 				end
 				if (l2i_snoop_en) begin
 					if (l2i_dtag_update_en_oh[way_idx] && (l2i_dtag_update_set == l2i_snoop_set))
@@ -1551,7 +1551,7 @@ module dcache_tag_stage (
 		.fill_set(l2i_dcache_lru_fill_set),
 		.fill_way(dt_fill_lru),
 		.access_en(instruction_valid),
-		.access_set(request_addr_nxt[11-:6]),
+		.access_set(request_addr_nxt[10-:6]),
 		.update_en(dd_update_lru_en),
 		.update_way(dd_update_lru_way),
 		.*
@@ -1592,21 +1592,21 @@ module l1_load_miss_queue (
 	input clk;
 	input reset;
 	input cache_miss;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	input wire [25:0] cache_miss_addr;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	input wire [26:0] cache_miss_addr;
 	input wire [1:0] cache_miss_thread_idx;
 	input cache_miss_sync;
 	output wire dequeue_ready;
 	input dequeue_ack;
-	output wire [25:0] dequeue_addr;
+	output wire [26:0] dequeue_addr;
 	output wire [1:0] dequeue_idx;
 	output wire dequeue_sync;
 	input l2_response_valid;
 	input wire [1:0] l2_response_idx;
 	output wire [3:0] wake_bitmap;
-	reg [32:0] pending_entries [0:3];
+	reg [33:0] pending_entries [0:3];
 	wire [3:0] collided_miss_oh;
 	wire [3:0] miss_thread_oh;
 	wire request_unique;
@@ -1629,11 +1629,11 @@ module l1_load_miss_queue (
 		.one_hot(send_grant_oh)
 	);
 	assign dequeue_ready = |arbiter_request;
-	assign dequeue_addr = pending_entries[send_grant_idx][26-:26];
+	assign dequeue_addr = pending_entries[send_grant_idx][27-:27];
 	assign dequeue_idx = send_grant_idx;
 	assign dequeue_sync = pending_entries[send_grant_idx][0];
 	assign request_unique = !(|collided_miss_oh);
-	assign wake_bitmap = (l2_response_valid ? pending_entries[l2_response_idx][30-:4] : 4'd0);
+	assign wake_bitmap = (l2_response_valid ? pending_entries[l2_response_idx][31-:4] : 4'd0);
 	genvar _gv_wait_entry_1;
 	function automatic [1:0] sv2v_cast_2;
 		input reg [1:0] inp;
@@ -1642,25 +1642,25 @@ module l1_load_miss_queue (
 	generate
 		for (_gv_wait_entry_1 = 0; _gv_wait_entry_1 < 4; _gv_wait_entry_1 = _gv_wait_entry_1 + 1) begin : wait_logic_gen
 			localparam wait_entry = _gv_wait_entry_1;
-			assign collided_miss_oh[wait_entry] = ((pending_entries[wait_entry][32] && (pending_entries[wait_entry][26-:26] == cache_miss_addr)) && !pending_entries[wait_entry][0]) && !cache_miss_sync;
-			assign arbiter_request[wait_entry] = pending_entries[wait_entry][32] && !pending_entries[wait_entry][31];
+			assign collided_miss_oh[wait_entry] = ((pending_entries[wait_entry][33] && (pending_entries[wait_entry][27-:27] == cache_miss_addr)) && !pending_entries[wait_entry][0]) && !cache_miss_sync;
+			assign arbiter_request[wait_entry] = pending_entries[wait_entry][33] && !pending_entries[wait_entry][32];
 			always @(posedge clk or posedge reset)
 				if (reset)
 					pending_entries[wait_entry] <= 0;
 				else begin
 					if (dequeue_ack && send_grant_oh[wait_entry])
-						pending_entries[wait_entry][31] <= 1;
-					else if ((cache_miss && miss_thread_oh[wait_entry]) && request_unique) begin
-						pending_entries[wait_entry][30-:4] <= miss_thread_oh;
 						pending_entries[wait_entry][32] <= 1;
-						pending_entries[wait_entry][26-:26] <= cache_miss_addr;
-						pending_entries[wait_entry][31] <= 0;
+					else if ((cache_miss && miss_thread_oh[wait_entry]) && request_unique) begin
+						pending_entries[wait_entry][31-:4] <= miss_thread_oh;
+						pending_entries[wait_entry][33] <= 1;
+						pending_entries[wait_entry][27-:27] <= cache_miss_addr;
+						pending_entries[wait_entry][32] <= 0;
 						pending_entries[wait_entry][0] <= cache_miss_sync;
 					end
 					else if (l2_response_valid && (l2_response_idx == sv2v_cast_2(wait_entry)))
-						pending_entries[wait_entry][32] <= 0;
+						pending_entries[wait_entry][33] <= 0;
 					if (cache_miss && collided_miss_oh[wait_entry])
-						pending_entries[wait_entry][30-:4] <= pending_entries[wait_entry][30-:4] | miss_thread_oh;
+						pending_entries[wait_entry][31-:4] <= pending_entries[wait_entry][31-:4] | miss_thread_oh;
 				end
 		end
 	endgenerate
@@ -1695,38 +1695,38 @@ module fp_execute_stage5 (
 	reg _sv2v_0;
 	input clk;
 	input reset;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	input wire [15:0] fx4_mask_value;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	input wire [7:0] fx4_mask_value;
 	input fx4_instruction_valid;
-	input wire [141:0] fx4_instruction;
+	input wire [140:0] fx4_instruction;
 	input wire [1:0] fx4_thread_idx;
-	input wire [3:0] fx4_subcycle;
-	input [15:0] fx4_result_inf;
-	input [15:0] fx4_result_nan;
-	input [15:0] fx4_equal;
-	input [127:0] fx4_add_exponent;
-	input wire [511:0] fx4_add_significand;
-	input [15:0] fx4_add_result_sign;
-	input [15:0] fx4_logical_subtract;
-	input [95:0] fx4_norm_shift;
-	input [1023:0] fx4_significand_product;
-	input [127:0] fx4_mul_exponent;
-	input [15:0] fx4_mul_underflow;
-	input [15:0] fx4_mul_sign;
+	input wire [2:0] fx4_subcycle;
+	input [7:0] fx4_result_inf;
+	input [7:0] fx4_result_nan;
+	input [7:0] fx4_equal;
+	input [63:0] fx4_add_exponent;
+	input wire [255:0] fx4_add_significand;
+	input [7:0] fx4_add_result_sign;
+	input [7:0] fx4_logical_subtract;
+	input [47:0] fx4_norm_shift;
+	input [511:0] fx4_significand_product;
+	input [63:0] fx4_mul_exponent;
+	input [7:0] fx4_mul_underflow;
+	input [7:0] fx4_mul_sign;
 	output reg fx5_instruction_valid;
-	output reg [141:0] fx5_instruction;
-	output reg [15:0] fx5_mask_value;
+	output reg [140:0] fx5_instruction;
+	output reg [7:0] fx5_mask_value;
 	output reg [1:0] fx5_thread_idx;
-	output reg [3:0] fx5_subcycle;
-	output reg [511:0] fx5_result;
+	output reg [2:0] fx5_subcycle;
+	output reg [255:0] fx5_result;
 	wire fmul;
 	wire imull;
 	wire imulh;
 	wire ftoi;
-	assign fmul = fx4_instruction[70-:6] == 6'b100010;
-	assign imull = fx4_instruction[70-:6] == 6'b000111;
-	assign imulh = (fx4_instruction[70-:6] == 6'b001000) || (fx4_instruction[70-:6] == 6'b011111);
-	assign ftoi = fx4_instruction[70-:6] == 6'b011011;
+	assign fmul = fx4_instruction[69-:6] == 6'b100010;
+	assign imull = fx4_instruction[69-:6] == 6'b000111;
+	assign imulh = (fx4_instruction[69-:6] == 6'b001000) || (fx4_instruction[69-:6] == 6'b011111);
+	assign ftoi = fx4_instruction[69-:6] == 6'b011011;
 	genvar _gv_lane_idx_3;
 	localparam defines_FLOAT32_EXP_WIDTH = 8;
 	localparam defines_FLOAT32_SIG_WIDTH = 23;
@@ -1793,7 +1793,7 @@ module fp_execute_stage5 (
 				if (_sv2v_0)
 					;
 				(* full_case, parallel_case *)
-				case (fx4_instruction[70-:6])
+				case (fx4_instruction[69-:6])
 					6'b101100: compare_result = (!fx4_add_result_sign[lane_idx] && !fx4_equal[lane_idx]) && !fx4_result_nan[lane_idx];
 					6'b101101: compare_result = (!fx4_add_result_sign[lane_idx] || fx4_equal[lane_idx]) && !fx4_result_nan[lane_idx];
 					6'b101110: compare_result = (fx4_add_result_sign[lane_idx] && !fx4_equal[lane_idx]) && !fx4_result_nan[lane_idx];
@@ -1839,7 +1839,7 @@ module fp_execute_stage5 (
 					else
 						fx5_result[lane_idx * 32+:32] <= shifted_significand;
 				end
-				else if (fx4_instruction[13])
+				else if (fx4_instruction[12])
 					fx5_result[lane_idx * 32+:32] <= sv2v_cast_32(compare_result);
 				else if (imull)
 					fx5_result[lane_idx * 32+:32] <= fx4_significand_product[(lane_idx * 64) + 31-:32];
@@ -1894,12 +1894,12 @@ module l2_cache_tag_stage (
 	input clk;
 	input reset;
 	input l2a_request_valid;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_BITS = 512;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	input wire [611:0] l2a_request;
-	input wire [511:0] l2a_data_from_memory;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_BITS = 256;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	input wire [324:0] l2a_request;
+	input wire [255:0] l2a_data_from_memory;
 	input l2a_l2_fill;
 	input l2a_restarted_flush;
 	input [1:0] l2r_update_dirty_en;
@@ -1908,27 +1908,27 @@ module l2_cache_tag_stage (
 	input [1:0] l2r_update_tag_en;
 	input wire [7:0] l2r_update_tag_set;
 	input l2r_update_tag_valid;
-	input wire [17:0] l2r_update_tag_value;
+	input wire [18:0] l2r_update_tag_value;
 	input l2r_update_lru_en;
 	input wire [0:0] l2r_update_lru_hit_way;
 	output reg l2t_request_valid;
-	output reg [611:0] l2t_request;
+	output reg [324:0] l2t_request;
 	output reg [0:1] l2t_valid;
-	output wire [35:0] l2t_tag;
+	output wire [37:0] l2t_tag;
 	output wire [0:1] l2t_dirty;
 	output reg l2t_l2_fill;
 	output wire [0:0] l2t_fill_way;
-	output reg [511:0] l2t_data_from_memory;
+	output reg [255:0] l2t_data_from_memory;
 	output reg l2t_restarted_flush;
 	cache_lru_2x256 #(
 		.NUM_SETS(256),
 		.NUM_WAYS(2)
 	) cache_lru(
 		.fill_en(l2a_l2_fill),
-		.fill_set(l2a_request[583-:8]),
+		.fill_set(l2a_request[295-:8]),
 		.fill_way(l2t_fill_way),
 		.access_en(l2a_request_valid),
-		.access_set(l2a_request[583-:8]),
+		.access_set(l2a_request[295-:8]),
 		.update_en(l2r_update_lru_en),
 		.update_way(l2r_update_lru_hit_way),
 		.*
@@ -1939,13 +1939,13 @@ module l2_cache_tag_stage (
 			localparam way_idx = _gv_way_idx_2;
 			reg line_valid [0:255];
 			fakeram_1r1w_18x256 #(
-				.DATA_WIDTH(18),
+				.DATA_WIDTH(19),
 				.SIZE(256),
 				.READ_DURING_WRITE("NEW_DATA")
 			) sram_tags(
 				.read_en(l2a_request_valid),
-				.read_addr(l2a_request[583-:8]),
-				.read_data(l2t_tag[0 + ((1 - way_idx) * 18)+:18]),
+				.read_addr(l2a_request[295-:8]),
+				.read_data(l2t_tag[0 + ((1 - way_idx) * 19)+:19]),
 				.write_en(l2r_update_tag_en[way_idx]),
 				.write_addr(l2r_update_tag_set),
 				.write_data(l2r_update_tag_value),
@@ -1957,7 +1957,7 @@ module l2_cache_tag_stage (
 				.READ_DURING_WRITE("NEW_DATA")
 			) sram_dirty_flags(
 				.read_en(l2a_request_valid),
-				.read_addr(l2a_request[583-:8]),
+				.read_addr(l2a_request[295-:8]),
 				.read_data(l2t_dirty[way_idx]),
 				.write_en(l2r_update_dirty_en[way_idx]),
 				.write_addr(l2r_update_dirty_set),
@@ -1974,10 +1974,10 @@ module l2_cache_tag_stage (
 					line_valid[l2r_update_tag_set] <= l2r_update_tag_valid;
 			always @(posedge clk)
 				if (l2a_request_valid) begin
-					if (l2r_update_tag_en[way_idx] && (l2r_update_tag_set == l2a_request[583-:8]))
+					if (l2r_update_tag_en[way_idx] && (l2r_update_tag_set == l2a_request[295-:8]))
 						l2t_valid[way_idx] <= l2r_update_tag_valid;
 					else
-						l2t_valid[way_idx] <= line_valid[l2a_request[583-:8]];
+						l2t_valid[way_idx] <= line_valid[l2a_request[295-:8]];
 				end
 		end
 	endgenerate
@@ -2129,40 +2129,40 @@ module writeback_stage (
 	input clk;
 	input reset;
 	input fx5_instruction_valid;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	input wire [141:0] fx5_instruction;
-	input wire [511:0] fx5_result;
-	input wire [15:0] fx5_mask_value;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	input wire [140:0] fx5_instruction;
+	input wire [255:0] fx5_result;
+	input wire [7:0] fx5_mask_value;
 	input wire [1:0] fx5_thread_idx;
-	input wire [3:0] fx5_subcycle;
+	input wire [2:0] fx5_subcycle;
 	input ix_instruction_valid;
-	input wire [141:0] ix_instruction;
-	input wire [511:0] ix_result;
+	input wire [140:0] ix_instruction;
+	input wire [255:0] ix_result;
 	input wire [1:0] ix_thread_idx;
-	input wire [15:0] ix_mask_value;
+	input wire [7:0] ix_mask_value;
 	input wire ix_rollback_en;
 	input wire [31:0] ix_rollback_pc;
-	input wire [3:0] ix_subcycle;
+	input wire [2:0] ix_subcycle;
 	input ix_privileged_op_fault;
 	input dd_instruction_valid;
-	input wire [141:0] dd_instruction;
-	input wire [15:0] dd_lane_mask;
+	input wire [140:0] dd_instruction;
+	input wire [7:0] dd_lane_mask;
 	input wire [1:0] dd_thread_idx;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	localparam defines_DCACHE_TAG_BITS = 20;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	localparam defines_DCACHE_TAG_BITS = 21;
 	input wire [31:0] dd_request_vaddr;
-	input wire [3:0] dd_subcycle;
+	input wire [2:0] dd_subcycle;
 	input dd_rollback_en;
 	input wire [31:0] dd_rollback_pc;
-	localparam defines_CACHE_LINE_BITS = 512;
-	input wire [511:0] dd_load_data;
+	localparam defines_CACHE_LINE_BITS = 256;
+	input wire [255:0] dd_load_data;
 	input dd_suspend_thread;
 	input dd_io_access;
 	input wire dd_trap;
 	input wire [5:0] dd_trap_cause;
-	input [63:0] sq_store_bypass_mask;
-	input wire [511:0] sq_store_bypass_data;
+	input [31:0] sq_store_bypass_mask;
+	input wire [255:0] sq_store_bypass_data;
 	input sq_store_sync_success;
 	input sq_rollback_en;
 	input wire [31:0] ior_read_value;
@@ -2170,24 +2170,24 @@ module writeback_stage (
 	input wire [31:0] cr_creg_read_val;
 	input wire [31:0] cr_trap_handler;
 	input wire [31:0] cr_tlb_miss_handler;
-	input wire [15:0] cr_eret_subcycle;
+	input wire [11:0] cr_eret_subcycle;
 	output reg wb_trap;
 	output reg [5:0] wb_trap_cause;
 	output reg [31:0] wb_trap_pc;
 	output reg [31:0] wb_trap_access_vaddr;
-	output reg [3:0] wb_trap_subcycle;
+	output reg [2:0] wb_trap_subcycle;
 	output wire [14:0] wb_syscall_index;
 	output reg wb_eret;
 	output reg wb_rollback_en;
 	output reg [1:0] wb_rollback_thread_idx;
 	output reg [31:0] wb_rollback_pc;
 	output reg [1:0] wb_rollback_pipeline;
-	output reg [3:0] wb_rollback_subcycle;
+	output reg [2:0] wb_rollback_subcycle;
 	output reg wb_writeback_en;
 	output reg [1:0] wb_writeback_thread_idx;
 	output reg wb_writeback_vector;
-	output reg [511:0] wb_writeback_value;
-	output reg [15:0] wb_writeback_mask;
+	output reg [255:0] wb_writeback_value;
+	output reg [7:0] wb_writeback_mask;
 	output reg [4:0] wb_writeback_reg;
 	output reg wb_writeback_last_subcycle;
 	output wire [3:0] wb_suspend_thread_oh;
@@ -2196,17 +2196,17 @@ module writeback_stage (
 	output reg wb_perf_store_rollback;
 	output reg wb_perf_interrupt;
 	wire [31:0] mem_load_lane;
-	localparam defines_CACHE_LINE_WORDS = 16;
-	wire [3:0] mem_load_lane_idx;
+	localparam defines_CACHE_LINE_WORDS = 8;
+	wire [2:0] mem_load_lane_idx;
 	reg [7:0] byte_aligned;
 	reg [15:0] half_aligned;
 	wire [31:0] swapped_word_value;
 	wire [3:0] memory_op;
-	wire [511:0] endian_twiddled_data;
-	wire [15:0] scycle_vcompare_result;
-	wire [15:0] mcycle_vcompare_result;
-	wire [15:0] dd_vector_lane_oh;
-	wire [511:0] bypassed_read_data;
+	wire [255:0] endian_twiddled_data;
+	wire [7:0] scycle_vcompare_result;
+	wire [7:0] mcycle_vcompare_result;
+	wire [7:0] dd_vector_lane_oh;
+	wire [255:0] bypassed_read_data;
 	wire [3:0] thread_dd_oh;
 	wire last_subcycle_dd;
 	wire last_subcycle_ix;
@@ -2214,8 +2214,8 @@ module writeback_stage (
 	reg writeback_en_nxt;
 	reg [1:0] writeback_thread_idx_nxt;
 	reg writeback_vector_nxt;
-	reg [511:0] writeback_value_nxt;
-	reg [15:0] writeback_mask_nxt;
+	reg [255:0] writeback_value_nxt;
+	reg [7:0] writeback_mask_nxt;
 	reg [4:0] writeback_reg_nxt;
 	reg writeback_last_subcycle_nxt;
 	always @(*) begin
@@ -2232,9 +2232,9 @@ module writeback_stage (
 		wb_trap_access_vaddr = 0;
 		wb_trap_subcycle = dd_subcycle;
 		wb_eret = 0;
-		if (ix_instruction_valid && (ix_instruction[108] || ix_privileged_op_fault)) begin
+		if (ix_instruction_valid && (ix_instruction[107] || ix_privileged_op_fault)) begin
 			wb_rollback_en = 1;
-			if (ix_instruction[105-:4] == 4'd7)
+			if (ix_instruction[104-:4] == 4'd7)
 				wb_rollback_pc = cr_tlb_miss_handler;
 			else
 				wb_rollback_pc = cr_trap_handler;
@@ -2244,9 +2244,9 @@ module writeback_stage (
 			if (ix_privileged_op_fault)
 				wb_trap_cause = 6'h02;
 			else
-				wb_trap_cause = ix_instruction[107-:6];
-			wb_trap_pc = ix_instruction[141-:32];
-			wb_trap_access_vaddr = ix_instruction[141-:32];
+				wb_trap_cause = ix_instruction[106-:6];
+			wb_trap_pc = ix_instruction[140-:32];
+			wb_trap_access_vaddr = ix_instruction[140-:32];
 			wb_trap_subcycle = ix_subcycle;
 		end
 		else if (dd_instruction_valid && dd_trap) begin
@@ -2259,7 +2259,7 @@ module writeback_stage (
 			wb_rollback_pipeline = 2'd0;
 			wb_trap = 1;
 			wb_trap_cause = dd_trap_cause;
-			wb_trap_pc = dd_instruction[141-:32];
+			wb_trap_pc = dd_instruction[140-:32];
 			wb_trap_access_vaddr = dd_request_vaddr;
 		end
 		else if (ix_instruction_valid && ix_rollback_en) begin
@@ -2267,9 +2267,9 @@ module writeback_stage (
 			wb_rollback_pc = ix_rollback_pc;
 			wb_rollback_thread_idx = ix_thread_idx;
 			wb_rollback_pipeline = 2'd1;
-			if (ix_instruction[25-:3] == 3'b111) begin
+			if (ix_instruction[24-:3] == 3'b111) begin
 				wb_eret = 1;
-				wb_rollback_subcycle = cr_eret_subcycle[(3 - ix_thread_idx) * 4+:4];
+				wb_rollback_subcycle = cr_eret_subcycle[(3 - ix_thread_idx) * 3+:3];
 			end
 			else
 				wb_rollback_subcycle = ix_subcycle;
@@ -2286,16 +2286,16 @@ module writeback_stage (
 		input reg [14:0] inp;
 		sv2v_cast_15 = inp;
 	endfunction
-	assign wb_syscall_index = sv2v_cast_15(ix_instruction[58-:32]);
+	assign wb_syscall_index = sv2v_cast_15(ix_instruction[57-:32]);
 	always @(*) begin
 		if (_sv2v_0)
 			;
 		if (ix_instruction_valid)
-			wb_inst_injected = ix_instruction[109];
+			wb_inst_injected = ix_instruction[108];
 		else if (dd_instruction_valid)
-			wb_inst_injected = dd_instruction[109];
+			wb_inst_injected = dd_instruction[108];
 		else if (fx5_instruction_valid)
-			wb_inst_injected = fx5_instruction[109];
+			wb_inst_injected = fx5_instruction[108];
 		else
 			wb_inst_injected = 0;
 	end
@@ -2314,8 +2314,8 @@ module writeback_stage (
 			assign bypassed_read_data[byte_lane * 8+:8] = (sq_store_bypass_mask[byte_lane] ? sq_store_bypass_data[byte_lane * 8+:8] : dd_load_data[byte_lane * 8+:8]);
 		end
 	endgenerate
-	assign memory_op = dd_instruction[18-:4];
-	assign mem_load_lane_idx = ~dd_request_vaddr[2+:4];
+	assign memory_op = dd_instruction[17-:4];
+	assign mem_load_lane_idx = ~dd_request_vaddr[2+:3];
 	assign mem_load_lane = bypassed_read_data[mem_load_lane_idx * 32+:32];
 	always @(*) begin
 		if (_sv2v_0)
@@ -2342,7 +2342,7 @@ module writeback_stage (
 	assign swapped_word_value = {mem_load_lane[7:0], mem_load_lane[15:8], mem_load_lane[23:16], mem_load_lane[31:24]};
 	genvar _gv_swap_word_1;
 	generate
-		for (_gv_swap_word_1 = 0; _gv_swap_word_1 < 16; _gv_swap_word_1 = _gv_swap_word_1 + 1) begin : swap_word_gen
+		for (_gv_swap_word_1 = 0; _gv_swap_word_1 < 8; _gv_swap_word_1 = _gv_swap_word_1 + 1) begin : swap_word_gen
 			localparam swap_word = _gv_swap_word_1;
 			assign endian_twiddled_data[swap_word * 32+:8] = bypassed_read_data[(swap_word * 32) + 24+:8];
 			assign endian_twiddled_data[(swap_word * 32) + 8+:8] = bypassed_read_data[(swap_word * 32) + 16+:8];
@@ -2365,9 +2365,9 @@ module writeback_stage (
 		.one_hot(dd_vector_lane_oh),
 		.index(dd_subcycle)
 	);
-	assign last_subcycle_dd = dd_subcycle == dd_instruction[12-:4];
-	assign last_subcycle_ix = ix_subcycle == ix_instruction[12-:4];
-	assign last_subcycle_fx = fx5_subcycle == fx5_instruction[12-:4];
+	assign last_subcycle_dd = dd_subcycle == dd_instruction[11-:3];
+	assign last_subcycle_ix = ix_subcycle == ix_instruction[11-:3];
+	assign last_subcycle_fx = fx5_subcycle == fx5_instruction[11-:3];
 	function automatic [31:0] sv2v_cast_32;
 		input reg [31:0] inp;
 		sv2v_cast_32 = inp;
@@ -2383,40 +2383,40 @@ module writeback_stage (
 		writeback_reg_nxt = 0;
 		writeback_last_subcycle_nxt = 0;
 		if (fx5_instruction_valid) begin
-			if (fx5_instruction[77] && !wb_rollback_en)
+			if (fx5_instruction[76] && !wb_rollback_en)
 				writeback_en_nxt = 1;
 			writeback_thread_idx_nxt = fx5_thread_idx;
 			writeback_mask_nxt = fx5_mask_value;
-			if (fx5_instruction[13])
+			if (fx5_instruction[12])
 				writeback_value_nxt[0+:32] = {16'd0, mcycle_vcompare_result};
 			else
 				writeback_value_nxt = fx5_result;
-			writeback_vector_nxt = fx5_instruction[76];
-			writeback_reg_nxt = fx5_instruction[75-:5];
+			writeback_vector_nxt = fx5_instruction[75];
+			writeback_reg_nxt = fx5_instruction[74-:5];
 			writeback_last_subcycle_nxt = last_subcycle_fx;
 		end
 		else if (ix_instruction_valid) begin
-			if (ix_instruction[26] && ((ix_instruction[25-:3] == 3'b100) || (ix_instruction[25-:3] == 3'b110)))
+			if (ix_instruction[25] && ((ix_instruction[24-:3] == 3'b100) || (ix_instruction[24-:3] == 3'b110)))
 				writeback_en_nxt = 1;
-			else if (ix_instruction[77] && !wb_rollback_en)
+			else if (ix_instruction[76] && !wb_rollback_en)
 				writeback_en_nxt = 1;
 			writeback_thread_idx_nxt = ix_thread_idx;
 			writeback_mask_nxt = ix_mask_value;
-			if (ix_instruction[22])
-				writeback_value_nxt[0+:32] = ix_instruction[141-:32] + 32'd4;
-			else if (ix_instruction[13])
+			if (ix_instruction[21])
+				writeback_value_nxt[0+:32] = ix_instruction[140-:32] + 32'd4;
+			else if (ix_instruction[12])
 				writeback_value_nxt[0+:32] = {16'd0, scycle_vcompare_result};
 			else
 				writeback_value_nxt = ix_result;
-			writeback_vector_nxt = ix_instruction[76];
-			writeback_reg_nxt = ix_instruction[75-:5];
+			writeback_vector_nxt = ix_instruction[75];
+			writeback_reg_nxt = ix_instruction[74-:5];
 			writeback_last_subcycle_nxt = last_subcycle_ix;
 		end
 		else if (dd_instruction_valid) begin
-			writeback_en_nxt = dd_instruction[77] && !wb_rollback_en;
+			writeback_en_nxt = dd_instruction[76] && !wb_rollback_en;
 			writeback_thread_idx_nxt = dd_thread_idx;
 			if (!dd_instruction[3]) begin
-				if (dd_instruction[14])
+				if (dd_instruction[13])
 					(* full_case, parallel_case *)
 					case (memory_op)
 						4'b0000: writeback_value_nxt[0+:32] = sv2v_cast_32(byte_aligned);
@@ -2449,8 +2449,8 @@ module writeback_stage (
 				else if (memory_op == 4'b0101)
 					writeback_value_nxt[0+:32] = sv2v_cast_32(sq_store_sync_success);
 			end
-			writeback_vector_nxt = dd_instruction[76];
-			writeback_reg_nxt = dd_instruction[75-:5];
+			writeback_vector_nxt = dd_instruction[75];
+			writeback_reg_nxt = dd_instruction[74-:5];
 			writeback_last_subcycle_nxt = last_subcycle_dd;
 		end
 	end
@@ -2467,7 +2467,7 @@ module writeback_stage (
 			wb_writeback_en <= 0;
 		else begin
 			if (dd_instruction_valid && !dd_instruction[3]) begin
-				if (dd_instruction[14]) begin
+				if (dd_instruction[13]) begin
 					if (((((((memory_op == 4'b0000) || (memory_op == 4'b0001)) || (memory_op == 4'b0010)) || (memory_op == 4'b0011)) || (memory_op == 4'b0101)) || (memory_op == 4'b0100)) || (memory_op == 4'b0110))
 						;
 				end
@@ -2475,9 +2475,9 @@ module writeback_stage (
 					;
 			end
 			wb_writeback_en <= writeback_en_nxt;
-			wb_perf_instruction_retire <= ((fx5_instruction_valid || ix_instruction_valid) || dd_instruction_valid) && (!wb_rollback_en || ((ix_instruction_valid && ix_instruction[26]) && !ix_privileged_op_fault));
+			wb_perf_instruction_retire <= ((fx5_instruction_valid || ix_instruction_valid) || dd_instruction_valid) && (!wb_rollback_en || ((ix_instruction_valid && ix_instruction[25]) && !ix_privileged_op_fault));
 			wb_perf_store_rollback <= sq_rollback_en;
-			wb_perf_interrupt <= (ix_instruction_valid && ix_instruction[108]) && (ix_instruction[105-:4] == 4'd3);
+			wb_perf_interrupt <= (ix_instruction_valid && ix_instruction[107]) && (ix_instruction[104-:4] == 4'd3);
 		end
 	initial _sv2v_0 = 0;
 endmodule
@@ -2532,10 +2532,10 @@ module ifetch_data_stage (
 	input clk;
 	input reset;
 	input ift_instruction_requested;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	localparam defines_ICACHE_TAG_BITS = 20;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	localparam defines_ICACHE_TAG_BITS = 21;
 	input wire [31:0] ift_pc_paddr;
 	input wire [31:0] ift_pc_vaddr;
 	input wire [1:0] ift_thread_idx;
@@ -2543,7 +2543,7 @@ module ifetch_data_stage (
 	input ift_tlb_present;
 	input ift_tlb_executable;
 	input ift_tlb_supervisor;
-	input wire [79:0] ift_tag;
+	input wire [83:0] ift_tag;
 	input [0:3] ift_valid;
 	output wire ifd_update_lru_en;
 	output wire [1:0] ifd_update_lru_way;
@@ -2551,13 +2551,13 @@ module ifetch_data_stage (
 	input l2i_idata_update_en;
 	input wire [1:0] l2i_idata_update_way;
 	input wire [5:0] l2i_idata_update_set;
-	localparam defines_CACHE_LINE_BITS = 512;
-	input wire [511:0] l2i_idata_update_data;
+	localparam defines_CACHE_LINE_BITS = 256;
+	input wire [255:0] l2i_idata_update_data;
 	input [3:0] l2i_itag_update_en;
 	input wire [5:0] l2i_itag_update_set;
-	input wire [19:0] l2i_itag_update_tag;
+	input wire [20:0] l2i_itag_update_tag;
 	output wire ifd_cache_miss;
-	output wire [25:0] ifd_cache_miss_paddr;
+	output wire [26:0] ifd_cache_miss_paddr;
 	output wire [1:0] ifd_cache_miss_thread_idx;
 	input wire [0:3] cr_supervisor_en;
 	output wire [31:0] ifd_instruction;
@@ -2583,10 +2583,10 @@ module ifetch_data_stage (
 	wire cache_hit;
 	wire [3:0] way_hit_oh;
 	wire [1:0] way_hit_idx;
-	wire [511:0] fetched_cache_line;
+	wire [255:0] fetched_cache_line;
 	wire [31:0] fetched_word;
-	localparam defines_CACHE_LINE_WORDS = 16;
-	wire [3:0] cache_lane_idx;
+	localparam defines_CACHE_LINE_WORDS = 8;
+	wire [2:0] cache_lane_idx;
 	wire alignment_fault;
 	wire squash_instruction;
 	reg ocd_halt_latched;
@@ -2595,7 +2595,7 @@ module ifetch_data_stage (
 	generate
 		for (_gv_way_idx_3 = 0; _gv_way_idx_3 < 4; _gv_way_idx_3 = _gv_way_idx_3 + 1) begin : hit_check_gen
 			localparam way_idx = _gv_way_idx_3;
-			assign way_hit_oh[way_idx] = (ift_pc_paddr[31-:20] == ift_tag[(3 - way_idx) * defines_ICACHE_TAG_BITS+:defines_ICACHE_TAG_BITS]) && ift_valid[way_idx];
+			assign way_hit_oh[way_idx] = (ift_pc_paddr[31-:21] == ift_tag[(3 - way_idx) * defines_ICACHE_TAG_BITS+:defines_ICACHE_TAG_BITS]) && ift_valid[way_idx];
 		end
 	endgenerate
 	assign cache_hit = |way_hit_oh && ift_tlb_hit;
@@ -2603,25 +2603,25 @@ module ifetch_data_stage (
 		.one_hot(way_hit_oh),
 		.index(way_hit_idx)
 	);
-	assign ifd_near_miss = ((((!cache_hit && ift_tlb_hit) && ift_instruction_requested) && |l2i_itag_update_en) && (l2i_itag_update_set == ift_pc_paddr[11-:6])) && (l2i_itag_update_tag == ift_pc_paddr[31-:20]);
+	assign ifd_near_miss = ((((!cache_hit && ift_tlb_hit) && ift_instruction_requested) && |l2i_itag_update_en) && (l2i_itag_update_set == ift_pc_paddr[10-:6])) && (l2i_itag_update_tag == ift_pc_paddr[31-:21]);
 	assign ifd_cache_miss = (((!cache_hit && ift_tlb_hit) && ift_instruction_requested) && !ifd_near_miss) && !squash_instruction;
-	assign ifd_cache_miss_paddr = {ift_pc_paddr[31-:20], ift_pc_paddr[11-:6]};
+	assign ifd_cache_miss_paddr = {ift_pc_paddr[31-:21], ift_pc_paddr[10-:6]};
 	assign ifd_cache_miss_thread_idx = ift_thread_idx;
 	assign alignment_fault = ift_pc_paddr[1:0] != 0;
-	fakeram_1r1w_512x256 #(
+	fakeram_1r1w_256x256 #(
 		.DATA_WIDTH(defines_CACHE_LINE_BITS),
 		.SIZE(256),
 		.READ_DURING_WRITE("NEW_DATA")
 	) sram_l1i_data(
 		.read_en(cache_hit && ift_instruction_requested),
-		.read_addr({way_hit_idx, ift_pc_paddr[11-:6]}),
+		.read_addr({way_hit_idx, ift_pc_paddr[10-:6]}),
 		.read_data(fetched_cache_line),
 		.write_en(l2i_idata_update_en),
 		.write_addr({l2i_idata_update_way, l2i_idata_update_set}),
 		.write_data(l2i_idata_update_data),
 		.*
 	);
-	assign cache_lane_idx = ~ifd_pc[5:2];
+	assign cache_lane_idx = ~ifd_pc[4:2];
 	assign fetched_word = fetched_cache_line[32 * cache_lane_idx+:32];
 	assign ifd_instruction = (ocd_halt_latched ? ocd_inject_inst : {fetched_word[7:0], fetched_word[15:8], fetched_word[23:16], fetched_word[31:24]});
 	assign ifd_update_lru_en = cache_hit && ift_instruction_requested;
@@ -2709,8 +2709,8 @@ module instruction_decode_stage (
 	input ifd_tlb_miss;
 	input wire [3:0] dd_load_sync_pending;
 	input wire [3:0] sq_store_sync_pending;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	output reg [141:0] id_instruction;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	output reg [140:0] id_instruction;
 	output reg id_instruction_valid;
 	output reg [1:0] id_thread_idx;
 	input wire [3:0] ior_pending;
@@ -2722,7 +2722,7 @@ module instruction_decode_stage (
 	localparam T = 1'b1;
 	localparam F = 1'b0;
 	reg [20:0] dlut_out;
-	reg [141:0] decoded_instr_nxt;
+	reg [140:0] decoded_instr_nxt;
 	wire nop;
 	wire fmt_r;
 	wire fmt_i;
@@ -2809,50 +2809,50 @@ module instruction_decode_stage (
 		if (_sv2v_0)
 			;
 		if (raise_interrupt)
-			decoded_instr_nxt[107-:6] = 6'h03;
+			decoded_instr_nxt[106-:6] = 6'h03;
 		else if (ifd_tlb_miss)
-			decoded_instr_nxt[107-:6] = 6'h07;
+			decoded_instr_nxt[106-:6] = 6'h07;
 		else if (ifd_page_fault)
-			decoded_instr_nxt[107-:6] = 6'h06;
+			decoded_instr_nxt[106-:6] = 6'h06;
 		else if (ifd_supervisor_fault)
-			decoded_instr_nxt[107-:6] = 6'h09;
+			decoded_instr_nxt[106-:6] = 6'h09;
 		else if (ifd_alignment_fault)
-			decoded_instr_nxt[107-:6] = 6'h05;
+			decoded_instr_nxt[106-:6] = 6'h05;
 		else if (ifd_executable_fault)
-			decoded_instr_nxt[107-:6] = 6'h0a;
+			decoded_instr_nxt[106-:6] = 6'h0a;
 		else if (dlut_out[20])
-			decoded_instr_nxt[107-:6] = 6'h01;
+			decoded_instr_nxt[106-:6] = 6'h01;
 		else if (syscall)
-			decoded_instr_nxt[107-:6] = 6'h04;
+			decoded_instr_nxt[106-:6] = 6'h04;
 		else if (breakpoint)
-			decoded_instr_nxt[107-:6] = 6'h0b;
+			decoded_instr_nxt[106-:6] = 6'h0b;
 		else
-			decoded_instr_nxt[107-:6] = 6'h00;
+			decoded_instr_nxt[106-:6] = 6'h00;
 	end
 	wire [1:1] sv2v_tmp_B134F;
 	assign sv2v_tmp_B134F = ifd_inst_injected;
-	always @(*) decoded_instr_nxt[109] = sv2v_tmp_B134F;
+	always @(*) decoded_instr_nxt[108] = sv2v_tmp_B134F;
 	assign masked_interrupt_flags = (((cr_interrupt_pending & cr_interrupt_en) & ~ior_pending) & ~dd_load_sync_pending) & ~sq_store_sync_pending;
 	assign raise_interrupt = masked_interrupt_flags[ifd_thread_idx] && !ocd_halt;
 	wire [1:1] sv2v_tmp_C4036;
 	assign sv2v_tmp_C4036 = has_trap;
-	always @(*) decoded_instr_nxt[108] = sv2v_tmp_C4036;
+	always @(*) decoded_instr_nxt[107] = sv2v_tmp_C4036;
 	assign unary_arith = (fmt_r && ((((((((alu_op == 6'b001100) || (alu_op == 6'b001110)) || (alu_op == 6'b001111)) || (alu_op == 6'b011011)) || (alu_op == 6'b011100)) || (alu_op == 6'b011101)) || (alu_op == 6'b011110)) || (alu_op == 6'b101010))) && (dlut_out[3-:2] != 2'd0);
 	wire [1:1] sv2v_tmp_B589F;
 	assign sv2v_tmp_B589F = (((dlut_out[14-:2] != 2'd0) && !nop) && !has_trap) && !unary_arith;
-	always @(*) decoded_instr_nxt[101] = sv2v_tmp_B589F;
+	always @(*) decoded_instr_nxt[100] = sv2v_tmp_B589F;
 	always @(*) begin
 		if (_sv2v_0)
 			;
 		(* full_case, parallel_case *)
 		case (dlut_out[14-:2])
-			2'd1: decoded_instr_nxt[100-:5] = ifd_instruction[14:10];
-			default: decoded_instr_nxt[100-:5] = ifd_instruction[4:0];
+			2'd1: decoded_instr_nxt[99-:5] = ifd_instruction[14:10];
+			default: decoded_instr_nxt[99-:5] = ifd_instruction[4:0];
 		endcase
 	end
 	wire [1:1] sv2v_tmp_D8F29;
 	assign sv2v_tmp_D8F29 = ((dlut_out[12-:3] != 3'd0) && !nop) && !has_trap;
-	always @(*) decoded_instr_nxt[95] = sv2v_tmp_D8F29;
+	always @(*) decoded_instr_nxt[94] = sv2v_tmp_D8F29;
 	always @(*) begin
 		if (_sv2v_0)
 			;
@@ -2866,37 +2866,37 @@ module instruction_decode_stage (
 	end
 	wire [5:1] sv2v_tmp_1FBF8;
 	assign sv2v_tmp_1FBF8 = scalar_sel2;
-	always @(*) decoded_instr_nxt[94-:5] = sv2v_tmp_1FBF8;
+	always @(*) decoded_instr_nxt[93-:5] = sv2v_tmp_1FBF8;
 	wire [1:1] sv2v_tmp_A0273;
 	assign sv2v_tmp_A0273 = (dlut_out[9] && !nop) && !has_trap;
-	always @(*) decoded_instr_nxt[89] = sv2v_tmp_A0273;
+	always @(*) decoded_instr_nxt[88] = sv2v_tmp_A0273;
 	wire [5:1] sv2v_tmp_1F848;
 	assign sv2v_tmp_1F848 = ifd_instruction[4:0];
-	always @(*) decoded_instr_nxt[88-:5] = sv2v_tmp_1F848;
+	always @(*) decoded_instr_nxt[87-:5] = sv2v_tmp_1F848;
 	wire [1:1] sv2v_tmp_1AA29;
 	assign sv2v_tmp_1AA29 = (dlut_out[8] && !nop) && !has_trap;
-	always @(*) decoded_instr_nxt[83] = sv2v_tmp_1AA29;
+	always @(*) decoded_instr_nxt[82] = sv2v_tmp_1AA29;
 	always @(*) begin
 		if (_sv2v_0)
 			;
 		if (dlut_out[7])
-			decoded_instr_nxt[82-:5] = ifd_instruction[9:5];
+			decoded_instr_nxt[81-:5] = ifd_instruction[9:5];
 		else
-			decoded_instr_nxt[82-:5] = ifd_instruction[19:15];
+			decoded_instr_nxt[81-:5] = ifd_instruction[19:15];
 	end
 	wire [1:1] sv2v_tmp_EBF04;
 	assign sv2v_tmp_EBF04 = (dlut_out[18] && !nop) && !has_trap;
-	always @(*) decoded_instr_nxt[77] = sv2v_tmp_EBF04;
+	always @(*) decoded_instr_nxt[76] = sv2v_tmp_EBF04;
 	wire [1:1] sv2v_tmp_C4837;
 	assign sv2v_tmp_C4837 = (dlut_out[19] && !compare) && !getlane;
-	always @(*) decoded_instr_nxt[76] = sv2v_tmp_C4837;
+	always @(*) decoded_instr_nxt[75] = sv2v_tmp_C4837;
 	localparam defines_REG_RA = 5'd31;
 	wire [5:1] sv2v_tmp_245AC;
 	assign sv2v_tmp_245AC = (dlut_out[0] ? defines_REG_RA : ifd_instruction[9:5]);
-	always @(*) decoded_instr_nxt[75-:5] = sv2v_tmp_245AC;
+	always @(*) decoded_instr_nxt[74-:5] = sv2v_tmp_245AC;
 	wire [1:1] sv2v_tmp_E98EC;
 	assign sv2v_tmp_E98EC = dlut_out[0];
-	always @(*) decoded_instr_nxt[22] = sv2v_tmp_E98EC;
+	always @(*) decoded_instr_nxt[21] = sv2v_tmp_E98EC;
 	always @(*) begin
 		if (_sv2v_0)
 			;
@@ -2909,24 +2909,24 @@ module instruction_decode_stage (
 	end
 	wire [6:1] sv2v_tmp_78B01;
 	assign sv2v_tmp_78B01 = alu_op;
-	always @(*) decoded_instr_nxt[70-:6] = sv2v_tmp_78B01;
+	always @(*) decoded_instr_nxt[69-:6] = sv2v_tmp_78B01;
 	wire [2:1] sv2v_tmp_990C6;
 	assign sv2v_tmp_990C6 = dlut_out[3-:2];
-	always @(*) decoded_instr_nxt[64-:2] = sv2v_tmp_990C6;
+	always @(*) decoded_instr_nxt[63-:2] = sv2v_tmp_990C6;
 	wire [1:1] sv2v_tmp_C2D78;
 	assign sv2v_tmp_C2D78 = dlut_out[1];
-	always @(*) decoded_instr_nxt[59] = sv2v_tmp_C2D78;
+	always @(*) decoded_instr_nxt[58] = sv2v_tmp_C2D78;
 	always @(*) begin
 		if (_sv2v_0)
 			;
 		if (dlut_out[6])
-			decoded_instr_nxt[62] = 1'd0;
+			decoded_instr_nxt[61] = 1'd0;
 		else
-			decoded_instr_nxt[62] = 1'd1;
+			decoded_instr_nxt[61] = 1'd1;
 	end
 	wire [2:1] sv2v_tmp_EE17C;
 	assign sv2v_tmp_EE17C = dlut_out[5-:2];
-	always @(*) decoded_instr_nxt[61-:2] = sv2v_tmp_EE17C;
+	always @(*) decoded_instr_nxt[60-:2] = sv2v_tmp_EE17C;
 	function automatic [31:0] sv2v_cast_32;
 		input reg [31:0] inp;
 		sv2v_cast_32 = inp;
@@ -2936,68 +2936,68 @@ module instruction_decode_stage (
 			;
 		(* full_case, parallel_case *)
 		case (dlut_out[17-:3])
-			3'd7: decoded_instr_nxt[58-:32] = {ifd_instruction[23:10], ifd_instruction[4:0], 13'd0};
-			3'd1: decoded_instr_nxt[58-:32] = sv2v_cast_32($signed(ifd_instruction[23:15]));
-			3'd2: decoded_instr_nxt[58-:32] = sv2v_cast_32($signed(ifd_instruction[23:10]));
-			3'd3: decoded_instr_nxt[58-:32] = sv2v_cast_32($signed(ifd_instruction[24:15]));
-			3'd4: decoded_instr_nxt[58-:32] = sv2v_cast_32($signed(ifd_instruction[24:10]));
-			3'd5: decoded_instr_nxt[58-:32] = sv2v_cast_32($signed({ifd_instruction[24:5], 2'b00}));
-			3'd6: decoded_instr_nxt[58-:32] = sv2v_cast_32($signed({ifd_instruction[24:0], 2'b00}));
-			default: decoded_instr_nxt[58-:32] = 0;
+			3'd7: decoded_instr_nxt[57-:32] = {ifd_instruction[23:10], ifd_instruction[4:0], 13'd0};
+			3'd1: decoded_instr_nxt[57-:32] = sv2v_cast_32($signed(ifd_instruction[23:15]));
+			3'd2: decoded_instr_nxt[57-:32] = sv2v_cast_32($signed(ifd_instruction[23:10]));
+			3'd3: decoded_instr_nxt[57-:32] = sv2v_cast_32($signed(ifd_instruction[24:15]));
+			3'd4: decoded_instr_nxt[57-:32] = sv2v_cast_32($signed(ifd_instruction[24:10]));
+			3'd5: decoded_instr_nxt[57-:32] = sv2v_cast_32($signed({ifd_instruction[24:5], 2'b00}));
+			3'd6: decoded_instr_nxt[57-:32] = sv2v_cast_32($signed({ifd_instruction[24:0], 2'b00}));
+			default: decoded_instr_nxt[57-:32] = 0;
 		endcase
 	end
 	wire [3:1] sv2v_tmp_1A26C;
 	assign sv2v_tmp_1A26C = ifd_instruction[27:25];
-	always @(*) decoded_instr_nxt[25-:3] = sv2v_tmp_1A26C;
+	always @(*) decoded_instr_nxt[24-:3] = sv2v_tmp_1A26C;
 	wire [1:1] sv2v_tmp_86CFB;
 	assign sv2v_tmp_86CFB = (ifd_instruction[31:28] == 4'b1111) && !has_trap;
-	always @(*) decoded_instr_nxt[26] = sv2v_tmp_86CFB;
+	always @(*) decoded_instr_nxt[25] = sv2v_tmp_86CFB;
 	wire [32:1] sv2v_tmp_B397D;
 	assign sv2v_tmp_B397D = ifd_pc;
-	always @(*) decoded_instr_nxt[141-:32] = sv2v_tmp_B397D;
+	always @(*) decoded_instr_nxt[140-:32] = sv2v_tmp_B397D;
 	always @(*) begin
 		if (_sv2v_0)
 			;
 		if (has_trap)
-			decoded_instr_nxt[21-:2] = 2'd1;
+			decoded_instr_nxt[20-:2] = 2'd1;
 		else if (fmt_r || fmt_i) begin
 			if ((((alu_op[5] || (alu_op == 6'b000111)) || (alu_op == 6'b001000)) || (alu_op == 6'b011111)) || (alu_op == 6'b011011))
-				decoded_instr_nxt[21-:2] = 2'd2;
+				decoded_instr_nxt[20-:2] = 2'd2;
 			else
-				decoded_instr_nxt[21-:2] = 2'd1;
+				decoded_instr_nxt[20-:2] = 2'd1;
 		end
 		else if (ifd_instruction[31:28] == 4'b1111)
-			decoded_instr_nxt[21-:2] = 2'd1;
+			decoded_instr_nxt[20-:2] = 2'd1;
 		else
-			decoded_instr_nxt[21-:2] = 2'd0;
+			decoded_instr_nxt[20-:2] = 2'd0;
 	end
 	assign memory_access_type = ifd_instruction[28:25];
 	wire [4:1] sv2v_tmp_D35EA;
 	assign sv2v_tmp_D35EA = memory_access_type;
-	always @(*) decoded_instr_nxt[18-:4] = sv2v_tmp_D35EA;
+	always @(*) decoded_instr_nxt[17-:4] = sv2v_tmp_D35EA;
 	wire [1:1] sv2v_tmp_D0F69;
 	assign sv2v_tmp_D0F69 = (ifd_instruction[31:30] == 2'b10) && !has_trap;
-	always @(*) decoded_instr_nxt[19] = sv2v_tmp_D0F69;
+	always @(*) decoded_instr_nxt[18] = sv2v_tmp_D0F69;
 	wire [1:1] sv2v_tmp_0C594;
 	assign sv2v_tmp_0C594 = ifd_instruction[29] && fmt_m;
-	always @(*) decoded_instr_nxt[14] = sv2v_tmp_0C594;
+	always @(*) decoded_instr_nxt[13] = sv2v_tmp_0C594;
 	wire [1:1] sv2v_tmp_0363D;
 	assign sv2v_tmp_0363D = (ifd_instruction[31:28] == 4'b1110) && !has_trap;
 	always @(*) decoded_instr_nxt[3] = sv2v_tmp_0363D;
 	wire [3:1] sv2v_tmp_8C9C3;
 	assign sv2v_tmp_8C9C3 = ifd_instruction[27:25];
 	always @(*) decoded_instr_nxt[2-:3] = sv2v_tmp_8C9C3;
-	function automatic [3:0] sv2v_cast_60D1B;
-		input reg [3:0] inp;
+	function automatic [2:0] sv2v_cast_60D1B;
+		input reg [2:0] inp;
 		sv2v_cast_60D1B = inp;
 	endfunction
 	always @(*) begin
 		if (_sv2v_0)
 			;
 		if ((ifd_instruction[31:30] == 2'b10) && ((memory_access_type == 4'b1101) || (memory_access_type == 4'b1110)))
-			decoded_instr_nxt[12-:4] = sv2v_cast_60D1B(15);
+			decoded_instr_nxt[11-:3] = sv2v_cast_60D1B(7);
 		else
-			decoded_instr_nxt[12-:4] = 0;
+			decoded_instr_nxt[11-:3] = 0;
 	end
 	wire [5:1] sv2v_tmp_E1483;
 	assign sv2v_tmp_E1483 = ifd_instruction[4:0];
@@ -3005,7 +3005,7 @@ module instruction_decode_stage (
 	assign compare = (fmt_r || fmt_i) && ((((((((((((((((alu_op == 6'b010000) || (alu_op == 6'b010001)) || (alu_op == 6'b010010)) || (alu_op == 6'b010011)) || (alu_op == 6'b010100)) || (alu_op == 6'b010101)) || (alu_op == 6'b010110)) || (alu_op == 6'b010111)) || (alu_op == 6'b011000)) || (alu_op == 6'b011001)) || (alu_op == 6'b101100)) || (alu_op == 6'b101110)) || (alu_op == 6'b101101)) || (alu_op == 6'b101111)) || (alu_op == 6'b110000)) || (alu_op == 6'b110001));
 	wire [1:1] sv2v_tmp_DE7AB;
 	assign sv2v_tmp_DE7AB = compare;
-	always @(*) decoded_instr_nxt[13] = sv2v_tmp_DE7AB;
+	always @(*) decoded_instr_nxt[12] = sv2v_tmp_DE7AB;
 	always @(posedge clk) begin
 		id_instruction <= decoded_instr_nxt;
 		id_thread_idx <= ifd_thread_idx;
@@ -3058,43 +3058,43 @@ module fp_execute_stage4 (
 	reg _sv2v_0;
 	input clk;
 	input reset;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	input wire [15:0] fx3_mask_value;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	input wire [7:0] fx3_mask_value;
 	input fx3_instruction_valid;
-	input wire [141:0] fx3_instruction;
+	input wire [140:0] fx3_instruction;
 	input wire [1:0] fx3_thread_idx;
-	input wire [3:0] fx3_subcycle;
-	input [15:0] fx3_result_inf;
-	input [15:0] fx3_result_nan;
-	input [15:0] fx3_equal;
-	input [95:0] fx3_ftoi_lshift;
-	input wire [511:0] fx3_add_significand;
-	input [127:0] fx3_add_exponent;
-	input [15:0] fx3_add_result_sign;
-	input [15:0] fx3_logical_subtract;
-	input [1023:0] fx3_significand_product;
-	input [127:0] fx3_mul_exponent;
-	input [15:0] fx3_mul_underflow;
-	input [15:0] fx3_mul_sign;
+	input wire [2:0] fx3_subcycle;
+	input [7:0] fx3_result_inf;
+	input [7:0] fx3_result_nan;
+	input [7:0] fx3_equal;
+	input [47:0] fx3_ftoi_lshift;
+	input wire [255:0] fx3_add_significand;
+	input [63:0] fx3_add_exponent;
+	input [7:0] fx3_add_result_sign;
+	input [7:0] fx3_logical_subtract;
+	input [511:0] fx3_significand_product;
+	input [63:0] fx3_mul_exponent;
+	input [7:0] fx3_mul_underflow;
+	input [7:0] fx3_mul_sign;
 	output reg fx4_instruction_valid;
-	output reg [141:0] fx4_instruction;
-	output reg [15:0] fx4_mask_value;
+	output reg [140:0] fx4_instruction;
+	output reg [7:0] fx4_mask_value;
 	output reg [1:0] fx4_thread_idx;
-	output reg [3:0] fx4_subcycle;
-	output reg [15:0] fx4_result_inf;
-	output reg [15:0] fx4_result_nan;
-	output reg [15:0] fx4_equal;
-	output reg [127:0] fx4_add_exponent;
-	output reg [511:0] fx4_add_significand;
-	output reg [15:0] fx4_add_result_sign;
-	output reg [15:0] fx4_logical_subtract;
-	output reg [95:0] fx4_norm_shift;
-	output reg [1023:0] fx4_significand_product;
-	output reg [127:0] fx4_mul_exponent;
-	output reg [15:0] fx4_mul_underflow;
-	output reg [15:0] fx4_mul_sign;
+	output reg [2:0] fx4_subcycle;
+	output reg [7:0] fx4_result_inf;
+	output reg [7:0] fx4_result_nan;
+	output reg [7:0] fx4_equal;
+	output reg [63:0] fx4_add_exponent;
+	output reg [255:0] fx4_add_significand;
+	output reg [7:0] fx4_add_result_sign;
+	output reg [7:0] fx4_logical_subtract;
+	output reg [47:0] fx4_norm_shift;
+	output reg [511:0] fx4_significand_product;
+	output reg [63:0] fx4_mul_exponent;
+	output reg [7:0] fx4_mul_underflow;
+	output reg [7:0] fx4_mul_sign;
 	wire ftoi;
-	assign ftoi = fx3_instruction[70-:6] == 6'b011011;
+	assign ftoi = fx3_instruction[69-:6] == 6'b011011;
 	genvar _gv_lane_idx_4;
 	generate
 		for (_gv_lane_idx_4 = 0; _gv_lane_idx_4 < defines_NUM_VECTOR_LANES; _gv_lane_idx_4 = _gv_lane_idx_4 + 1) begin : lane_logic_gen
@@ -3267,11 +3267,11 @@ module control_registers (
 	input wire [31:0] wb_trap_pc;
 	input wire [31:0] wb_trap_access_vaddr;
 	input wire [1:0] wb_rollback_thread_idx;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	input wire [3:0] wb_trap_subcycle;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	input wire [2:0] wb_trap_subcycle;
 	input wire [14:0] wb_syscall_index;
 	output reg [31:0] cr_creg_read_val;
-	output wire [15:0] cr_eret_subcycle;
+	output wire [11:0] cr_eret_subcycle;
 	output reg [31:0] cr_trap_handler;
 	output reg [31:0] cr_tlb_miss_handler;
 	output reg [EVENT_IDX_WIDTH - 1:0] cr_perf_event_select0;
@@ -3282,7 +3282,7 @@ module control_registers (
 	input ocd_data_update;
 	output wire [31:0] cr_data_to_host;
 	localparam TRAP_LEVELS = 3;
-	reg [155:0] trap_state [0:3][0:2];
+	reg [154:0] trap_state [0:3][0:2];
 	reg [31:0] page_dir_base [0:3];
 	reg [31:0] cycle_count;
 	reg [NUM_INTERRUPTS - 1:0] interrupt_mask [0:3];
@@ -3297,8 +3297,8 @@ module control_registers (
 		input reg [2:0] inp;
 		sv2v_cast_3 = inp;
 	endfunction
-	function automatic [3:0] sv2v_cast_60D1B;
-		input reg [3:0] inp;
+	function automatic [2:0] sv2v_cast_60D1B;
+		input reg [2:0] inp;
 		sv2v_cast_60D1B = inp;
 	endfunction
 	always @(posedge clk or posedge reset)
@@ -3308,7 +3308,7 @@ module control_registers (
 				for (thread_idx = 0; thread_idx < 4; thread_idx = thread_idx + 1)
 					begin
 						trap_state[thread_idx][0] <= 1'sb0;
-						trap_state[thread_idx][0][155] <= 1'b1;
+						trap_state[thread_idx][0][154] <= 1'b1;
 						cr_current_asid[(3 - thread_idx) * 8+:8] <= 1'sb0;
 						page_dir_base[thread_idx] <= 1'sb0;
 						interrupt_mask[thread_idx] <= 1'sb0;
@@ -3332,15 +3332,15 @@ module control_registers (
 					for (level = 0; level < 2; level = level + 1)
 						trap_state[wb_rollback_thread_idx][level + 1] <= trap_state[wb_rollback_thread_idx][level];
 				end
-				trap_state[wb_rollback_thread_idx][0][88-:6] <= wb_trap_cause;
-				trap_state[wb_rollback_thread_idx][0][82-:32] <= wb_trap_pc;
-				trap_state[wb_rollback_thread_idx][0][50-:32] <= wb_trap_access_vaddr;
+				trap_state[wb_rollback_thread_idx][0][87-:6] <= wb_trap_cause;
+				trap_state[wb_rollback_thread_idx][0][81-:32] <= wb_trap_pc;
+				trap_state[wb_rollback_thread_idx][0][49-:32] <= wb_trap_access_vaddr;
 				trap_state[wb_rollback_thread_idx][0][14-:15] <= wb_syscall_index;
-				trap_state[wb_rollback_thread_idx][0][18-:4] <= wb_trap_subcycle;
-				trap_state[wb_rollback_thread_idx][0][153] <= 0;
-				trap_state[wb_rollback_thread_idx][0][155] <= 1;
+				trap_state[wb_rollback_thread_idx][0][17-:3] <= wb_trap_subcycle;
+				trap_state[wb_rollback_thread_idx][0][152] <= 0;
+				trap_state[wb_rollback_thread_idx][0][154] <= 1;
 				if (wb_trap_cause[3-:4] == 4'd7)
-					trap_state[wb_rollback_thread_idx][0][154] <= 0;
+					trap_state[wb_rollback_thread_idx][0][153] <= 0;
 			end
 			if (wb_eret) begin : sv2v_autoblock_3
 				reg signed [31:0] level;
@@ -3352,14 +3352,14 @@ module control_registers (
 			if (dd_creg_write_en)
 				(* full_case, parallel_case *)
 				case (dd_creg_index)
-					5'd4: trap_state[dt_thread_idx][0][155-:3] <= sv2v_cast_3(dd_creg_write_val);
-					5'd8: trap_state[dt_thread_idx][1][155-:3] <= sv2v_cast_3(dd_creg_write_val);
-					5'd2: trap_state[dt_thread_idx][0][82-:32] <= dd_creg_write_val;
+					5'd4: trap_state[dt_thread_idx][0][154-:3] <= sv2v_cast_3(dd_creg_write_val);
+					5'd8: trap_state[dt_thread_idx][1][154-:3] <= sv2v_cast_3(dd_creg_write_val);
+					5'd2: trap_state[dt_thread_idx][0][81-:32] <= dd_creg_write_val;
 					5'd1: cr_trap_handler <= dd_creg_write_val;
 					5'd7: cr_tlb_miss_handler <= dd_creg_write_val;
-					5'd11: trap_state[dt_thread_idx][0][152-:32] <= dd_creg_write_val;
-					5'd12: trap_state[dt_thread_idx][0][120-:32] <= dd_creg_write_val;
-					5'd13: trap_state[dt_thread_idx][0][18-:4] <= sv2v_cast_60D1B(dd_creg_write_val);
+					5'd11: trap_state[dt_thread_idx][0][151-:32] <= dd_creg_write_val;
+					5'd12: trap_state[dt_thread_idx][0][119-:32] <= dd_creg_write_val;
+					5'd13: trap_state[dt_thread_idx][0][17-:3] <= sv2v_cast_60D1B(dd_creg_write_val);
 					5'd9: cr_current_asid[(3 - dt_thread_idx) * 8+:8] <= dd_creg_write_val[7:0];
 					5'd10: page_dir_base[dt_thread_idx] <= dd_creg_write_val;
 					5'd14: interrupt_mask[dt_thread_idx] <= dd_creg_write_val[NUM_INTERRUPTS - 1:0];
@@ -3389,11 +3389,11 @@ module control_registers (
 			wire do_interrupt_ack;
 			assign do_interrupt_ack = ((dt_thread_idx == thread_idx) && dd_creg_write_en) && (dd_creg_index == 5'd15);
 			assign interrupt_ack = {NUM_INTERRUPTS {do_interrupt_ack}} & dd_creg_write_val[NUM_INTERRUPTS - 1:0];
-			assign cr_interrupt_en[thread_idx] = trap_state[thread_idx][0][153];
-			assign cr_supervisor_en[thread_idx] = trap_state[thread_idx][0][155];
-			assign cr_mmu_en[thread_idx] = trap_state[thread_idx][0][154];
-			assign cr_eret_subcycle[(3 - thread_idx) * 4+:4] = trap_state[thread_idx][0][18-:4];
-			assign cr_eret_address[(3 - thread_idx) * 32+:32] = trap_state[thread_idx][0][82-:32];
+			assign cr_interrupt_en[thread_idx] = trap_state[thread_idx][0][152];
+			assign cr_supervisor_en[thread_idx] = trap_state[thread_idx][0][154];
+			assign cr_mmu_en[thread_idx] = trap_state[thread_idx][0][153];
+			assign cr_eret_subcycle[(3 - thread_idx) * 3+:3] = trap_state[thread_idx][0][17-:3];
+			assign cr_eret_address[(3 - thread_idx) * 32+:32] = trap_state[thread_idx][0][81-:32];
 			always @(posedge clk or posedge reset)
 				if (reset)
 					interrupt_edge_latched[thread_idx] <= 1'sb0;
@@ -3411,18 +3411,18 @@ module control_registers (
 		if (dd_creg_read_en)
 			(* full_case, parallel_case *)
 			case (dd_creg_index)
-				5'd4: cr_creg_read_val <= sv2v_cast_32(trap_state[dt_thread_idx][0][155-:3]);
-				5'd8: cr_creg_read_val <= sv2v_cast_32(trap_state[dt_thread_idx][1][155-:3]);
+				5'd4: cr_creg_read_val <= sv2v_cast_32(trap_state[dt_thread_idx][0][154-:3]);
+				5'd8: cr_creg_read_val <= sv2v_cast_32(trap_state[dt_thread_idx][1][154-:3]);
 				5'd0: cr_creg_read_val <= sv2v_cast_32({CORE_ID, dt_thread_idx});
-				5'd2: cr_creg_read_val <= trap_state[dt_thread_idx][0][82-:32];
-				5'd3: cr_creg_read_val <= sv2v_cast_32(trap_state[dt_thread_idx][0][88-:6]);
+				5'd2: cr_creg_read_val <= trap_state[dt_thread_idx][0][81-:32];
+				5'd3: cr_creg_read_val <= sv2v_cast_32(trap_state[dt_thread_idx][0][87-:6]);
 				5'd1: cr_creg_read_val <= cr_trap_handler;
-				5'd5: cr_creg_read_val <= trap_state[dt_thread_idx][0][50-:32];
+				5'd5: cr_creg_read_val <= trap_state[dt_thread_idx][0][49-:32];
 				5'd7: cr_creg_read_val <= cr_tlb_miss_handler;
 				5'd6: cr_creg_read_val <= cycle_count;
-				5'd11: cr_creg_read_val <= trap_state[dt_thread_idx][0][152-:32];
-				5'd12: cr_creg_read_val <= trap_state[dt_thread_idx][0][120-:32];
-				5'd13: cr_creg_read_val <= sv2v_cast_32(trap_state[dt_thread_idx][0][18-:4]);
+				5'd11: cr_creg_read_val <= trap_state[dt_thread_idx][0][151-:32];
+				5'd12: cr_creg_read_val <= trap_state[dt_thread_idx][0][119-:32];
+				5'd13: cr_creg_read_val <= sv2v_cast_32(trap_state[dt_thread_idx][0][17-:3]);
 				5'd9: cr_creg_read_val <= sv2v_cast_32(cr_current_asid[(3 - dt_thread_idx) * 8+:8]);
 				5'd10: cr_creg_read_val <= page_dir_base[dt_thread_idx];
 				5'd16: cr_creg_read_val <= sv2v_cast_32(interrupt_pending[dt_thread_idx] & interrupt_mask[dt_thread_idx]);
@@ -3505,45 +3505,45 @@ module l1_l2_interface (
 	input reset;
 	input l2_ready;
 	input l2_response_valid;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_BITS = 512;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	input wire [548:0] l2_response;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_BITS = 256;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	input wire [293:0] l2_response;
 	output reg l2i_request_valid;
-	output reg [611:0] l2i_request;
+	output reg [324:0] l2i_request;
 	output wire l2i_icache_lru_fill_en;
 	output wire [5:0] l2i_icache_lru_fill_set;
 	output wire [3:0] l2i_itag_update_en;
 	output wire [5:0] l2i_itag_update_set;
-	localparam defines_ICACHE_TAG_BITS = 20;
-	output wire [19:0] l2i_itag_update_tag;
+	localparam defines_ICACHE_TAG_BITS = 21;
+	output wire [20:0] l2i_itag_update_tag;
 	output wire l2i_itag_update_valid;
 	output wire [3:0] sq_store_sync_pending;
 	input wire [1:0] ift_fill_lru;
 	input wire ifd_cache_miss;
-	input wire [25:0] ifd_cache_miss_paddr;
+	input wire [26:0] ifd_cache_miss_paddr;
 	input wire [1:0] ifd_cache_miss_thread_idx;
 	output reg l2i_idata_update_en;
 	output reg [1:0] l2i_idata_update_way;
 	output reg [5:0] l2i_idata_update_set;
-	output reg [511:0] l2i_idata_update_data;
+	output reg [255:0] l2i_idata_update_data;
 	output wire [3:0] l2i_dcache_wake_bitmap;
 	output wire [3:0] l2i_icache_wake_bitmap;
 	input wire [0:3] dt_snoop_valid;
-	localparam defines_DCACHE_TAG_BITS = 20;
-	input wire [79:0] dt_snoop_tag;
+	localparam defines_DCACHE_TAG_BITS = 21;
+	input wire [83:0] dt_snoop_tag;
 	input wire [1:0] dt_fill_lru;
 	output wire l2i_snoop_en;
 	output wire [5:0] l2i_snoop_set;
 	output wire [3:0] l2i_dtag_update_en_oh;
 	output wire [5:0] l2i_dtag_update_set;
-	output wire [19:0] l2i_dtag_update_tag;
+	output wire [20:0] l2i_dtag_update_tag;
 	output wire l2i_dtag_update_valid;
 	output wire l2i_dcache_lru_fill_en;
 	output wire [5:0] l2i_dcache_lru_fill_set;
 	input dd_cache_miss;
-	input wire [25:0] dd_cache_miss_addr;
+	input wire [26:0] dd_cache_miss_addr;
 	input wire [1:0] dd_cache_miss_thread_idx;
 	input dd_cache_miss_sync;
 	input dd_store_en;
@@ -3551,20 +3551,20 @@ module l1_l2_interface (
 	input dd_membar_en;
 	input dd_iinvalidate_en;
 	input dd_dinvalidate_en;
-	input [63:0] dd_store_mask;
-	input wire [25:0] dd_store_addr;
-	input wire [511:0] dd_store_data;
+	input [31:0] dd_store_mask;
+	input wire [26:0] dd_store_addr;
+	input wire [255:0] dd_store_data;
 	input wire [1:0] dd_store_thread_idx;
 	input dd_store_sync;
-	input wire [25:0] dd_store_bypass_addr;
+	input wire [26:0] dd_store_bypass_addr;
 	input wire [1:0] dd_store_bypass_thread_idx;
 	output reg l2i_ddata_update_en;
 	output reg [1:0] l2i_ddata_update_way;
 	output reg [5:0] l2i_ddata_update_set;
-	output reg [511:0] l2i_ddata_update_data;
-	output wire [63:0] sq_store_bypass_mask;
+	output reg [255:0] l2i_ddata_update_data;
+	output wire [31:0] sq_store_bypass_mask;
 	output wire sq_store_sync_success;
-	output wire [511:0] sq_store_bypass_data;
+	output wire [255:0] sq_store_bypass_data;
 	output wire sq_rollback_en;
 	output reg l2i_perf_store;
 	wire [3:0] snoop_hit_way_oh;
@@ -3587,29 +3587,29 @@ module l1_l2_interface (
 	reg icache_dequeue_ack;
 	wire dcache_dequeue_ready;
 	reg dcache_dequeue_ack;
-	wire [25:0] dcache_dequeue_addr;
+	wire [26:0] dcache_dequeue_addr;
 	wire dcache_dequeue_sync;
-	wire [25:0] icache_dequeue_addr;
+	wire [26:0] icache_dequeue_addr;
 	wire [1:0] dcache_dequeue_idx;
 	wire [1:0] icache_dequeue_idx;
 	reg response_stage2_valid;
-	reg [548:0] response_stage2;
+	reg [293:0] response_stage2;
 	wire [5:0] dcache_set_stage1;
 	wire [5:0] icache_set_stage1;
 	wire [5:0] dcache_set_stage2;
 	wire [5:0] icache_set_stage2;
-	wire [19:0] dcache_tag_stage2;
-	wire [19:0] icache_tag_stage2;
+	wire [20:0] dcache_tag_stage2;
+	wire [20:0] icache_tag_stage2;
 	wire storebuf_l2_sync_success;
 	wire response_iinvalidate;
 	wire response_dinvalidate;
-	wire [25:0] sq_dequeue_addr;
-	wire [511:0] sq_dequeue_data;
+	wire [26:0] sq_dequeue_addr;
+	wire [255:0] sq_dequeue_data;
 	wire sq_dequeue_dinvalidate;
 	wire sq_dequeue_flush;
 	wire [1:0] sq_dequeue_idx;
 	wire sq_dequeue_iinvalidate;
-	wire [63:0] sq_dequeue_mask;
+	wire [31:0] sq_dequeue_mask;
 	wire sq_dequeue_ready;
 	wire sq_dequeue_sync;
 	wire [3:0] sq_wake_bitmap;
@@ -3682,13 +3682,13 @@ module l1_l2_interface (
 		.clk(clk),
 		.reset(reset)
 	);
-	assign dcache_set_stage1 = l2_response[517:512];
-	assign icache_set_stage1 = l2_response[517:512];
-	assign l2i_snoop_en = l2_response_valid && (l2_response[538] == 1'd1);
+	assign dcache_set_stage1 = l2_response[261:256];
+	assign icache_set_stage1 = l2_response[261:256];
+	assign l2i_snoop_en = l2_response_valid && (l2_response[283] == 1'd1);
 	assign l2i_snoop_set = dcache_set_stage1;
-	assign l2i_dcache_lru_fill_en = ((l2_response_valid && (l2_response[538] == 1'd1)) && (l2_response[541-:3] == 3'd0)) && (l2_response[547-:4] == CORE_ID);
+	assign l2i_dcache_lru_fill_en = ((l2_response_valid && (l2_response[283] == 1'd1)) && (l2_response[286-:3] == 3'd0)) && (l2_response[292-:4] == CORE_ID);
 	assign l2i_dcache_lru_fill_set = dcache_set_stage1;
-	assign l2i_icache_lru_fill_en = ((l2_response_valid && (l2_response[538] == 1'd0)) && (l2_response[541-:3] == 3'd0)) && (l2_response[547-:4] == CORE_ID);
+	assign l2i_icache_lru_fill_en = ((l2_response_valid && (l2_response[283] == 1'd0)) && (l2_response[286-:3] == 3'd0)) && (l2_response[292-:4] == CORE_ID);
 	assign l2i_icache_lru_fill_set = icache_set_stage1;
 	always @(posedge clk or posedge reset)
 		if (reset)
@@ -3696,8 +3696,8 @@ module l1_l2_interface (
 		else
 			response_stage2_valid <= l2_response_valid;
 	always @(posedge clk) response_stage2 <= l2_response;
-	assign {icache_tag_stage2, icache_set_stage2} = response_stage2[537-:26];
-	assign {dcache_tag_stage2, dcache_set_stage2} = response_stage2[537-:26];
+	assign {icache_tag_stage2, icache_set_stage2} = response_stage2[282-:27];
+	assign {dcache_tag_stage2, dcache_set_stage2} = response_stage2[282-:27];
 	genvar _gv_way_idx_4;
 	generate
 		for (_gv_way_idx_4 = 0; _gv_way_idx_4 < 4; _gv_way_idx_4 = _gv_way_idx_4 + 1) begin : snoop_hit_check_gen
@@ -3725,33 +3725,33 @@ module l1_l2_interface (
 		.index(ift_fill_lru),
 		.one_hot(ifill_way_oh)
 	);
-	assign ack_for_me = response_stage2_valid && (response_stage2[547-:4] == CORE_ID);
-	assign response_dinvalidate = response_stage2[541-:3] == 3'd4;
-	assign dcache_update_en = (ack_for_me && (((response_stage2[541-:3] == 3'd0) && (response_stage2[538] == 1'd1)) || (response_stage2[541-:3] == 3'd1))) || ((response_stage2_valid && response_dinvalidate) && |snoop_hit_way_oh);
+	assign ack_for_me = response_stage2_valid && (response_stage2[292-:4] == CORE_ID);
+	assign response_dinvalidate = response_stage2[286-:3] == 3'd4;
+	assign dcache_update_en = (ack_for_me && (((response_stage2[286-:3] == 3'd0) && (response_stage2[283] == 1'd1)) || (response_stage2[286-:3] == 3'd1))) || ((response_stage2_valid && response_dinvalidate) && |snoop_hit_way_oh);
 	assign l2i_dtag_update_en_oh = dupdate_way_oh & {4 {dcache_update_en}};
 	assign l2i_dtag_update_tag = dcache_tag_stage2;
 	assign l2i_dtag_update_set = dcache_set_stage2;
 	assign l2i_dtag_update_valid = !response_dinvalidate;
-	assign response_iinvalidate = response_stage2_valid && (response_stage2[541-:3] == 3'd3);
-	assign icache_update_en = (ack_for_me && (response_stage2[538] == 1'd0)) || response_iinvalidate;
+	assign response_iinvalidate = response_stage2_valid && (response_stage2[286-:3] == 3'd3);
+	assign icache_update_en = (ack_for_me && (response_stage2[283] == 1'd0)) || response_iinvalidate;
 	assign l2i_itag_update_en = (response_iinvalidate ? {4 {1'b1}} : ifill_way_oh & {4 {icache_update_en}});
 	assign l2i_itag_update_tag = icache_tag_stage2;
 	assign l2i_itag_update_set = icache_set_stage2;
 	assign l2i_itag_update_valid = !response_iinvalidate;
-	assign icache_l2_response_valid = ack_for_me && (response_stage2[538] == 1'd0);
-	assign dcache_l2_response_valid = (ack_for_me && (response_stage2[541-:3] == 3'd0)) && (response_stage2[538] == 1'd1);
-	assign storebuf_l2_response_valid = ack_for_me && ((((response_stage2[541-:3] == 3'd1) || (response_stage2[541-:3] == 3'd2)) || (response_stage2[541-:3] == 3'd3)) || (response_stage2[541-:3] == 3'd4));
-	assign dcache_l2_response_idx = response_stage2[543-:2];
-	assign icache_l2_response_idx = response_stage2[543-:2];
-	assign storebuf_l2_response_idx = response_stage2[543-:2];
-	assign storebuf_l2_sync_success = response_stage2[548];
+	assign icache_l2_response_valid = ack_for_me && (response_stage2[283] == 1'd0);
+	assign dcache_l2_response_valid = (ack_for_me && (response_stage2[286-:3] == 3'd0)) && (response_stage2[283] == 1'd1);
+	assign storebuf_l2_response_valid = ack_for_me && ((((response_stage2[286-:3] == 3'd1) || (response_stage2[286-:3] == 3'd2)) || (response_stage2[286-:3] == 3'd3)) || (response_stage2[286-:3] == 3'd4));
+	assign dcache_l2_response_idx = response_stage2[288-:2];
+	assign icache_l2_response_idx = response_stage2[288-:2];
+	assign storebuf_l2_response_idx = response_stage2[288-:2];
+	assign storebuf_l2_sync_success = response_stage2[293];
 	always @(posedge clk) begin
 		l2i_ddata_update_way <= dupdate_way_idx;
 		l2i_ddata_update_set <= dcache_set_stage2;
-		l2i_ddata_update_data <= response_stage2[511-:defines_CACHE_LINE_BITS];
+		l2i_ddata_update_data <= response_stage2[255-:defines_CACHE_LINE_BITS];
 		l2i_idata_update_way <= ift_fill_lru;
 		l2i_idata_update_set <= icache_set_stage2;
-		l2i_idata_update_data <= response_stage2[511-:defines_CACHE_LINE_BITS];
+		l2i_idata_update_data <= response_stage2[255-:defines_CACHE_LINE_BITS];
 	end
 	always @(posedge clk or posedge reset)
 		if (reset) begin
@@ -3759,7 +3759,7 @@ module l1_l2_interface (
 			l2i_idata_update_en <= 1'sb0;
 		end
 		else begin
-			l2i_ddata_update_en <= dcache_update_en || ((|snoop_hit_way_oh && response_stage2_valid) && (response_stage2[541-:3] == 3'd1));
+			l2i_ddata_update_en <= dcache_update_en || ((|snoop_hit_way_oh && response_stage2_valid) && (response_stage2[286-:3] == 3'd1));
 			l2i_idata_update_en <= icache_update_en;
 		end
 	always @(*) begin
@@ -3771,45 +3771,45 @@ module l1_l2_interface (
 		icache_dequeue_ack = 0;
 		dcache_dequeue_ack = 0;
 		l2i_perf_store = 0;
-		l2i_request[611-:4] = CORE_ID;
+		l2i_request[324-:4] = CORE_ID;
 		if (dcache_dequeue_ready) begin
 			l2i_request_valid = 1;
-			l2i_request[605-:3] = (dcache_dequeue_sync ? 3'd1 : 3'd0);
-			l2i_request[607-:2] = dcache_dequeue_idx;
-			l2i_request[601-:26] = dcache_dequeue_addr;
-			l2i_request[602] = 1'd1;
+			l2i_request[318-:3] = (dcache_dequeue_sync ? 3'd1 : 3'd0);
+			l2i_request[320-:2] = dcache_dequeue_idx;
+			l2i_request[314-:27] = dcache_dequeue_addr;
+			l2i_request[315] = 1'd1;
 			if (l2_ready)
 				dcache_dequeue_ack = 1;
 		end
 		else if (icache_dequeue_ready) begin
 			l2i_request_valid = 1;
-			l2i_request[605-:3] = 3'd0;
-			l2i_request[607-:2] = icache_dequeue_idx;
-			l2i_request[601-:26] = icache_dequeue_addr;
-			l2i_request[602] = 1'd0;
+			l2i_request[318-:3] = 3'd0;
+			l2i_request[320-:2] = icache_dequeue_idx;
+			l2i_request[314-:27] = icache_dequeue_addr;
+			l2i_request[315] = 1'd0;
 			if (l2_ready)
 				icache_dequeue_ack = 1;
 		end
 		else if (sq_dequeue_ready) begin
 			l2i_request_valid = 1;
 			if (sq_dequeue_flush)
-				l2i_request[605-:3] = 3'd4;
+				l2i_request[318-:3] = 3'd4;
 			else if (sq_dequeue_sync)
-				l2i_request[605-:3] = 3'd3;
+				l2i_request[318-:3] = 3'd3;
 			else if (sq_dequeue_iinvalidate)
-				l2i_request[605-:3] = 3'd5;
+				l2i_request[318-:3] = 3'd5;
 			else if (sq_dequeue_dinvalidate)
-				l2i_request[605-:3] = 3'd6;
+				l2i_request[318-:3] = 3'd6;
 			else
-				l2i_request[605-:3] = 3'd2;
-			l2i_request[607-:2] = sq_dequeue_idx;
-			l2i_request[601-:26] = sq_dequeue_addr;
-			l2i_request[511-:defines_CACHE_LINE_BITS] = sq_dequeue_data;
-			l2i_request[575-:64] = sq_dequeue_mask;
-			l2i_request[602] = 1'd1;
+				l2i_request[318-:3] = 3'd2;
+			l2i_request[320-:2] = sq_dequeue_idx;
+			l2i_request[314-:27] = sq_dequeue_addr;
+			l2i_request[255-:defines_CACHE_LINE_BITS] = sq_dequeue_data;
+			l2i_request[287-:32] = sq_dequeue_mask;
+			l2i_request[315] = 1'd1;
 			if (l2_ready) begin
 				storebuf_dequeue_ack = 1;
-				l2i_perf_store = l2i_request[605-:3] == 3'd2;
+				l2i_perf_store = l2i_request[318-:3] == 3'd2;
 			end
 		end
 	end
@@ -3909,47 +3909,47 @@ module fp_execute_stage3 (
 );
 	input clk;
 	input reset;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	input wire [15:0] fx2_mask_value;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	input wire [7:0] fx2_mask_value;
 	input fx2_instruction_valid;
-	input wire [141:0] fx2_instruction;
+	input wire [140:0] fx2_instruction;
 	input wire [1:0] fx2_thread_idx;
-	input wire [3:0] fx2_subcycle;
-	input [15:0] fx2_result_inf;
-	input [15:0] fx2_result_nan;
-	input [15:0] fx2_equal;
-	input [95:0] fx2_ftoi_lshift;
-	input wire [511:0] fx2_significand_le;
-	input wire [511:0] fx2_significand_se;
-	input [15:0] fx2_logical_subtract;
-	input [127:0] fx2_add_exponent;
-	input [15:0] fx2_add_result_sign;
-	input [15:0] fx2_guard;
-	input [15:0] fx2_round;
-	input [15:0] fx2_sticky;
-	input [1023:0] fx2_significand_product;
-	input [127:0] fx2_mul_exponent;
-	input [15:0] fx2_mul_underflow;
-	input [15:0] fx2_mul_sign;
+	input wire [2:0] fx2_subcycle;
+	input [7:0] fx2_result_inf;
+	input [7:0] fx2_result_nan;
+	input [7:0] fx2_equal;
+	input [47:0] fx2_ftoi_lshift;
+	input wire [255:0] fx2_significand_le;
+	input wire [255:0] fx2_significand_se;
+	input [7:0] fx2_logical_subtract;
+	input [63:0] fx2_add_exponent;
+	input [7:0] fx2_add_result_sign;
+	input [7:0] fx2_guard;
+	input [7:0] fx2_round;
+	input [7:0] fx2_sticky;
+	input [511:0] fx2_significand_product;
+	input [63:0] fx2_mul_exponent;
+	input [7:0] fx2_mul_underflow;
+	input [7:0] fx2_mul_sign;
 	output reg fx3_instruction_valid;
-	output reg [141:0] fx3_instruction;
-	output reg [15:0] fx3_mask_value;
+	output reg [140:0] fx3_instruction;
+	output reg [7:0] fx3_mask_value;
 	output reg [1:0] fx3_thread_idx;
-	output reg [3:0] fx3_subcycle;
-	output reg [15:0] fx3_result_inf;
-	output reg [15:0] fx3_result_nan;
-	output reg [15:0] fx3_equal;
-	output reg [95:0] fx3_ftoi_lshift;
-	output reg [511:0] fx3_add_significand;
-	output reg [127:0] fx3_add_exponent;
-	output reg [15:0] fx3_add_result_sign;
-	output reg [15:0] fx3_logical_subtract;
-	output reg [1023:0] fx3_significand_product;
-	output reg [127:0] fx3_mul_exponent;
-	output reg [15:0] fx3_mul_underflow;
-	output reg [15:0] fx3_mul_sign;
+	output reg [2:0] fx3_subcycle;
+	output reg [7:0] fx3_result_inf;
+	output reg [7:0] fx3_result_nan;
+	output reg [7:0] fx3_equal;
+	output reg [47:0] fx3_ftoi_lshift;
+	output reg [255:0] fx3_add_significand;
+	output reg [63:0] fx3_add_exponent;
+	output reg [7:0] fx3_add_result_sign;
+	output reg [7:0] fx3_logical_subtract;
+	output reg [511:0] fx3_significand_product;
+	output reg [63:0] fx3_mul_exponent;
+	output reg [7:0] fx3_mul_underflow;
+	output reg [7:0] fx3_mul_sign;
 	wire ftoi;
-	assign ftoi = fx2_instruction[70-:6] == 6'b011011;
+	assign ftoi = fx2_instruction[69-:6] == 6'b011011;
 	genvar _gv_lane_idx_5;
 	generate
 		for (_gv_lane_idx_5 = 0; _gv_lane_idx_5 < defines_NUM_VECTOR_LANES; _gv_lane_idx_5 = _gv_lane_idx_5 + 1) begin : lane_logic_gen
@@ -4149,23 +4149,23 @@ module dcache_data_stage (
 	input reset;
 	output reg [3:0] dd_load_sync_pending;
 	input dt_instruction_valid;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	input wire [141:0] dt_instruction;
-	input wire [15:0] dt_mask_value;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	input wire [140:0] dt_instruction;
+	input wire [7:0] dt_mask_value;
 	input wire [1:0] dt_thread_idx;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	localparam defines_DCACHE_TAG_BITS = 20;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	localparam defines_DCACHE_TAG_BITS = 21;
 	input wire [31:0] dt_request_vaddr;
 	input wire [31:0] dt_request_paddr;
 	input dt_tlb_hit;
 	input dt_tlb_present;
 	input dt_tlb_supervisor;
 	input dt_tlb_writable;
-	input wire [511:0] dt_store_value;
-	input wire [3:0] dt_subcycle;
+	input wire [255:0] dt_store_value;
+	input wire [2:0] dt_subcycle;
 	input [0:3] dt_valid;
-	input wire [79:0] dt_tag;
+	input wire [83:0] dt_tag;
 	output wire dd_update_lru_en;
 	output wire [1:0] dd_update_lru_way;
 	output wire dd_io_write_en;
@@ -4174,15 +4174,15 @@ module dcache_data_stage (
 	output wire [31:0] dd_io_addr;
 	output wire [31:0] dd_io_write_value;
 	output reg dd_instruction_valid;
-	output reg [141:0] dd_instruction;
-	output reg [15:0] dd_lane_mask;
+	output reg [140:0] dd_instruction;
+	output reg [7:0] dd_lane_mask;
 	output reg [1:0] dd_thread_idx;
 	output reg [31:0] dd_request_vaddr;
-	output reg [3:0] dd_subcycle;
+	output reg [2:0] dd_subcycle;
 	output reg dd_rollback_en;
 	output reg [31:0] dd_rollback_pc;
-	localparam defines_CACHE_LINE_BITS = 512;
-	output wire [511:0] dd_load_data;
+	localparam defines_CACHE_LINE_BITS = 256;
+	output wire [255:0] dd_load_data;
 	output reg dd_suspend_thread;
 	output reg dd_io_access;
 	output reg dd_trap;
@@ -4195,12 +4195,12 @@ module dcache_data_stage (
 	input l2i_ddata_update_en;
 	input wire [1:0] l2i_ddata_update_way;
 	input wire [5:0] l2i_ddata_update_set;
-	input wire [511:0] l2i_ddata_update_data;
+	input wire [255:0] l2i_ddata_update_data;
 	input [3:0] l2i_dtag_update_en_oh;
 	input wire [5:0] l2i_dtag_update_set;
-	input wire [19:0] l2i_dtag_update_tag;
+	input wire [20:0] l2i_dtag_update_tag;
 	output wire dd_cache_miss;
-	output wire [25:0] dd_cache_miss_addr;
+	output wire [26:0] dd_cache_miss_addr;
 	output wire [1:0] dd_cache_miss_thread_idx;
 	output wire dd_cache_miss_sync;
 	output wire dd_store_en;
@@ -4208,12 +4208,12 @@ module dcache_data_stage (
 	output wire dd_membar_en;
 	output wire dd_iinvalidate_en;
 	output wire dd_dinvalidate_en;
-	output wire [63:0] dd_store_mask;
-	output wire [25:0] dd_store_addr;
-	output reg [511:0] dd_store_data;
+	output wire [31:0] dd_store_mask;
+	output wire [26:0] dd_store_addr;
+	output reg [255:0] dd_store_data;
 	output wire [1:0] dd_store_thread_idx;
 	output wire dd_store_sync;
-	output wire [25:0] dd_store_bypass_addr;
+	output wire [26:0] dd_store_bypass_addr;
 	output wire [1:0] dd_store_bypass_thread_idx;
 	input wire wb_rollback_en;
 	input wire [1:0] wb_rollback_thread_idx;
@@ -4243,21 +4243,21 @@ module dcache_data_stage (
 	wire tlb_miss;
 	wire page_fault;
 	wire any_fault;
-	reg [15:0] word_store_mask;
+	reg [7:0] word_store_mask;
 	reg [3:0] byte_store_mask;
-	localparam defines_CACHE_LINE_WORDS = 16;
-	wire [3:0] cache_lane_idx;
-	wire [511:0] endian_twiddled_data;
+	localparam defines_CACHE_LINE_WORDS = 8;
+	wire [2:0] cache_lane_idx;
+	wire [255:0] endian_twiddled_data;
 	wire [31:0] lane_store_value;
-	wire [15:0] cache_lane_mask;
-	wire [15:0] subcycle_mask;
+	wire [7:0] cache_lane_mask;
+	wire [7:0] subcycle_mask;
 	wire [3:0] way_hit_oh;
 	wire [1:0] way_hit_idx;
 	wire cache_hit;
 	wire [31:0] dcache_request_addr;
 	wire squash_instruction;
 	wire cache_near_miss;
-	wire [3:0] scgath_lane;
+	wire [2:0] scgath_lane;
 	reg tlb_read;
 	wire fault_store_flag;
 	wire lane_enabled;
@@ -4270,28 +4270,28 @@ module dcache_data_stage (
 		.one_hot(subcycle_mask),
 		.index(dt_subcycle)
 	);
-	assign lane_enabled = (!dt_instruction[19] || (dt_instruction[18-:4] != 4'b1110)) || ((dt_mask_value & subcycle_mask) != 0);
+	assign lane_enabled = (!dt_instruction[18] || (dt_instruction[17-:4] != 4'b1110)) || ((dt_mask_value & subcycle_mask) != 0);
 	assign addr_in_io_region = (dt_request_paddr | 32'h0000ffff) == 32'hffffffff;
-	assign sync_access_req = dt_instruction[18-:4] == 4'b0101;
-	assign memory_access_req = (((dt_instruction_valid && !squash_instruction) && dt_instruction[19]) && (dt_instruction[18-:4] != 4'b0110)) && lane_enabled;
+	assign sync_access_req = dt_instruction[17-:4] == 4'b0101;
+	assign memory_access_req = (((dt_instruction_valid && !squash_instruction) && dt_instruction[18]) && (dt_instruction[17-:4] != 4'b0110)) && lane_enabled;
 	assign io_access_req = memory_access_req && addr_in_io_region;
 	assign cached_access_req = memory_access_req && !addr_in_io_region;
-	assign cached_load_req = cached_access_req && dt_instruction[14];
-	assign cached_store_req = cached_access_req && !dt_instruction[14];
+	assign cached_load_req = cached_access_req && dt_instruction[13];
+	assign cached_store_req = cached_access_req && !dt_instruction[13];
 	assign cache_control_req = (dt_instruction_valid && !squash_instruction) && dt_instruction[3];
 	assign flush_req = (cache_control_req && (dt_instruction[2-:3] == 3'b010)) && !addr_in_io_region;
 	assign iinvalidate_req = (cache_control_req && (dt_instruction[2-:3] == 3'b011)) && !addr_in_io_region;
 	assign dinvalidate_req = (cache_control_req && (dt_instruction[2-:3] == 3'b001)) && !addr_in_io_region;
 	assign membar_req = cache_control_req && (dt_instruction[2-:3] == 3'b100);
 	assign tlb_update_req = cache_control_req && ((((dt_instruction[2-:3] == 3'b000) || (dt_instruction[2-:3] == 3'b111)) || (dt_instruction[2-:3] == 3'b101)) || (dt_instruction[2-:3] == 3'b110));
-	assign creg_access_req = ((dt_instruction_valid && !squash_instruction) && dt_instruction[19]) && (dt_instruction[18-:4] == 4'b0110);
+	assign creg_access_req = ((dt_instruction_valid && !squash_instruction) && dt_instruction[18]) && (dt_instruction[17-:4] == 4'b0110);
 	always @(*) begin
 		if (_sv2v_0)
 			;
 		tlb_read = 0;
 		if (dt_instruction_valid && !squash_instruction) begin
-			if (dt_instruction[19])
-				tlb_read = (dt_instruction[18-:4] != 4'b0110) && lane_enabled;
+			if (dt_instruction[18])
+				tlb_read = (dt_instruction[17-:4] != 4'b0110) && lane_enabled;
 			else if (dt_instruction[3])
 				tlb_read = (dt_instruction[2-:3] == 3'b010) || (dt_instruction[2-:3] == 3'b001);
 		end
@@ -4301,10 +4301,10 @@ module dcache_data_stage (
 		if (_sv2v_0)
 			;
 		(* full_case, parallel_case *)
-		case (dt_instruction[18-:4])
+		case (dt_instruction[17-:4])
 			4'b0010, 4'b0011: unaligned_address = dt_request_paddr[0];
 			4'b0100, 4'b0101, 4'b1101, 4'b1110: unaligned_address = |dt_request_paddr[1:0];
-			4'b0111, 4'b1000: unaligned_address = dt_request_paddr[5-:defines_CACHE_LINE_OFFSET_WIDTH] != 0;
+			4'b0111, 4'b1000: unaligned_address = dt_request_paddr[4-:defines_CACHE_LINE_OFFSET_WIDTH] != 0;
 			default: unaligned_address = 0;
 		endcase
 	end
@@ -4312,23 +4312,23 @@ module dcache_data_stage (
 	assign privileged_op_fault = ((creg_access_req || tlb_update_req) || dinvalidate_req) && !cr_supervisor_en[dt_thread_idx];
 	assign page_fault = (memory_access_req && dt_tlb_hit) && !dt_tlb_present;
 	assign supervisor_fault = (((memory_access_req && dt_tlb_hit) && dt_tlb_present) && dt_tlb_supervisor) && !cr_supervisor_en[dt_thread_idx];
-	assign write_fault = ((((cached_store_req || (io_access_req && !dt_instruction[14])) && dt_tlb_hit) && dt_tlb_present) && !supervisor_fault) && !dt_tlb_writable;
+	assign write_fault = ((((cached_store_req || (io_access_req && !dt_instruction[13])) && dt_tlb_hit) && dt_tlb_present) && !supervisor_fault) && !dt_tlb_writable;
 	assign any_fault = (((alignment_fault || privileged_op_fault) || page_fault) || supervisor_fault) || write_fault;
 	assign dd_store_en = (cached_store_req && !tlb_miss) && !any_fault;
 	assign dcache_request_addr = {dt_request_paddr[31:defines_CACHE_LINE_OFFSET_WIDTH], {defines_CACHE_LINE_OFFSET_WIDTH {1'b0}}};
-	assign cache_lane_idx = dt_request_paddr[5:2];
+	assign cache_lane_idx = dt_request_paddr[4:2];
 	assign dd_store_bypass_addr = dt_request_paddr[31:defines_CACHE_LINE_OFFSET_WIDTH];
 	assign dd_store_bypass_thread_idx = dt_thread_idx;
 	assign dd_store_addr = dt_request_paddr[31:defines_CACHE_LINE_OFFSET_WIDTH];
 	assign dd_store_sync = sync_access_req;
 	assign dd_store_thread_idx = dt_thread_idx;
-	assign dd_io_write_en = ((io_access_req && !dt_instruction[14]) && !tlb_miss) && !any_fault;
-	assign dd_io_read_en = ((io_access_req && dt_instruction[14]) && !tlb_miss) && !any_fault;
+	assign dd_io_write_en = ((io_access_req && !dt_instruction[13]) && !tlb_miss) && !any_fault;
+	assign dd_io_read_en = ((io_access_req && dt_instruction[13]) && !tlb_miss) && !any_fault;
 	assign dd_io_write_value = dt_store_value[0+:32];
 	assign dd_io_thread_idx = dt_thread_idx;
 	assign dd_io_addr = {16'd0, dt_request_paddr[15:0]};
-	assign dd_creg_write_en = (creg_access_req && !dt_instruction[14]) && !any_fault;
-	assign dd_creg_read_en = (creg_access_req && dt_instruction[14]) && !any_fault;
+	assign dd_creg_write_en = (creg_access_req && !dt_instruction[13]) && !any_fault;
+	assign dd_creg_read_en = (creg_access_req && dt_instruction[13]) && !any_fault;
 	assign dd_creg_write_val = dt_store_value[0+:32];
 	assign dd_creg_index = dt_instruction[8-:5];
 	assign dd_flush_en = (((flush_req && dt_tlb_hit) && dt_tlb_present) && !io_access_req) && !any_fault;
@@ -4339,7 +4339,7 @@ module dcache_data_stage (
 	generate
 		for (_gv_way_idx_5 = 0; _gv_way_idx_5 < 4; _gv_way_idx_5 = _gv_way_idx_5 + 1) begin : hit_check_gen
 			localparam way_idx = _gv_way_idx_5;
-			assign way_hit_oh[way_idx] = (dt_request_paddr[31-:20] == dt_tag[(3 - way_idx) * defines_DCACHE_TAG_BITS+:defines_DCACHE_TAG_BITS]) && dt_valid[way_idx];
+			assign way_hit_oh[way_idx] = (dt_request_paddr[31-:21] == dt_tag[(3 - way_idx) * defines_DCACHE_TAG_BITS+:defines_DCACHE_TAG_BITS]) && dt_valid[way_idx];
 		end
 	endgenerate
 	assign cache_hit = (|way_hit_oh && (!sync_access_req || dd_load_sync_pending[dt_thread_idx])) && dt_tlb_hit;
@@ -4355,7 +4355,7 @@ module dcache_data_stage (
 			;
 		word_store_mask = 0;
 		(* full_case, parallel_case *)
-		case (dt_instruction[18-:4])
+		case (dt_instruction[17-:4])
 			4'b0111, 4'b1000: word_store_mask = dt_mask_value;
 			4'b1101, 4'b1110:
 				if ((dt_mask_value & subcycle_mask) != 0)
@@ -4367,7 +4367,7 @@ module dcache_data_stage (
 	end
 	genvar _gv_swap_word_2;
 	generate
-		for (_gv_swap_word_2 = 0; _gv_swap_word_2 < 16; _gv_swap_word_2 = _gv_swap_word_2 + 1) begin : swap_word_gen
+		for (_gv_swap_word_2 = 0; _gv_swap_word_2 < 8; _gv_swap_word_2 = _gv_swap_word_2 + 1) begin : swap_word_gen
 			localparam swap_word = _gv_swap_word_2;
 			assign endian_twiddled_data[swap_word * 32+:8] = dt_store_value[(swap_word * 32) + 24+:8];
 			assign endian_twiddled_data[(swap_word * 32) + 8+:8] = dt_store_value[(swap_word * 32) + 16+:8];
@@ -4380,9 +4380,9 @@ module dcache_data_stage (
 		if (_sv2v_0)
 			;
 		(* full_case, parallel_case *)
-		case (dt_instruction[18-:4])
+		case (dt_instruction[17-:4])
 			4'b0000, 4'b0001: begin
-				dd_store_data = {64 {dt_store_value[7-:8]}};
+				dd_store_data = {32 {dt_store_value[7-:8]}};
 				case (dt_request_paddr[1:0])
 					2'd0: byte_store_mask = 4'b1000;
 					2'd1: byte_store_mask = 4'b0100;
@@ -4392,7 +4392,7 @@ module dcache_data_stage (
 				endcase
 			end
 			4'b0010, 4'b0011: begin
-				dd_store_data = {32 {dt_store_value[7-:8], dt_store_value[15-:8]}};
+				dd_store_data = {16 {dt_store_value[7-:8], dt_store_value[15-:8]}};
 				if (dt_request_paddr[1] == 1'b0)
 					byte_store_mask = 4'b1100;
 				else
@@ -4423,20 +4423,20 @@ module dcache_data_stage (
 		.one_hot(way_hit_oh),
 		.index(way_hit_idx)
 	);
-	fakeram_1r1w_512x256 #(
+	fakeram_1r1w_256x256 #(
 		.DATA_WIDTH(defines_CACHE_LINE_BITS),
 		.SIZE(256),
 		.READ_DURING_WRITE("NEW_DATA")
 	) l1d_data(
 		.read_en(cache_hit && cached_load_req),
-		.read_addr({way_hit_idx, dt_request_paddr[11-:6]}),
+		.read_addr({way_hit_idx, dt_request_paddr[10-:6]}),
 		.read_data(dd_load_data),
 		.write_en(l2i_ddata_update_en),
 		.write_addr({l2i_ddata_update_way, l2i_ddata_update_set}),
 		.write_data(l2i_ddata_update_data),
 		.*
 	);
-	assign cache_near_miss = ((((((!cache_hit && dt_tlb_hit) && cached_load_req) && |l2i_dtag_update_en_oh) && (l2i_dtag_update_set == dt_request_paddr[11-:6])) && (l2i_dtag_update_tag == dt_request_paddr[31-:20])) && !sync_access_req) && !any_fault;
+	assign cache_near_miss = ((((((!cache_hit && dt_tlb_hit) && cached_load_req) && |l2i_dtag_update_en_oh) && (l2i_dtag_update_set == dt_request_paddr[10-:6])) && (l2i_dtag_update_tag == dt_request_paddr[31-:21])) && !sync_access_req) && !any_fault;
 	assign dd_cache_miss = (((cached_load_req && !cache_hit) && dt_tlb_hit) && !cache_near_miss) && !any_fault;
 	assign dd_cache_miss_addr = dcache_request_addr[31:defines_CACHE_LINE_OFFSET_WIDTH];
 	assign dd_cache_miss_thread_idx = dt_thread_idx;
@@ -4458,14 +4458,14 @@ module dcache_data_stage (
 					dd_load_sync_pending[thread_idx] <= !dd_load_sync_pending[thread_idx];
 		end
 	endgenerate
-	assign fault_store_flag = dt_instruction[19] && !dt_instruction[14];
+	assign fault_store_flag = dt_instruction[18] && !dt_instruction[13];
 	always @(posedge clk) begin
 		dd_instruction <= dt_instruction;
 		dd_lane_mask <= dt_mask_value;
 		dd_thread_idx <= dt_thread_idx;
 		dd_request_vaddr <= dt_request_vaddr;
 		dd_subcycle <= dt_subcycle;
-		dd_rollback_pc <= dt_instruction[141-:32];
+		dd_rollback_pc <= dt_instruction[140-:32];
 		dd_io_access <= io_access_req;
 		if (tlb_miss)
 			dd_trap_cause <= {1'b1, fault_store_flag, 4'd7};
@@ -4575,10 +4575,10 @@ module l2_cache_pending_miss_cam (
 	input clk;
 	input reset;
 	input request_valid;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	input wire [25:0] request_addr;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	input wire [26:0] request_addr;
 	input enqueue_fill_request;
 	input l2r_l2_fill;
 	output wire duplicate_request;
@@ -4599,7 +4599,7 @@ module l2_cache_pending_miss_cam (
 	assign duplicate_request = cam_hit && !l2r_l2_fill;
 	cam #(
 		.NUM_ENTRIES(QUEUE_SIZE),
-		.KEY_WIDTH(26)
+		.KEY_WIDTH(27)
 	) cam_pending_miss(
 		.clk(clk),
 		.reset(reset),
@@ -4648,15 +4648,15 @@ module thread_select_stage (
 	reg _sv2v_0;
 	input clk;
 	input reset;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	input wire [141:0] id_instruction;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	input wire [140:0] id_instruction;
 	input id_instruction_valid;
 	input wire [1:0] id_thread_idx;
 	output wire [3:0] ts_fetch_en;
 	output reg ts_instruction_valid;
-	output reg [141:0] ts_instruction;
+	output reg [140:0] ts_instruction;
 	output reg [1:0] ts_thread_idx;
-	output reg [3:0] ts_subcycle;
+	output reg [2:0] ts_subcycle;
 	input wb_writeback_en;
 	input wire [1:0] wb_writeback_thread_idx;
 	input wb_writeback_vector;
@@ -4665,7 +4665,7 @@ module thread_select_stage (
 	input wire [1:0] wb_rollback_thread_idx;
 	input wb_rollback_en;
 	input wire [1:0] wb_rollback_pipeline;
-	input wire [3:0] wb_rollback_subcycle;
+	input wire [2:0] wb_rollback_subcycle;
 	input wire [3:0] thread_en;
 	input wire [3:0] wb_suspend_thread_oh;
 	input wire [3:0] l2i_dcache_wake_bitmap;
@@ -4673,23 +4673,23 @@ module thread_select_stage (
 	output reg ts_perf_instruction_issue;
 	localparam THREAD_FIFO_SIZE = 8;
 	localparam WRITEBACK_ALLOC_STAGES = 4;
-	wire [141:0] thread_instr [0:3];
-	wire [141:0] issue_instr;
+	wire [140:0] thread_instr [0:3];
+	wire [140:0] issue_instr;
 	reg [3:0] thread_blocked;
 	wire [3:0] can_issue_thread;
 	wire [3:0] thread_issue_oh;
 	wire [1:0] issue_thread_idx;
 	reg [3:0] writeback_allocate;
 	reg [3:0] writeback_allocate_nxt;
-	reg [3:0] current_subcycle [0:3];
+	reg [2:0] current_subcycle [0:3];
 	wire issue_last_subcycle [0:3];
 	genvar _gv_thread_idx_3;
 	function automatic [1:0] sv2v_cast_2;
 		input reg [1:0] inp;
 		sv2v_cast_2 = inp;
 	endfunction
-	function automatic [3:0] sv2v_cast_60D1B;
-		input reg [3:0] inp;
+	function automatic [2:0] sv2v_cast_60D1B;
+		input reg [2:0] inp;
 		sv2v_cast_60D1B = inp;
 	endfunction
 	generate
@@ -4704,7 +4704,7 @@ module thread_select_stage (
 			wire scoreboard_can_issue;
 			assign enqueue_this_thread = id_instruction_valid && (id_thread_idx == sv2v_cast_2(thread_idx));
 			sync_fifo #(
-				.WIDTH(142),
+				.WIDTH(141),
 				.SIZE(THREAD_FIFO_SIZE),
 				.ALMOST_FULL_THRESHOLD(5)
 			) instruction_fifo(
@@ -4739,14 +4739,14 @@ module thread_select_stage (
 				if (_sv2v_0)
 					;
 				(* full_case, parallel_case *)
-				case (thread_instr[thread_idx][21-:2])
+				case (thread_instr[thread_idx][20-:2])
 					2'd1: writeback_conflict = writeback_allocate[0];
 					2'd0: writeback_conflict = writeback_allocate[1];
 					default: writeback_conflict = 0;
 				endcase
 			end
 			assign can_issue_thread[thread_idx] = ((((!ififo_empty && (scoreboard_can_issue || (current_subcycle[thread_idx] != 0))) && thread_en[thread_idx]) && !rollback_this_thread) && !writeback_conflict) && !thread_blocked[thread_idx];
-			assign issue_last_subcycle[thread_idx] = thread_issue_oh[thread_idx] && (current_subcycle[thread_idx] == thread_instr[thread_idx][12-:4]);
+			assign issue_last_subcycle[thread_idx] = thread_issue_oh[thread_idx] && (current_subcycle[thread_idx] == thread_instr[thread_idx][11-:3]);
 			always @(posedge clk or posedge reset)
 				if (reset)
 					current_subcycle[thread_idx] <= 0;
@@ -4764,7 +4764,7 @@ module thread_select_stage (
 		writeback_allocate_nxt = {1'b0, writeback_allocate[3:1]};
 		if (|thread_issue_oh)
 			(* full_case, parallel_case *)
-			case (issue_instr[21-:2])
+			case (issue_instr[20-:2])
 				2'd2: writeback_allocate_nxt[3] = 1'b1;
 				2'd0: writeback_allocate_nxt[0] = 1'b1;
 				default:
@@ -4833,31 +4833,31 @@ module int_execute_stage (
 	reg _sv2v_0;
 	input clk;
 	input reset;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	input wire [511:0] of_operand1;
-	input wire [511:0] of_operand2;
-	input wire [15:0] of_mask_value;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	input wire [255:0] of_operand1;
+	input wire [255:0] of_operand2;
+	input wire [7:0] of_mask_value;
 	input of_instruction_valid;
-	input wire [141:0] of_instruction;
+	input wire [140:0] of_instruction;
 	input wire [1:0] of_thread_idx;
-	input wire [3:0] of_subcycle;
+	input wire [2:0] of_subcycle;
 	input wire wb_rollback_en;
 	input wire [1:0] wb_rollback_thread_idx;
 	output reg ix_instruction_valid;
-	output reg [141:0] ix_instruction;
-	output reg [511:0] ix_result;
-	output reg [15:0] ix_mask_value;
+	output reg [140:0] ix_instruction;
+	output reg [255:0] ix_result;
+	output reg [7:0] ix_mask_value;
 	output reg [1:0] ix_thread_idx;
 	output reg ix_rollback_en;
 	output reg [31:0] ix_rollback_pc;
-	output reg [3:0] ix_subcycle;
+	output reg [2:0] ix_subcycle;
 	output reg ix_privileged_op_fault;
 	input wire [127:0] cr_eret_address;
 	input [0:3] cr_supervisor_en;
 	output reg ix_perf_uncond_branch;
 	output reg ix_perf_cond_branch_taken;
 	output reg ix_perf_cond_branch_not_taken;
-	wire [511:0] vector_result;
+	wire [255:0] vector_result;
 	wire eret;
 	wire privileged_op_fault;
 	reg branch_taken;
@@ -4930,7 +4930,7 @@ module int_execute_stage (
 			endfunction
 			assign lz = count_lz(lane_operand2);
 			assign tz = count_tz(lane_operand2);
-			assign shift_in_sign = (of_instruction[70-:6] == 6'b001001 ? lane_operand1[31] : 1'd0);
+			assign shift_in_sign = (of_instruction[69-:6] == 6'b001001 ? lane_operand1[31] : 1'd0);
 			assign rshift = sv2v_cast_32({{32 {shift_in_sign}}, lane_operand1} >> lane_operand2[4:0]);
 			assign fp_operand = lane_operand2;
 			reciprocal_rom rom(
@@ -4955,7 +4955,7 @@ module int_execute_stage (
 				if (_sv2v_0)
 					;
 				(* full_case, parallel_case *)
-				case (of_instruction[70-:6])
+				case (of_instruction[69-:6])
 					6'b001001, 6'b001010: lane_result = rshift;
 					6'b001011: lane_result = lane_operand1 << lane_operand2[4:0];
 					6'b001111: lane_result = lane_operand2;
@@ -4986,17 +4986,17 @@ module int_execute_stage (
 			assign vector_result[lane * 32+:32] = lane_result;
 		end
 	endgenerate
-	assign valid_instruction = (of_instruction_valid && (!wb_rollback_en || (wb_rollback_thread_idx != of_thread_idx))) && (of_instruction[21-:2] == 2'd1);
-	assign eret = (valid_instruction && of_instruction[26]) && (of_instruction[25-:3] == 3'b111);
+	assign valid_instruction = (of_instruction_valid && (!wb_rollback_en || (wb_rollback_thread_idx != of_thread_idx))) && (of_instruction[20-:2] == 2'd1);
+	assign eret = (valid_instruction && of_instruction[25]) && (of_instruction[24-:3] == 3'b111);
 	assign privileged_op_fault = eret && !cr_supervisor_en[of_thread_idx];
 	always @(*) begin
 		if (_sv2v_0)
 			;
 		branch_taken = 0;
 		conditional_branch = 0;
-		if ((valid_instruction && of_instruction[26]) && !privileged_op_fault)
+		if ((valid_instruction && of_instruction[25]) && !privileged_op_fault)
 			(* full_case, parallel_case *)
-			case (of_instruction[25-:3])
+			case (of_instruction[24-:3])
 				3'b001: begin
 					branch_taken = of_operand1[0+:32] == 0;
 					conditional_branch = 1;
@@ -5017,10 +5017,10 @@ module int_execute_stage (
 		ix_thread_idx <= of_thread_idx;
 		ix_subcycle <= of_subcycle;
 		(* full_case, parallel_case *)
-		case (of_instruction[25-:3])
+		case (of_instruction[24-:3])
 			3'b110, 3'b000: ix_rollback_pc <= of_operand1[0+:32];
 			3'b111: ix_rollback_pc <= cr_eret_address[(3 - of_thread_idx) * 32+:32];
-			default: ix_rollback_pc <= of_instruction[141-:32] + of_instruction[58-:32];
+			default: ix_rollback_pc <= of_instruction[140-:32] + of_instruction[57-:32];
 		endcase
 	end
 	always @(posedge clk or posedge reset)
@@ -5076,40 +5076,40 @@ module operand_fetch_stage (
 	input clk;
 	input reset;
 	input ts_instruction_valid;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	input wire [141:0] ts_instruction;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	input wire [140:0] ts_instruction;
 	input wire [1:0] ts_thread_idx;
-	input wire [3:0] ts_subcycle;
-	output reg [511:0] of_operand1;
-	output reg [511:0] of_operand2;
-	output reg [15:0] of_mask_value;
-	output wire [511:0] of_store_value;
-	output reg [141:0] of_instruction;
+	input wire [2:0] ts_subcycle;
+	output reg [255:0] of_operand1;
+	output reg [255:0] of_operand2;
+	output reg [7:0] of_mask_value;
+	output wire [255:0] of_store_value;
+	output reg [140:0] of_instruction;
 	output reg of_instruction_valid;
 	output reg [1:0] of_thread_idx;
-	output reg [3:0] of_subcycle;
+	output reg [2:0] of_subcycle;
 	input wb_rollback_en;
 	input wire [1:0] wb_rollback_thread_idx;
 	input wb_writeback_en;
 	input wire [1:0] wb_writeback_thread_idx;
 	input wb_writeback_vector;
-	input wire [511:0] wb_writeback_value;
-	input wire [15:0] wb_writeback_mask;
+	input wire [255:0] wb_writeback_value;
+	input wire [7:0] wb_writeback_mask;
 	input wire [4:0] wb_writeback_reg;
 	wire [31:0] scalar_val1;
 	wire [31:0] scalar_val2;
-	wire [511:0] vector_val1;
-	wire [511:0] vector_val2;
+	wire [255:0] vector_val1;
+	wire [255:0] vector_val2;
 	fakeram_2r1w_32x128 #(
 		.DATA_WIDTH(32),
 		.SIZE(128),
 		.READ_DURING_WRITE("DONT_CARE")
 	) scalar_registers(
-		.read1_en(ts_instruction_valid && ts_instruction[101]),
-		.read1_addr({ts_thread_idx, ts_instruction[100-:5]}),
+		.read1_en(ts_instruction_valid && ts_instruction[100]),
+		.read1_addr({ts_thread_idx, ts_instruction[99-:5]}),
 		.read1_data(scalar_val1),
-		.read2_en(ts_instruction_valid && ts_instruction[95]),
-		.read2_addr({ts_thread_idx, ts_instruction[94-:5]}),
+		.read2_en(ts_instruction_valid && ts_instruction[94]),
+		.read2_addr({ts_thread_idx, ts_instruction[93-:5]}),
 		.read2_data(scalar_val2),
 		.write_en(wb_writeback_en && !wb_writeback_vector),
 		.write_addr({wb_writeback_thread_idx, wb_writeback_reg}),
@@ -5125,11 +5125,11 @@ module operand_fetch_stage (
 				.SIZE(128),
 				.READ_DURING_WRITE("DONT_CARE")
 			) vector_registers(
-				.read1_en(ts_instruction[89]),
-				.read1_addr({ts_thread_idx, ts_instruction[88-:5]}),
+				.read1_en(ts_instruction[88]),
+				.read1_addr({ts_thread_idx, ts_instruction[87-:5]}),
 				.read1_data(vector_val1[lane * 32+:32]),
-				.read2_en(ts_instruction[83]),
-				.read2_addr({ts_thread_idx, ts_instruction[82-:5]}),
+				.read2_en(ts_instruction[82]),
+				.read2_addr({ts_thread_idx, ts_instruction[81-:5]}),
 				.read2_data(vector_val2[lane * 32+:32]),
 				.write_en((wb_writeback_en && wb_writeback_vector) && wb_writeback_mask[(defines_NUM_VECTOR_LANES - lane) - 1]),
 				.write_addr({wb_writeback_thread_idx, wb_writeback_reg}),
@@ -5148,25 +5148,25 @@ module operand_fetch_stage (
 		of_thread_idx <= ts_thread_idx;
 		of_subcycle <= ts_subcycle;
 	end
-	assign of_store_value = (of_instruction[59] ? vector_val2 : {{15 {32'd0}}, scalar_val2});
+	assign of_store_value = (of_instruction[58] ? vector_val2 : {{7 {32'd0}}, scalar_val2});
 	always @(*) begin
 		if (_sv2v_0)
 			;
 		(* full_case, parallel_case *)
-		case (of_instruction[62])
+		case (of_instruction[61])
 			1'd0: of_operand1 = vector_val1;
 			default: of_operand1 = {defines_NUM_VECTOR_LANES {scalar_val1}};
 		endcase
 		(* full_case, parallel_case *)
-		case (of_instruction[61-:2])
+		case (of_instruction[60-:2])
 			2'd0: of_operand2 = {defines_NUM_VECTOR_LANES {scalar_val2}};
 			2'd1: of_operand2 = vector_val2;
-			default: of_operand2 = {defines_NUM_VECTOR_LANES {of_instruction[58-:32]}};
+			default: of_operand2 = {defines_NUM_VECTOR_LANES {of_instruction[57-:32]}};
 		endcase
 		(* full_case, parallel_case *)
-		case (of_instruction[64-:2])
-			2'd0: of_mask_value = scalar_val1[15:0];
-			2'd1: of_mask_value = scalar_val2[15:0];
+		case (of_instruction[63-:2])
+			2'd0: of_mask_value = scalar_val1[7:0];
+			2'd1: of_mask_value = scalar_val2[7:0];
 			default: of_mask_value = {defines_NUM_VECTOR_LANES {1'b1}};
 		endcase
 	end
@@ -5216,36 +5216,36 @@ module l1_store_queue (
 	input dd_membar_en;
 	input dd_iinvalidate_en;
 	input dd_dinvalidate_en;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	input wire [25:0] dd_store_addr;
-	input [63:0] dd_store_mask;
-	localparam defines_CACHE_LINE_BITS = 512;
-	input wire [511:0] dd_store_data;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	input wire [26:0] dd_store_addr;
+	input [31:0] dd_store_mask;
+	localparam defines_CACHE_LINE_BITS = 256;
+	input wire [255:0] dd_store_data;
 	input dd_store_sync;
 	input wire [1:0] dd_store_thread_idx;
-	input wire [25:0] dd_store_bypass_addr;
+	input wire [26:0] dd_store_bypass_addr;
 	input wire [1:0] dd_store_bypass_thread_idx;
-	output reg [63:0] sq_store_bypass_mask;
-	output reg [511:0] sq_store_bypass_data;
+	output reg [31:0] sq_store_bypass_mask;
+	output reg [255:0] sq_store_bypass_data;
 	output reg sq_store_sync_success;
 	input storebuf_dequeue_ack;
 	input storebuf_l2_response_valid;
 	input wire [1:0] storebuf_l2_response_idx;
 	input storebuf_l2_sync_success;
 	output wire sq_dequeue_ready;
-	output wire [25:0] sq_dequeue_addr;
+	output wire [26:0] sq_dequeue_addr;
 	output wire [1:0] sq_dequeue_idx;
-	output wire [63:0] sq_dequeue_mask;
-	output wire [511:0] sq_dequeue_data;
+	output wire [31:0] sq_dequeue_mask;
+	output wire [255:0] sq_dequeue_data;
 	output wire sq_dequeue_sync;
 	output wire sq_dequeue_flush;
 	output wire sq_dequeue_iinvalidate;
 	output wire sq_dequeue_dinvalidate;
 	output reg sq_rollback_en;
 	output wire [3:0] sq_wake_bitmap;
-	reg [610:0] pending_stores [0:3];
+	reg [323:0] pending_stores [0:3];
 	reg [3:0] rollback;
 	wire [3:0] send_request;
 	wire [1:0] send_grant_idx;
@@ -5277,17 +5277,17 @@ module l1_store_queue (
 			wire got_response_this_entry;
 			wire membar_requested_this_entry;
 			wire enqueue_cache_control;
-			assign send_request[thread_idx] = pending_stores[thread_idx][602] && !pending_stores[thread_idx][606];
+			assign send_request[thread_idx] = pending_stores[thread_idx][315] && !pending_stores[thread_idx][319];
 			assign store_requested_this_entry = dd_store_en && (dd_store_thread_idx == sv2v_cast_2(thread_idx));
 			assign membar_requested_this_entry = dd_membar_en && (dd_store_thread_idx == sv2v_cast_2(thread_idx));
 			assign send_this_cycle = send_grant_oh[thread_idx] && storebuf_dequeue_ack;
-			assign can_write_combine = (((((((((pending_stores[thread_idx][602] && (pending_stores[thread_idx][25-:26] == dd_store_addr)) && !pending_stores[thread_idx][609]) && !pending_stores[thread_idx][608]) && !pending_stores[thread_idx][607]) && !dd_store_sync) && !pending_stores[thread_idx][606]) && !send_this_cycle) && !dd_flush_en) && !dd_iinvalidate_en) && !dd_dinvalidate_en;
-			assign restarted_sync_request = (pending_stores[thread_idx][602] && pending_stores[thread_idx][605]) && pending_stores[thread_idx][610];
-			assign update_store_entry = (store_requested_this_entry && ((!pending_stores[thread_idx][602] || can_write_combine) || got_response_this_entry)) && !restarted_sync_request;
+			assign can_write_combine = (((((((((pending_stores[thread_idx][315] && (pending_stores[thread_idx][26-:27] == dd_store_addr)) && !pending_stores[thread_idx][322]) && !pending_stores[thread_idx][321]) && !pending_stores[thread_idx][320]) && !dd_store_sync) && !pending_stores[thread_idx][319]) && !send_this_cycle) && !dd_flush_en) && !dd_iinvalidate_en) && !dd_dinvalidate_en;
+			assign restarted_sync_request = (pending_stores[thread_idx][315] && pending_stores[thread_idx][318]) && pending_stores[thread_idx][323];
+			assign update_store_entry = (store_requested_this_entry && ((!pending_stores[thread_idx][315] || can_write_combine) || got_response_this_entry)) && !restarted_sync_request;
 			assign got_response_this_entry = storebuf_l2_response_valid && (storebuf_l2_response_idx == sv2v_cast_2(thread_idx));
-			assign sq_wake_bitmap[thread_idx] = got_response_this_entry && pending_stores[thread_idx][603];
-			assign enqueue_cache_control = ((dd_store_thread_idx == sv2v_cast_2(thread_idx)) && (!pending_stores[thread_idx][602] || got_response_this_entry)) && ((dd_flush_en || dd_dinvalidate_en) || dd_iinvalidate_en);
-			assign sq_store_sync_pending[thread_idx] = pending_stores[thread_idx][602] && pending_stores[thread_idx][610];
+			assign sq_wake_bitmap[thread_idx] = got_response_this_entry && pending_stores[thread_idx][316];
+			assign enqueue_cache_control = ((dd_store_thread_idx == sv2v_cast_2(thread_idx)) && (!pending_stores[thread_idx][315] || got_response_this_entry)) && ((dd_flush_en || dd_dinvalidate_en) || dd_iinvalidate_en);
+			assign sq_store_sync_pending[thread_idx] = pending_stores[thread_idx][315] && pending_stores[thread_idx][323];
 			always @(*) begin
 				if (_sv2v_0)
 					;
@@ -5295,10 +5295,10 @@ module l1_store_queue (
 				if ((dd_store_thread_idx == sv2v_cast_2(thread_idx)) && (((dd_flush_en || dd_dinvalidate_en) || dd_iinvalidate_en) || dd_store_en)) begin
 					if (dd_store_sync)
 						rollback[thread_idx] = !restarted_sync_request;
-					else if ((pending_stores[thread_idx][602] && !can_write_combine) && !got_response_this_entry)
+					else if ((pending_stores[thread_idx][315] && !can_write_combine) && !got_response_this_entry)
 						rollback[thread_idx] = 1;
 				end
-				else if ((membar_requested_this_entry && pending_stores[thread_idx][602]) && !got_response_this_entry)
+				else if ((membar_requested_this_entry && pending_stores[thread_idx][315]) && !got_response_this_entry)
 					rollback[thread_idx] = 1;
 			end
 			always @(posedge clk or posedge reset)
@@ -5307,77 +5307,77 @@ module l1_store_queue (
 				else begin
 					if (((((dd_store_en || dd_flush_en) || dd_membar_en) || dd_iinvalidate_en) || dd_dinvalidate_en) && (dd_store_thread_idx == thread_idx))
 						;
-					if (((dd_store_en && (dd_store_thread_idx == thread_idx)) && pending_stores[thread_idx][610]) && pending_stores[thread_idx][602])
+					if (((dd_store_en && (dd_store_thread_idx == thread_idx)) && pending_stores[thread_idx][323]) && pending_stores[thread_idx][315])
 						;
 					if (send_this_cycle)
-						pending_stores[thread_idx][606] <= 1;
+						pending_stores[thread_idx][319] <= 1;
 					if (update_store_entry) begin
 						begin : sv2v_autoblock_1
 							reg signed [31:0] byte_lane;
 							for (byte_lane = 0; byte_lane < defines_CACHE_LINE_BYTES; byte_lane = byte_lane + 1)
 								if (dd_store_mask[byte_lane])
-									pending_stores[thread_idx][90 + (byte_lane * 8)+:8] <= dd_store_data[byte_lane * 8+:8];
+									pending_stores[thread_idx][59 + (byte_lane * 8)+:8] <= dd_store_data[byte_lane * 8+:8];
 						end
 						if (can_write_combine)
-							pending_stores[thread_idx][89-:64] <= pending_stores[thread_idx][89-:64] | dd_store_mask;
+							pending_stores[thread_idx][58-:32] <= pending_stores[thread_idx][58-:32] | dd_store_mask;
 						else
-							pending_stores[thread_idx][89-:64] <= dd_store_mask;
+							pending_stores[thread_idx][58-:32] <= dd_store_mask;
 					end
 					if (sq_wake_bitmap[thread_idx])
-						pending_stores[thread_idx][603] <= 0;
+						pending_stores[thread_idx][316] <= 0;
 					else if (rollback[thread_idx])
-						pending_stores[thread_idx][603] <= 1;
+						pending_stores[thread_idx][316] <= 1;
 					if (store_requested_this_entry) begin
 						if (restarted_sync_request)
-							pending_stores[thread_idx][602] <= 0;
+							pending_stores[thread_idx][315] <= 0;
 						else if (update_store_entry && !can_write_combine) begin
-							pending_stores[thread_idx][602] <= 1;
-							pending_stores[thread_idx][25-:26] <= dd_store_addr;
-							pending_stores[thread_idx][610] <= dd_store_sync;
-							pending_stores[thread_idx][609] <= 0;
-							pending_stores[thread_idx][608] <= 0;
-							pending_stores[thread_idx][607] <= 0;
-							pending_stores[thread_idx][606] <= 0;
-							pending_stores[thread_idx][605] <= 0;
+							pending_stores[thread_idx][315] <= 1;
+							pending_stores[thread_idx][26-:27] <= dd_store_addr;
+							pending_stores[thread_idx][323] <= dd_store_sync;
+							pending_stores[thread_idx][322] <= 0;
+							pending_stores[thread_idx][321] <= 0;
+							pending_stores[thread_idx][320] <= 0;
+							pending_stores[thread_idx][319] <= 0;
+							pending_stores[thread_idx][318] <= 0;
 						end
 					end
 					else if (enqueue_cache_control) begin
-						pending_stores[thread_idx][602] <= 1;
-						pending_stores[thread_idx][25-:26] <= dd_store_addr;
-						pending_stores[thread_idx][610] <= 0;
-						pending_stores[thread_idx][609] <= dd_flush_en;
-						pending_stores[thread_idx][608] <= dd_iinvalidate_en;
-						pending_stores[thread_idx][607] <= dd_dinvalidate_en;
-						pending_stores[thread_idx][606] <= 0;
-						pending_stores[thread_idx][605] <= 0;
+						pending_stores[thread_idx][315] <= 1;
+						pending_stores[thread_idx][26-:27] <= dd_store_addr;
+						pending_stores[thread_idx][323] <= 0;
+						pending_stores[thread_idx][322] <= dd_flush_en;
+						pending_stores[thread_idx][321] <= dd_iinvalidate_en;
+						pending_stores[thread_idx][320] <= dd_dinvalidate_en;
+						pending_stores[thread_idx][319] <= 0;
+						pending_stores[thread_idx][318] <= 0;
 					end
 					if ((got_response_this_entry && (!store_requested_this_entry || !update_store_entry)) && !enqueue_cache_control) begin
-						if (pending_stores[thread_idx][610]) begin
-							pending_stores[thread_idx][605] <= 1;
-							pending_stores[thread_idx][604] <= storebuf_l2_sync_success;
+						if (pending_stores[thread_idx][323]) begin
+							pending_stores[thread_idx][318] <= 1;
+							pending_stores[thread_idx][317] <= storebuf_l2_sync_success;
 						end
 						else
-							pending_stores[thread_idx][602] <= 0;
+							pending_stores[thread_idx][315] <= 0;
 					end
 				end
 		end
 	endgenerate
 	assign sq_dequeue_ready = |send_grant_oh;
 	assign sq_dequeue_idx = send_grant_idx;
-	assign sq_dequeue_addr = pending_stores[send_grant_idx][25-:26];
-	assign sq_dequeue_mask = pending_stores[send_grant_idx][89-:64];
-	assign sq_dequeue_data = pending_stores[send_grant_idx][601-:512];
-	assign sq_dequeue_sync = pending_stores[send_grant_idx][610];
-	assign sq_dequeue_flush = pending_stores[send_grant_idx][609];
-	assign sq_dequeue_iinvalidate = pending_stores[send_grant_idx][608];
-	assign sq_dequeue_dinvalidate = pending_stores[send_grant_idx][607];
+	assign sq_dequeue_addr = pending_stores[send_grant_idx][26-:27];
+	assign sq_dequeue_mask = pending_stores[send_grant_idx][58-:32];
+	assign sq_dequeue_data = pending_stores[send_grant_idx][314-:256];
+	assign sq_dequeue_sync = pending_stores[send_grant_idx][323];
+	assign sq_dequeue_flush = pending_stores[send_grant_idx][322];
+	assign sq_dequeue_iinvalidate = pending_stores[send_grant_idx][321];
+	assign sq_dequeue_dinvalidate = pending_stores[send_grant_idx][320];
 	always @(posedge clk) begin
-		sq_store_bypass_data <= pending_stores[dd_store_bypass_thread_idx][601-:512];
-		if (((((dd_store_bypass_addr == pending_stores[dd_store_bypass_thread_idx][25-:26]) && pending_stores[dd_store_bypass_thread_idx][602]) && !pending_stores[dd_store_bypass_thread_idx][609]) && !pending_stores[dd_store_bypass_thread_idx][608]) && !pending_stores[dd_store_bypass_thread_idx][607])
-			sq_store_bypass_mask <= pending_stores[dd_store_bypass_thread_idx][89-:64];
+		sq_store_bypass_data <= pending_stores[dd_store_bypass_thread_idx][314-:256];
+		if (((((dd_store_bypass_addr == pending_stores[dd_store_bypass_thread_idx][26-:27]) && pending_stores[dd_store_bypass_thread_idx][315]) && !pending_stores[dd_store_bypass_thread_idx][322]) && !pending_stores[dd_store_bypass_thread_idx][321]) && !pending_stores[dd_store_bypass_thread_idx][320])
+			sq_store_bypass_mask <= pending_stores[dd_store_bypass_thread_idx][58-:32];
 		else
 			sq_store_bypass_mask <= 0;
-		sq_store_sync_success <= pending_stores[dd_store_thread_idx][604];
+		sq_store_sync_success <= pending_stores[dd_store_thread_idx][317];
 	end
 	always @(posedge clk or posedge reset)
 		if (reset)
@@ -5409,44 +5409,44 @@ module l2_cache_update_stage (
 	input clk;
 	input reset;
 	input l2r_request_valid;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_BITS = 512;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	input wire [611:0] l2r_request;
-	input wire [511:0] l2r_data;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_BITS = 256;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	input wire [324:0] l2r_request;
+	input wire [255:0] l2r_data;
 	input l2r_cache_hit;
 	input wire [8:0] l2r_hit_cache_idx;
 	input l2r_l2_fill;
 	input l2r_restarted_flush;
-	input wire [511:0] l2r_data_from_memory;
+	input wire [255:0] l2r_data_from_memory;
 	input l2r_store_sync_success;
 	input l2r_needs_writeback;
 	output wire l2u_write_en;
 	output wire [8:0] l2u_write_addr;
-	output wire [511:0] l2u_write_data;
+	output wire [255:0] l2u_write_data;
 	output reg l2_response_valid;
-	output reg [548:0] l2_response;
-	wire [511:0] original_data;
+	output reg [293:0] l2_response;
+	wire [255:0] original_data;
 	wire update_data;
 	reg [2:0] response_type;
 	wire completed_flush;
 	assign original_data = (l2r_l2_fill ? l2r_data_from_memory : l2r_data);
-	assign update_data = (l2r_request[605-:3] == 3'd2) || ((l2r_request[605-:3] == 3'd3) && l2r_store_sync_success);
+	assign update_data = (l2r_request[318-:3] == 3'd2) || ((l2r_request[318-:3] == 3'd3) && l2r_store_sync_success);
 	genvar _gv_byte_lane_2;
 	generate
 		for (_gv_byte_lane_2 = 0; _gv_byte_lane_2 < defines_CACHE_LINE_BYTES; _gv_byte_lane_2 = _gv_byte_lane_2 + 1) begin : lane_mask_gen
 			localparam byte_lane = _gv_byte_lane_2;
-			assign l2u_write_data[byte_lane * 8+:8] = (l2r_request[512 + byte_lane] && update_data ? l2r_request[0 + (byte_lane * 8)+:8] : original_data[byte_lane * 8+:8]);
+			assign l2u_write_data[byte_lane * 8+:8] = (l2r_request[256 + byte_lane] && update_data ? l2r_request[0 + (byte_lane * 8)+:8] : original_data[byte_lane * 8+:8]);
 		end
 	endgenerate
-	assign l2u_write_en = l2r_request_valid && (l2r_l2_fill || (l2r_cache_hit && ((l2r_request[605-:3] == 3'd2) || (l2r_request[605-:3] == 3'd3))));
+	assign l2u_write_en = l2r_request_valid && (l2r_l2_fill || (l2r_cache_hit && ((l2r_request[318-:3] == 3'd2) || (l2r_request[318-:3] == 3'd3))));
 	assign l2u_write_addr = l2r_hit_cache_idx;
 	always @(*) begin
 		if (_sv2v_0)
 			;
 		(* full_case, parallel_case *)
-		case (l2r_request[605-:3])
+		case (l2r_request[318-:3])
 			3'd0, 3'd1: response_type = 3'd0;
 			3'd2, 3'd3: response_type = 3'd1;
 			3'd4: response_type = 3'd2;
@@ -5455,22 +5455,22 @@ module l2_cache_update_stage (
 			default: response_type = 3'd0;
 		endcase
 	end
-	assign completed_flush = (l2r_request[605-:3] == 3'd4) && ((l2r_restarted_flush || !l2r_cache_hit) || !l2r_needs_writeback);
+	assign completed_flush = (l2r_request[318-:3] == 3'd4) && ((l2r_restarted_flush || !l2r_cache_hit) || !l2r_needs_writeback);
 	always @(posedge clk or posedge reset)
 		if (reset)
 			l2_response_valid <= 0;
-		else if (l2r_request_valid && (((((l2r_cache_hit && (l2r_request[605-:3] != 3'd4)) || l2r_l2_fill) || completed_flush) || (l2r_request[605-:3] == 3'd6)) || (l2r_request[605-:3] == 3'd5)))
+		else if (l2r_request_valid && (((((l2r_cache_hit && (l2r_request[318-:3] != 3'd4)) || l2r_l2_fill) || completed_flush) || (l2r_request[318-:3] == 3'd6)) || (l2r_request[318-:3] == 3'd5)))
 			l2_response_valid <= 1;
 		else
 			l2_response_valid <= 0;
 	always @(posedge clk) begin
-		l2_response[548] <= (l2r_request[605-:3] == 3'd3 ? l2r_store_sync_success : 1'b1);
-		l2_response[547-:4] <= l2r_request[611-:4];
-		l2_response[543-:2] <= l2r_request[607-:2];
-		l2_response[541-:3] <= response_type;
-		l2_response[538] <= l2r_request[602];
-		l2_response[511-:defines_CACHE_LINE_BITS] <= l2u_write_data;
-		l2_response[537-:26] <= l2r_request[601-:26];
+		l2_response[293] <= (l2r_request[318-:3] == 3'd3 ? l2r_store_sync_success : 1'b1);
+		l2_response[292-:4] <= l2r_request[324-:4];
+		l2_response[288-:2] <= l2r_request[320-:2];
+		l2_response[286-:3] <= response_type;
+		l2_response[283] <= l2r_request[315];
+		l2_response[255-:defines_CACHE_LINE_BITS] <= l2u_write_data;
+		l2_response[282-:27] <= l2r_request[314-:27];
 	end
 	initial _sv2v_0 = 0;
 endmodule
@@ -5494,28 +5494,28 @@ module l2_cache_arb_stage (
 	input clk;
 	input reset;
 	input [0:0] l2i_request_valid;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_BITS = 512;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	input wire [611:0] l2i_request;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_BITS = 256;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	input wire [324:0] l2i_request;
 	output wire [0:0] l2_ready;
 	output reg l2a_request_valid;
-	output reg [611:0] l2a_request;
-	output reg [511:0] l2a_data_from_memory;
+	output reg [324:0] l2a_request;
+	output reg [255:0] l2a_data_from_memory;
 	output reg l2a_l2_fill;
 	output reg l2a_restarted_flush;
 	input l2bi_request_valid;
-	input wire [611:0] l2bi_request;
-	input wire [511:0] l2bi_data_from_memory;
+	input wire [324:0] l2bi_request;
+	input wire [255:0] l2bi_data_from_memory;
 	input l2bi_stall;
 	input l2bi_collided_miss;
 	wire can_accept_request;
-	wire [611:0] grant_request;
+	wire [324:0] grant_request;
 	wire [0:0] grant_oh;
 	wire restarted_flush;
 	assign can_accept_request = !l2bi_request_valid && !l2bi_stall;
-	assign restarted_flush = l2bi_request[605-:3] == 3'd4;
+	assign restarted_flush = l2bi_request[318-:3] == 3'd4;
 	genvar _gv_request_idx_2;
 	generate
 		for (_gv_request_idx_2 = 0; _gv_request_idx_2 < 1; _gv_request_idx_2 = _gv_request_idx_2 + 1) begin : handshake_gen
@@ -5527,7 +5527,7 @@ module l2_cache_arb_stage (
 	generate
 		if (1) begin : genblk2
 			assign grant_oh[0] = l2i_request_valid[0];
-			assign grant_request = l2i_request[0+:612];
+			assign grant_request = l2i_request[0+:325];
 		end
 	endgenerate
 	always @(posedge clk) begin
@@ -5710,10 +5710,10 @@ module ifetch_tag_stage (
 	input ifd_near_miss;
 	input wire [1:0] ifd_cache_miss_thread_idx;
 	output reg ift_instruction_requested;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	localparam defines_ICACHE_TAG_BITS = 20;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	localparam defines_ICACHE_TAG_BITS = 21;
 	output wire [31:0] ift_pc_paddr;
 	output wire [31:0] ift_pc_vaddr;
 	output reg [1:0] ift_thread_idx;
@@ -5721,13 +5721,13 @@ module ifetch_tag_stage (
 	output reg ift_tlb_present;
 	output reg ift_tlb_executable;
 	output reg ift_tlb_supervisor;
-	output wire [79:0] ift_tag;
+	output wire [83:0] ift_tag;
 	output reg [0:3] ift_valid;
 	input l2i_icache_lru_fill_en;
 	input wire [5:0] l2i_icache_lru_fill_set;
 	input [3:0] l2i_itag_update_en;
 	input wire [5:0] l2i_itag_update_set;
-	input wire [19:0] l2i_itag_update_tag;
+	input wire [20:0] l2i_itag_update_tag;
 	input l2i_itag_update_valid;
 	input wire [3:0] l2i_icache_wake_bitmap;
 	output wire [1:0] ift_fill_lru;
@@ -5816,7 +5816,7 @@ module ifetch_tag_stage (
 				.READ_DURING_WRITE("NEW_DATA")
 			) sram_tags(
 				.read_en(cache_fetch_en),
-				.read_addr(pc_to_fetch[11-:6]),
+				.read_addr(pc_to_fetch[10-:6]),
 				.read_data(ift_tag[(3 - way_idx) * defines_ICACHE_TAG_BITS+:defines_ICACHE_TAG_BITS]),
 				.write_en(l2i_itag_update_en[way_idx]),
 				.write_addr(l2i_itag_update_set),
@@ -5832,10 +5832,10 @@ module ifetch_tag_stage (
 				else if (l2i_itag_update_en[way_idx])
 					line_valid[l2i_itag_update_set] <= l2i_itag_update_valid;
 			always @(posedge clk)
-				if (l2i_itag_update_en[way_idx] && (l2i_itag_update_set == pc_to_fetch[11-:6]))
+				if (l2i_itag_update_en[way_idx] && (l2i_itag_update_set == pc_to_fetch[10-:6]))
 					ift_valid[way_idx] <= l2i_itag_update_valid;
 				else
-					ift_valid[way_idx] <= line_valid[pc_to_fetch[11-:6]];
+					ift_valid[way_idx] <= line_valid[pc_to_fetch[10-:6]];
 		end
 	endgenerate
 	always @(*) begin
@@ -5899,7 +5899,7 @@ module ifetch_tag_stage (
 		.fill_set(l2i_icache_lru_fill_set),
 		.fill_way(ift_fill_lru),
 		.access_en(cache_fetch_en),
-		.access_set(pc_to_fetch[11-:6]),
+		.access_set(pc_to_fetch[10-:6]),
 		.update_en(ifd_update_lru_en),
 		.update_way(ifd_update_lru_way),
 		.*
@@ -5943,8 +5943,8 @@ module scoreboard (
 	reg _sv2v_0;
 	input clk;
 	input reset;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	input wire [141:0] next_instruction;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	input wire [140:0] next_instruction;
 	output wire scoreboard_can_issue;
 	input will_issue;
 	input writeback_en;
@@ -5984,30 +5984,30 @@ module scoreboard (
 		if (_sv2v_0)
 			;
 		dep_bitmap = 0;
-		if (next_instruction[77]) begin
-			if (next_instruction[76])
-				dep_bitmap[{1'b1, next_instruction[75-:5]}] = 1;
+		if (next_instruction[76]) begin
+			if (next_instruction[75])
+				dep_bitmap[{1'b1, next_instruction[74-:5]}] = 1;
 			else
-				dep_bitmap[{1'b0, next_instruction[75-:5]}] = 1;
+				dep_bitmap[{1'b0, next_instruction[74-:5]}] = 1;
 		end
-		if (next_instruction[101])
-			dep_bitmap[{1'b0, next_instruction[100-:5]}] = 1;
-		if (next_instruction[95])
-			dep_bitmap[{1'b0, next_instruction[94-:5]}] = 1;
-		if (next_instruction[89])
-			dep_bitmap[{1'b1, next_instruction[88-:5]}] = 1;
-		if (next_instruction[83])
-			dep_bitmap[{1'b1, next_instruction[82-:5]}] = 1;
+		if (next_instruction[100])
+			dep_bitmap[{1'b0, next_instruction[99-:5]}] = 1;
+		if (next_instruction[94])
+			dep_bitmap[{1'b0, next_instruction[93-:5]}] = 1;
+		if (next_instruction[88])
+			dep_bitmap[{1'b1, next_instruction[87-:5]}] = 1;
+		if (next_instruction[82])
+			dep_bitmap[{1'b1, next_instruction[81-:5]}] = 1;
 	end
 	always @(*) begin
 		if (_sv2v_0)
 			;
 		dest_bitmap = 0;
-		if (next_instruction[77]) begin
-			if (next_instruction[76])
-				dest_bitmap[{1'b1, next_instruction[75-:5]}] = 1;
+		if (next_instruction[76]) begin
+			if (next_instruction[75])
+				dest_bitmap[{1'b1, next_instruction[74-:5]}] = 1;
 			else
-				dest_bitmap[{1'b0, next_instruction[75-:5]}] = 1;
+				dest_bitmap[{1'b0, next_instruction[74-:5]}] = 1;
 		end
 	end
 	always @(*) begin
@@ -6032,11 +6032,11 @@ module scoreboard (
 		end
 		else begin
 			scoreboard_regs <= scoreboard_regs_nxt;
-			has_writeback <= {has_writeback[2:0], will_issue && next_instruction[77]};
+			has_writeback <= {has_writeback[2:0], will_issue && next_instruction[76]};
 		end
 	always @(posedge clk) begin
 		if (will_issue)
-			writeback_reg[0] <= {next_instruction[76], next_instruction[75-:5]};
+			writeback_reg[0] <= {next_instruction[75], next_instruction[74-:5]};
 		begin : sv2v_autoblock_2
 			reg signed [31:0] i;
 			for (i = 1; i < ROLLBACK_STAGES; i = i + 1)
@@ -6338,13 +6338,13 @@ module core (
 	input [NUM_INTERRUPTS - 1:0] interrupt_req;
 	input l2_ready;
 	input l2_response_valid;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_BITS = 512;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	input wire [548:0] l2_response;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_BITS = 256;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	input wire [293:0] l2_response;
 	output wire l2i_request_valid;
-	output wire [611:0] l2i_request;
+	output wire [324:0] l2i_request;
 	input ii_ready;
 	input ii_response_valid;
 	input wire [37:0] ii_response;
@@ -6373,7 +6373,7 @@ module core (
 	localparam defines_ASID_WIDTH = 8;
 	wire [31:0] cr_current_asid;
 	wire [127:0] cr_eret_address;
-	wire [15:0] cr_eret_subcycle;
+	wire [11:0] cr_eret_subcycle;
 	wire [3:0] cr_interrupt_en;
 	wire [3:0] cr_interrupt_pending;
 	wire [0:3] cr_mmu_en;
@@ -6381,7 +6381,7 @@ module core (
 	wire [31:0] cr_tlb_miss_handler;
 	wire [31:0] cr_trap_handler;
 	wire dd_cache_miss;
-	wire [25:0] dd_cache_miss_addr;
+	wire [26:0] dd_cache_miss_addr;
 	wire dd_cache_miss_sync;
 	wire [1:0] dd_cache_miss_thread_idx;
 	wire [4:0] dd_creg_index;
@@ -6391,7 +6391,7 @@ module core (
 	wire dd_dinvalidate_en;
 	wire dd_flush_en;
 	wire dd_iinvalidate_en;
-	wire [141:0] dd_instruction;
+	wire [140:0] dd_instruction;
 	wire dd_instruction_valid;
 	wire dd_io_access;
 	wire [31:0] dd_io_addr;
@@ -6399,26 +6399,26 @@ module core (
 	wire [1:0] dd_io_thread_idx;
 	wire dd_io_write_en;
 	wire [31:0] dd_io_write_value;
-	wire [15:0] dd_lane_mask;
-	wire [511:0] dd_load_data;
+	wire [7:0] dd_lane_mask;
+	wire [255:0] dd_load_data;
 	wire [3:0] dd_load_sync_pending;
 	wire dd_membar_en;
 	wire dd_perf_dcache_hit;
 	wire dd_perf_dcache_miss;
 	wire dd_perf_dtlb_miss;
-	localparam defines_DCACHE_TAG_BITS = 20;
+	localparam defines_DCACHE_TAG_BITS = 21;
 	wire [31:0] dd_request_vaddr;
 	wire dd_rollback_en;
 	wire [31:0] dd_rollback_pc;
-	wire [25:0] dd_store_addr;
-	wire [25:0] dd_store_bypass_addr;
+	wire [26:0] dd_store_addr;
+	wire [26:0] dd_store_bypass_addr;
 	wire [1:0] dd_store_bypass_thread_idx;
-	wire [511:0] dd_store_data;
+	wire [255:0] dd_store_data;
 	wire dd_store_en;
-	wire [63:0] dd_store_mask;
+	wire [31:0] dd_store_mask;
 	wire dd_store_sync;
 	wire [1:0] dd_store_thread_idx;
-	wire [3:0] dd_subcycle;
+	wire [2:0] dd_subcycle;
 	wire dd_suspend_thread;
 	wire [1:0] dd_thread_idx;
 	wire dd_trap;
@@ -6426,18 +6426,18 @@ module core (
 	wire dd_update_lru_en;
 	wire [1:0] dd_update_lru_way;
 	wire [1:0] dt_fill_lru;
-	wire [141:0] dt_instruction;
+	wire [140:0] dt_instruction;
 	wire dt_instruction_valid;
 	wire dt_invalidate_tlb_all_en;
 	wire dt_invalidate_tlb_en;
-	wire [15:0] dt_mask_value;
+	wire [7:0] dt_mask_value;
 	wire [31:0] dt_request_paddr;
 	wire [31:0] dt_request_vaddr;
-	wire [79:0] dt_snoop_tag;
+	wire [83:0] dt_snoop_tag;
 	wire [0:3] dt_snoop_valid;
-	wire [511:0] dt_store_value;
-	wire [3:0] dt_subcycle;
-	wire [79:0] dt_tag;
+	wire [255:0] dt_store_value;
+	wire [2:0] dt_subcycle;
+	wire [83:0] dt_tag;
 	wire [1:0] dt_thread_idx;
 	wire dt_tlb_hit;
 	wire dt_tlb_present;
@@ -6454,93 +6454,93 @@ module core (
 	wire dt_update_itlb_supervisor;
 	wire [defines_PAGE_NUM_BITS - 1:0] dt_update_itlb_vpage_idx;
 	wire [0:3] dt_valid;
-	wire [127:0] fx1_add_exponent;
-	wire [15:0] fx1_add_result_sign;
-	wire [15:0] fx1_equal;
-	wire [95:0] fx1_ftoi_lshift;
-	wire [141:0] fx1_instruction;
+	wire [63:0] fx1_add_exponent;
+	wire [7:0] fx1_add_result_sign;
+	wire [7:0] fx1_equal;
+	wire [47:0] fx1_ftoi_lshift;
+	wire [140:0] fx1_instruction;
 	wire fx1_instruction_valid;
-	wire [15:0] fx1_logical_subtract;
-	wire [15:0] fx1_mask_value;
-	wire [127:0] fx1_mul_exponent;
-	wire [15:0] fx1_mul_sign;
-	wire [15:0] fx1_mul_underflow;
-	wire [511:0] fx1_multiplicand;
-	wire [511:0] fx1_multiplier;
-	wire [15:0] fx1_result_inf;
-	wire [15:0] fx1_result_nan;
-	wire [95:0] fx1_se_align_shift;
-	wire [511:0] fx1_significand_le;
-	wire [511:0] fx1_significand_se;
-	wire [3:0] fx1_subcycle;
+	wire [7:0] fx1_logical_subtract;
+	wire [7:0] fx1_mask_value;
+	wire [63:0] fx1_mul_exponent;
+	wire [7:0] fx1_mul_sign;
+	wire [7:0] fx1_mul_underflow;
+	wire [255:0] fx1_multiplicand;
+	wire [255:0] fx1_multiplier;
+	wire [7:0] fx1_result_inf;
+	wire [7:0] fx1_result_nan;
+	wire [47:0] fx1_se_align_shift;
+	wire [255:0] fx1_significand_le;
+	wire [255:0] fx1_significand_se;
+	wire [2:0] fx1_subcycle;
 	wire [1:0] fx1_thread_idx;
-	wire [127:0] fx2_add_exponent;
-	wire [15:0] fx2_add_result_sign;
-	wire [15:0] fx2_equal;
-	wire [95:0] fx2_ftoi_lshift;
-	wire [15:0] fx2_guard;
-	wire [141:0] fx2_instruction;
+	wire [63:0] fx2_add_exponent;
+	wire [7:0] fx2_add_result_sign;
+	wire [7:0] fx2_equal;
+	wire [47:0] fx2_ftoi_lshift;
+	wire [7:0] fx2_guard;
+	wire [140:0] fx2_instruction;
 	wire fx2_instruction_valid;
-	wire [15:0] fx2_logical_subtract;
-	wire [15:0] fx2_mask_value;
-	wire [127:0] fx2_mul_exponent;
-	wire [15:0] fx2_mul_sign;
-	wire [15:0] fx2_mul_underflow;
-	wire [15:0] fx2_result_inf;
-	wire [15:0] fx2_result_nan;
-	wire [15:0] fx2_round;
-	wire [511:0] fx2_significand_le;
-	wire [1023:0] fx2_significand_product;
-	wire [511:0] fx2_significand_se;
-	wire [15:0] fx2_sticky;
-	wire [3:0] fx2_subcycle;
+	wire [7:0] fx2_logical_subtract;
+	wire [7:0] fx2_mask_value;
+	wire [63:0] fx2_mul_exponent;
+	wire [7:0] fx2_mul_sign;
+	wire [7:0] fx2_mul_underflow;
+	wire [7:0] fx2_result_inf;
+	wire [7:0] fx2_result_nan;
+	wire [7:0] fx2_round;
+	wire [255:0] fx2_significand_le;
+	wire [511:0] fx2_significand_product;
+	wire [255:0] fx2_significand_se;
+	wire [7:0] fx2_sticky;
+	wire [2:0] fx2_subcycle;
 	wire [1:0] fx2_thread_idx;
-	wire [127:0] fx3_add_exponent;
-	wire [15:0] fx3_add_result_sign;
-	wire [511:0] fx3_add_significand;
-	wire [15:0] fx3_equal;
-	wire [95:0] fx3_ftoi_lshift;
-	wire [141:0] fx3_instruction;
+	wire [63:0] fx3_add_exponent;
+	wire [7:0] fx3_add_result_sign;
+	wire [255:0] fx3_add_significand;
+	wire [7:0] fx3_equal;
+	wire [47:0] fx3_ftoi_lshift;
+	wire [140:0] fx3_instruction;
 	wire fx3_instruction_valid;
-	wire [15:0] fx3_logical_subtract;
-	wire [15:0] fx3_mask_value;
-	wire [127:0] fx3_mul_exponent;
-	wire [15:0] fx3_mul_sign;
-	wire [15:0] fx3_mul_underflow;
-	wire [15:0] fx3_result_inf;
-	wire [15:0] fx3_result_nan;
-	wire [1023:0] fx3_significand_product;
-	wire [3:0] fx3_subcycle;
+	wire [7:0] fx3_logical_subtract;
+	wire [7:0] fx3_mask_value;
+	wire [63:0] fx3_mul_exponent;
+	wire [7:0] fx3_mul_sign;
+	wire [7:0] fx3_mul_underflow;
+	wire [7:0] fx3_result_inf;
+	wire [7:0] fx3_result_nan;
+	wire [511:0] fx3_significand_product;
+	wire [2:0] fx3_subcycle;
 	wire [1:0] fx3_thread_idx;
-	wire [127:0] fx4_add_exponent;
-	wire [15:0] fx4_add_result_sign;
-	wire [511:0] fx4_add_significand;
-	wire [15:0] fx4_equal;
-	wire [141:0] fx4_instruction;
+	wire [63:0] fx4_add_exponent;
+	wire [7:0] fx4_add_result_sign;
+	wire [255:0] fx4_add_significand;
+	wire [7:0] fx4_equal;
+	wire [140:0] fx4_instruction;
 	wire fx4_instruction_valid;
-	wire [15:0] fx4_logical_subtract;
-	wire [15:0] fx4_mask_value;
-	wire [127:0] fx4_mul_exponent;
-	wire [15:0] fx4_mul_sign;
-	wire [15:0] fx4_mul_underflow;
-	wire [95:0] fx4_norm_shift;
-	wire [15:0] fx4_result_inf;
-	wire [15:0] fx4_result_nan;
-	wire [1023:0] fx4_significand_product;
-	wire [3:0] fx4_subcycle;
+	wire [7:0] fx4_logical_subtract;
+	wire [7:0] fx4_mask_value;
+	wire [63:0] fx4_mul_exponent;
+	wire [7:0] fx4_mul_sign;
+	wire [7:0] fx4_mul_underflow;
+	wire [47:0] fx4_norm_shift;
+	wire [7:0] fx4_result_inf;
+	wire [7:0] fx4_result_nan;
+	wire [511:0] fx4_significand_product;
+	wire [2:0] fx4_subcycle;
 	wire [1:0] fx4_thread_idx;
-	wire [141:0] fx5_instruction;
+	wire [140:0] fx5_instruction;
 	wire fx5_instruction_valid;
-	wire [15:0] fx5_mask_value;
-	wire [511:0] fx5_result;
-	wire [3:0] fx5_subcycle;
+	wire [7:0] fx5_mask_value;
+	wire [255:0] fx5_result;
+	wire [2:0] fx5_subcycle;
 	wire [1:0] fx5_thread_idx;
-	wire [141:0] id_instruction;
+	wire [140:0] id_instruction;
 	wire id_instruction_valid;
 	wire [1:0] id_thread_idx;
 	wire ifd_alignment_fault;
 	wire ifd_cache_miss;
-	wire [25:0] ifd_cache_miss_paddr;
+	wire [26:0] ifd_cache_miss_paddr;
 	wire [1:0] ifd_cache_miss_thread_idx;
 	wire ifd_executable_fault;
 	wire ifd_inst_injected;
@@ -6559,10 +6559,10 @@ module core (
 	wire [1:0] ifd_update_lru_way;
 	wire [1:0] ift_fill_lru;
 	wire ift_instruction_requested;
-	localparam defines_ICACHE_TAG_BITS = 20;
+	localparam defines_ICACHE_TAG_BITS = 21;
 	wire [31:0] ift_pc_paddr;
 	wire [31:0] ift_pc_vaddr;
-	wire [79:0] ift_tag;
+	wire [83:0] ift_tag;
 	wire [1:0] ift_thread_idx;
 	wire ift_tlb_executable;
 	wire ift_tlb_hit;
@@ -6573,62 +6573,62 @@ module core (
 	wire [31:0] ior_read_value;
 	wire ior_rollback_en;
 	wire [3:0] ior_wake_bitmap;
-	wire [141:0] ix_instruction;
+	wire [140:0] ix_instruction;
 	wire ix_instruction_valid;
-	wire [15:0] ix_mask_value;
+	wire [7:0] ix_mask_value;
 	wire ix_perf_cond_branch_not_taken;
 	wire ix_perf_cond_branch_taken;
 	wire ix_perf_uncond_branch;
 	wire ix_privileged_op_fault;
-	wire [511:0] ix_result;
+	wire [255:0] ix_result;
 	wire ix_rollback_en;
 	wire [31:0] ix_rollback_pc;
-	wire [3:0] ix_subcycle;
+	wire [2:0] ix_subcycle;
 	wire [1:0] ix_thread_idx;
 	wire l2i_dcache_lru_fill_en;
 	wire [5:0] l2i_dcache_lru_fill_set;
 	wire [3:0] l2i_dcache_wake_bitmap;
-	wire [511:0] l2i_ddata_update_data;
+	wire [255:0] l2i_ddata_update_data;
 	wire l2i_ddata_update_en;
 	wire [5:0] l2i_ddata_update_set;
 	wire [1:0] l2i_ddata_update_way;
 	wire [3:0] l2i_dtag_update_en_oh;
 	wire [5:0] l2i_dtag_update_set;
-	wire [19:0] l2i_dtag_update_tag;
+	wire [20:0] l2i_dtag_update_tag;
 	wire l2i_dtag_update_valid;
 	wire l2i_icache_lru_fill_en;
 	wire [5:0] l2i_icache_lru_fill_set;
 	wire [3:0] l2i_icache_wake_bitmap;
-	wire [511:0] l2i_idata_update_data;
+	wire [255:0] l2i_idata_update_data;
 	wire l2i_idata_update_en;
 	wire [5:0] l2i_idata_update_set;
 	wire [1:0] l2i_idata_update_way;
 	wire [3:0] l2i_itag_update_en;
 	wire [5:0] l2i_itag_update_set;
-	wire [19:0] l2i_itag_update_tag;
+	wire [20:0] l2i_itag_update_tag;
 	wire l2i_itag_update_valid;
 	wire l2i_perf_store;
 	wire l2i_snoop_en;
 	wire [5:0] l2i_snoop_set;
-	wire [141:0] of_instruction;
+	wire [140:0] of_instruction;
 	wire of_instruction_valid;
-	wire [15:0] of_mask_value;
-	wire [511:0] of_operand1;
-	wire [511:0] of_operand2;
-	wire [511:0] of_store_value;
-	wire [3:0] of_subcycle;
+	wire [7:0] of_mask_value;
+	wire [255:0] of_operand1;
+	wire [255:0] of_operand2;
+	wire [255:0] of_store_value;
+	wire [2:0] of_subcycle;
 	wire [1:0] of_thread_idx;
 	wire [127:0] perf_event_count;
 	wire sq_rollback_en;
-	wire [511:0] sq_store_bypass_data;
-	wire [63:0] sq_store_bypass_mask;
+	wire [255:0] sq_store_bypass_data;
+	wire [31:0] sq_store_bypass_mask;
 	wire [3:0] sq_store_sync_pending;
 	wire sq_store_sync_success;
 	wire [3:0] ts_fetch_en;
-	wire [141:0] ts_instruction;
+	wire [140:0] ts_instruction;
 	wire ts_instruction_valid;
 	wire ts_perf_instruction_issue;
-	wire [3:0] ts_subcycle;
+	wire [2:0] ts_subcycle;
 	wire [1:0] ts_thread_idx;
 	wire wb_eret;
 	wire wb_inst_injected;
@@ -6638,7 +6638,7 @@ module core (
 	wire wb_rollback_en;
 	wire [31:0] wb_rollback_pc;
 	wire [1:0] wb_rollback_pipeline;
-	wire [3:0] wb_rollback_subcycle;
+	wire [2:0] wb_rollback_subcycle;
 	wire [1:0] wb_rollback_thread_idx;
 	wire [3:0] wb_suspend_thread_oh;
 	wire [14:0] wb_syscall_index;
@@ -6646,13 +6646,13 @@ module core (
 	wire [31:0] wb_trap_access_vaddr;
 	wire [5:0] wb_trap_cause;
 	wire [31:0] wb_trap_pc;
-	wire [3:0] wb_trap_subcycle;
+	wire [2:0] wb_trap_subcycle;
 	wire wb_writeback_en;
 	wire wb_writeback_last_subcycle;
-	wire [15:0] wb_writeback_mask;
+	wire [7:0] wb_writeback_mask;
 	wire [4:0] wb_writeback_reg;
 	wire [1:0] wb_writeback_thread_idx;
-	wire [511:0] wb_writeback_value;
+	wire [255:0] wb_writeback_value;
 	wire wb_writeback_vector;
 	ifetch_tag_stage #(.RESET_PC(RESET_PC)) ifetch_tag_stage(
 		.clk(clk),
@@ -7408,46 +7408,46 @@ module l2_cache_read_stage (
 	input clk;
 	input reset;
 	input l2t_request_valid;
-	localparam defines_NUM_VECTOR_LANES = 16;
-	localparam defines_CACHE_LINE_BYTES = 64;
-	localparam defines_CACHE_LINE_BITS = 512;
-	localparam defines_CACHE_LINE_OFFSET_WIDTH = 6;
-	input wire [611:0] l2t_request;
+	localparam defines_NUM_VECTOR_LANES = 8;
+	localparam defines_CACHE_LINE_BYTES = 32;
+	localparam defines_CACHE_LINE_BITS = 256;
+	localparam defines_CACHE_LINE_OFFSET_WIDTH = 5;
+	input wire [324:0] l2t_request;
 	input [0:1] l2t_valid;
-	input wire [35:0] l2t_tag;
+	input wire [37:0] l2t_tag;
 	input [0:1] l2t_dirty;
 	input l2t_l2_fill;
 	input l2t_restarted_flush;
 	input wire [0:0] l2t_fill_way;
-	input wire [511:0] l2t_data_from_memory;
+	input wire [255:0] l2t_data_from_memory;
 	output wire [1:0] l2r_update_dirty_en;
 	output wire [7:0] l2r_update_dirty_set;
 	output wire l2r_update_dirty_value;
 	output wire [1:0] l2r_update_tag_en;
 	output wire [7:0] l2r_update_tag_set;
 	output wire l2r_update_tag_valid;
-	output wire [17:0] l2r_update_tag_value;
+	output wire [18:0] l2r_update_tag_value;
 	output wire l2r_update_lru_en;
 	output wire [0:0] l2r_update_lru_hit_way;
 	input l2u_write_en;
 	input [8:0] l2u_write_addr;
-	input wire [511:0] l2u_write_data;
+	input wire [255:0] l2u_write_data;
 	output reg l2r_request_valid;
-	output reg [611:0] l2r_request;
-	output wire [511:0] l2r_data;
+	output reg [324:0] l2r_request;
+	output wire [255:0] l2r_data;
 	output reg l2r_cache_hit;
 	output reg [8:0] l2r_hit_cache_idx;
 	output reg l2r_l2_fill;
 	output reg l2r_restarted_flush;
-	output reg [511:0] l2r_data_from_memory;
+	output reg [255:0] l2r_data_from_memory;
 	output reg l2r_store_sync_success;
-	output reg [17:0] l2r_writeback_tag;
+	output reg [18:0] l2r_writeback_tag;
 	output reg l2r_needs_writeback;
 	output reg l2r_perf_l2_miss;
 	output reg l2r_perf_l2_hit;
 	localparam defines_TOTAL_THREADS = 4;
 	localparam GLOBAL_THREAD_IDX_WIDTH = 2;
-	reg [25:0] load_sync_address [0:3];
+	reg [26:0] load_sync_address [0:3];
 	reg load_sync_address_valid [0:3];
 	wire can_store_sync;
 	wire [1:0] hit_way_oh;
@@ -7464,15 +7464,15 @@ module l2_cache_read_stage (
 	wire dinvalidate;
 	wire [0:0] tag_update_way;
 	wire [1:0] request_sync_slot;
-	assign load = (l2t_request[605-:3] == 3'd0) || (l2t_request[605-:3] == 3'd1);
-	assign store = (l2t_request[605-:3] == 3'd2) || (l2t_request[605-:3] == 3'd3);
-	assign writeback_way = (l2t_request[605-:3] == 3'd4 ? hit_way_idx : l2t_fill_way);
-	assign dinvalidate = l2t_request[605-:3] == 3'd6;
+	assign load = (l2t_request[318-:3] == 3'd0) || (l2t_request[318-:3] == 3'd1);
+	assign store = (l2t_request[318-:3] == 3'd2) || (l2t_request[318-:3] == 3'd3);
+	assign writeback_way = (l2t_request[318-:3] == 3'd4 ? hit_way_idx : l2t_fill_way);
+	assign dinvalidate = l2t_request[318-:3] == 3'd6;
 	genvar _gv_way_idx_8;
 	generate
 		for (_gv_way_idx_8 = 0; _gv_way_idx_8 < 2; _gv_way_idx_8 = _gv_way_idx_8 + 1) begin : hit_way_gen
 			localparam way_idx = _gv_way_idx_8;
-			assign hit_way_oh[way_idx] = (l2t_request[601-:18] == l2t_tag[0 + ((1 - way_idx) * 18)+:18]) && l2t_valid[way_idx];
+			assign hit_way_oh[way_idx] = (l2t_request[314-:19] == l2t_tag[0 + ((1 - way_idx) * 19)+:19]) && l2t_valid[way_idx];
 		end
 	endgenerate
 	assign cache_hit = |hit_way_oh && l2t_request_valid;
@@ -7480,8 +7480,8 @@ module l2_cache_read_stage (
 		.one_hot(hit_way_oh),
 		.index(hit_way_idx)
 	);
-	assign read_address = {(l2t_l2_fill ? l2t_fill_way : hit_way_idx), l2t_request[583-:8]};
-	fakeram_1r1w_512x512 #(
+	assign read_address = {(l2t_l2_fill ? l2t_fill_way : hit_way_idx), l2t_request[295-:8]};
+	fakeram_1r1w_256x512 #(
 		.DATA_WIDTH(defines_CACHE_LINE_BITS),
 		.SIZE(512),
 		.READ_DURING_WRITE("NEW_DATA")
@@ -7494,9 +7494,9 @@ module l2_cache_read_stage (
 		.write_data(l2u_write_data),
 		.*
 	);
-	assign flush_first_pass = (l2t_request[605-:3] == 3'd4) && !l2t_restarted_flush;
+	assign flush_first_pass = (l2t_request[318-:3] == 3'd4) && !l2t_restarted_flush;
 	assign update_dirty = l2t_request_valid && (l2t_l2_fill || (cache_hit && (store || flush_first_pass)));
-	assign l2r_update_dirty_set = l2t_request[583-:8];
+	assign l2r_update_dirty_set = l2t_request[295-:8];
 	assign l2r_update_dirty_value = store;
 	genvar _gv_dirty_update_idx_1;
 	function automatic [0:0] sv2v_cast_1;
@@ -7518,23 +7518,23 @@ module l2_cache_read_stage (
 			assign l2r_update_tag_en[tag_idx] = update_tag && (tag_update_way == sv2v_cast_1(tag_idx));
 		end
 	endgenerate
-	assign l2r_update_tag_set = l2t_request[583-:8];
+	assign l2r_update_tag_set = l2t_request[295-:8];
 	assign l2r_update_tag_valid = !dinvalidate;
-	assign l2r_update_tag_value = l2t_request[601-:18];
+	assign l2r_update_tag_value = l2t_request[314-:19];
 	assign l2r_update_lru_en = cache_hit && (load || store);
 	assign l2r_update_lru_hit_way = hit_way_idx;
 	function automatic [1:0] sv2v_cast_2;
 		input reg [1:0] inp;
 		sv2v_cast_2 = inp;
 	endfunction
-	assign request_sync_slot = sv2v_cast_2({l2t_request[611-:4], l2t_request[607-:2]});
-	assign can_store_sync = ((load_sync_address[request_sync_slot] == {l2t_request[601-:18], l2t_request[583-:8]}) && load_sync_address_valid[request_sync_slot]) && (l2t_request[605-:3] == 3'd3);
-	assign hit_or_miss = (l2t_request_valid && (((l2t_request[605-:3] == 3'd2) || can_store_sync) || (l2t_request[605-:3] == 3'd0))) && !l2t_l2_fill;
+	assign request_sync_slot = sv2v_cast_2({l2t_request[324-:4], l2t_request[320-:2]});
+	assign can_store_sync = ((load_sync_address[request_sync_slot] == {l2t_request[314-:19], l2t_request[295-:8]}) && load_sync_address_valid[request_sync_slot]) && (l2t_request[318-:3] == 3'd3);
+	assign hit_or_miss = (l2t_request_valid && (((l2t_request[318-:3] == 3'd2) || can_store_sync) || (l2t_request[318-:3] == 3'd0))) && !l2t_l2_fill;
 	always @(posedge clk) begin
 		l2r_request <= l2t_request;
 		l2r_cache_hit <= cache_hit;
 		l2r_l2_fill <= l2t_l2_fill;
-		l2r_writeback_tag <= l2t_tag[0 + ((1 - writeback_way) * 18)+:18];
+		l2r_writeback_tag <= l2t_tag[0 + ((1 - writeback_way) * 19)+:19];
 		l2r_needs_writeback <= l2t_dirty[writeback_way] && l2t_valid[writeback_way];
 		l2r_data_from_memory <= l2t_data_from_memory;
 		l2r_hit_cache_idx <= read_address;
@@ -7559,16 +7559,16 @@ module l2_cache_read_stage (
 			l2r_request_valid <= l2t_request_valid;
 			if (l2t_request_valid && (cache_hit || l2t_l2_fill)) begin
 				(* full_case, parallel_case *)
-				case (l2t_request[605-:3])
+				case (l2t_request[318-:3])
 					3'd1: begin
-						load_sync_address[request_sync_slot] <= {l2t_request[601-:18], l2t_request[583-:8]};
+						load_sync_address[request_sync_slot] <= {l2t_request[314-:19], l2t_request[295-:8]};
 						load_sync_address_valid[request_sync_slot] <= 1;
 					end
 					3'd2, 3'd3:
-						if ((l2t_request[605-:3] == 3'd2) || can_store_sync) begin : sv2v_autoblock_2
+						if ((l2t_request[318-:3] == 3'd2) || can_store_sync) begin : sv2v_autoblock_2
 							reg signed [31:0] entry_idx;
 							for (entry_idx = 0; entry_idx < defines_TOTAL_THREADS; entry_idx = entry_idx + 1)
-								if (load_sync_address[entry_idx] == {l2t_request[601-:18], l2t_request[583-:8]})
+								if (load_sync_address[entry_idx] == {l2t_request[314-:19], l2t_request[295-:8]})
 									load_sync_address_valid[entry_idx] <= 0;
 						end
 					default:

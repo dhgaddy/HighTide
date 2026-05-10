@@ -69,7 +69,7 @@ FakeRAM macros are shared across variants per platform under `designs/<platform>
 |---|---:|---:|---:|---:|---|
 | `liteeth_mac_axi_mii` | 45 | 0.15 | 30 30 | (default) | |
 | `liteeth_mac_wb_mii` | 40 | 0.15 | 20 20 | (default) | |
-| `liteeth_udp_raw_rgmii` | 35 | 0.4 | 30 30 | 10 | `SYNTH_HIERARCHICAL=1` |
+| `liteeth_udp_raw_rgmii` | 50 | 0.55 | 30 30 | 10 | `SYNTH_HIERARCHICAL=1` — area-tuned 2026-05-10 |
 | `liteeth_udp_stream_rgmii` | 40 | 0.35 | 30 30 | 10 | |
 | `liteeth_udp_stream_sgmii` | 35 | 0.3 | 30 30 | 10 | No ODB-1200 workaround needed on sky130hd |
 | `liteeth_udp_usp_gth_sgmii` | 50 | 0.4 | 30 30 | 10 | |
@@ -77,6 +77,7 @@ FakeRAM macros are shared across variants per platform under `designs/<platform>
 ### Decisions
 - sky130hd halos are uniformly 30×30 across variants — large enough to keep std cells out of the macro shadow given sky130hd's wide cells.
 - ODB-1200 doesn't trigger on sky130hd's variants either, same as nangate45.
+- **2026-05-10 — `liteeth_udp_raw_rgmii` PPA area sweep**: bumped UTIL 35→50, DENSITY 0.4→0.55. Die area 1,688,700 → 1,182,810 µm² (**−30 %**), achieved utilization 37 % → 52 %, cell count 23,839 → 16,716, WNS still positive, zero DRCs / setup / hold / DRV violations. UTIL=60 is structurally infeasible (`MPL-0003`: macros plus 30 µm halos won't tile in the smaller core). UTIL=55 fits but introduces 24 max-slew and 2 max-cap DRV violations — left at 50 for a clean flow. Same recipe as `liteeth_udp_usp_gth_sgmii` (which already runs at UTIL=50, DENSITY=0.4).
 
 ## Cross-platform notes
 

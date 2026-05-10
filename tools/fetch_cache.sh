@@ -12,7 +12,7 @@
 # Options:
 #   --stage STAGE   Stop at stage (synth, floorplan, place, cts, route, final)
 #                   Default: final
-#   --timeout SECS  Remote cache timeout in seconds (default: 30)
+#   --timeout SECS  Remote cache timeout in seconds (default: 300)
 
 set -uo pipefail
 
@@ -20,7 +20,7 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_DIR"
 
 REMOTE_CACHE="https://cache.hightide-benchmarks.dev"
-TIMEOUT=30
+TIMEOUT=300
 STAGE="final"
 FILTER_PLATFORM=""
 FILTER_DESIGN=""

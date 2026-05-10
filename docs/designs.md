@@ -18,7 +18,7 @@ HighTide ports open-source hardware designs across three technology platforms us
 | **minimax** | RISC-V RV32I core | SystemVerilog (sv2v) | x | x | x |
 | **liteeth** | Ethernet MAC (6 variants) | LiteX/Python | x | x | x |
 | **NyuziProcessor** | Multi-threaded GPGPU | SystemVerilog (yosys-slang) | x | x | |
-| **bp_processor** | Black-Parrot RISC-V (bp_uno, bp_quad) | SystemVerilog (yosys-slang) | x | x | |
+| **bp_processor** | Black-Parrot RISC-V (bp_uno, bp_quad) | SystemVerilog (yosys-slang) | x | x | x (bp_uno) |
 | **gemmini** | ML systolic array accelerator | Chisel/Scala | x | x | |
 | **cnn** | CNN accelerator | Veriloggen/NNgen/Python | x | x | |
 | **sha3** | SHA3 hash engine | Verilog | x | x | |

@@ -69,6 +69,18 @@ PLATFORM_PARAMS = {
         "nom_voltage": 1.1,
         "op_cond_name": "tt_1.0_25.0",
     },
+    "sky130hd": {
+        "pin_w": 0.170,
+        "pin_pitch": 2.720,
+        "snap_w": 0.460,
+        "snap_h": 2.720,
+        "area_per_bit": 10.0,
+        "min_area": 2000,
+        "pin_layer": "met3",
+        "obs_layers": ["met1", "met2", "met3"],
+        "nom_voltage": 1.8,
+        "op_cond_name": "tt_1.8_25.0",
+    },
 }
 
 

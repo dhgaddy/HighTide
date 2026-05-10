@@ -4,9 +4,12 @@ load("//designs/src/bp_processor:defs.bzl", "BP_COMMON_ARGS")
 _ARGS = dict(BP_COMMON_ARGS)
 
 _ARGS.update({
-    "CORE_UTILIZATION": "25",
+    # First sky130hd bp_uno run that cleared DPL passed CTS+placement but
+    # failed routing with GRT-0116 (congestion). Lower utilization to 20%
+    # and bump halos to give the router more whitespace.
+    "CORE_UTILIZATION": "20",
     "PLACE_DENSITY_LB_ADDON": "0.20",
-    "MACRO_PLACE_HALO": "60 60",
+    "MACRO_PLACE_HALO": "80 80",
 })
 
 hightide_design(

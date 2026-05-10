@@ -169,6 +169,14 @@ The full-res `href` and the thumbnail `src` MUST share the same SHA — they des
 
 Same migration rule applies on first run for both the `.png` and `.jpg` references.
 
+### Thumbnail order within each design card
+
+For a card whose family has multiple thumbnails (NVDLA partitions a/c/m/o/p, LiteEth's 6 PHY/bus variants, etc.), order the `<a class="thumb-link">` entries by **(platform, variant)** — platform first, then variant alphabetically within each platform.  Platform sequence is always asap7 → nangate45 → sky130hd to match the badge ordering everywhere else.
+
+Concretely: emit all asap7 thumbs (sorted by variant), then all nangate45 thumbs, then all sky130hd thumbs.  This produces a clean per-platform row in the auto-fill grid (~6 cells across) for cards like LiteEth, and matches the existing NVDLA ordering.
+
+For cards with one thumb per platform (CoralNPU, Vortex, Gemmini, etc.), the variant secondary sort is a no-op — just preserve asap7 → nangate45 → sky130hd order.
+
 ## Step 8: Update the Design Portfolio platform badges in index.html
 
 `webpage/index.html` has a "Design Portfolio" table (`<section id="designs">`) where each row's last column is a list of `<span class="platform-badge badge-<platform>">…</span>` tags.  Those badges must reflect which platforms each design *actually* reaches `_final` on, derived from the same per-(platform, design) sweep used above.

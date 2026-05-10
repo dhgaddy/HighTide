@@ -27,7 +27,12 @@ spec:
           mountPath: /repo
       containers:
       - name: build
-        image: ubuntu:24.04
+        # Pin ubuntu:24.04 by digest so apt repo content can't drift between
+        # pods. Drift in transitive C/C++ dep versions changes OpenROAD's
+        # build-from-source binary hash, which invalidates every cached ORFS
+        # action from 2_floorplan onwards. Bump this manually after auditing
+        # if you need newer apt packages.
+        image: ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b
         command:
         - /bin/bash
         - -c
@@ -54,9 +59,12 @@ spec:
             libfontconfig1 libglib2.0-0 \
             >/dev/null 2>&1
 
-          # Install bazelisk as bazel
+          # Install bazelisk as bazel — pinned to a specific release tag so
+          # bazelisk-itself doesn't drift between pods. Bazelisk just routes
+          # to the version in .bazelversion (8.5.0), but a different
+          # bazelisk binary can still leak into action keys via env/PATH.
           curl -fsSL -o /usr/local/bin/bazel \
-            https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
+            https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
           chmod +x /usr/local/bin/bazel
 
           cd /repo

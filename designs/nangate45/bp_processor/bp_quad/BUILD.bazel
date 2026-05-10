@@ -27,6 +27,7 @@ hightide_design(
     sources = {
         "SDC_FILE": [":constraint.sdc"],
         "MACRO_PLACEMENT_TCL": [":macros.tcl"],
+        "PRE_CTS_TCL": [":pre_cts.tcl"],
         "ADDITIONAL_LEFS": ["//designs/nangate45/bp_processor:sram_lefs"],
         "ADDITIONAL_LIBS": ["//designs/nangate45/bp_processor:sram_libs"],
     },

@@ -1,12 +1,11 @@
 # Workaround for OpenROAD CTS-0105 false skip.
 # https://github.com/The-OpenROAD-Project/OpenROAD/issues/10177
 #
-# Yosys output port buffers arrive in the ODB with dbSourceType::TIMING,
-# causing CTS to mistake them for pre-existing clock tree buffers and
-# skip the clock net (CTS-0041 warnings on every single-sink net). On
-# bp_quad this leaves all 339k registers on an unbuffered clock and
-# the post-CTS repair_timing eventually trips ODB-1200. Reset those
-# buffers to NETLIST so CTS builds a real tree.
+# Yosys hierarchical synthesis output port buffers arrive in the ODB with
+# dbSourceType::TIMING, causing CTS to mistake them for pre-existing clock
+# tree buffers and skip the clock net (CTS-0041 warnings on every
+# single-sink net). Reset those buffers to NETLIST so CTS builds a real
+# tree. Mirrors designs/asap7/bp_processor/bp_quad/pre_cts.tcl.
 
 set block [[[ord::get_db] getChip] getBlock]
 set count 0

@@ -11,8 +11,8 @@ hightide_design(
     },
     arguments = {
         "VERILOG_DEFINES": "-D USE_ASAP7_CELLS",
-        "CORE_UTILIZATION": "40",
-        "PLACE_DENSITY": "0.3",
+        "CORE_UTILIZATION": "55",
+        "PLACE_DENSITY": "0.6",
         "MACRO_PLACE_HALO": "5 5",
         # Workaround for OpenROAD ODB-1200 crash in post-CTS hold-repair
         # (tested at OR 5f1bd87f, bazel-orfs pin from PR #71). The new

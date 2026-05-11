@@ -28,16 +28,21 @@ FakeRAM macros are shared across variants per platform under `designs/<platform>
 
 | Variant | Util | Density | Halo | Clock (ps) | Notes |
 |---|---:|---:|---:|---:|---|
-| `liteeth_mac_axi_mii` | 40 | 0.4 | 2 2 | 610 | Smallest variant |
-| `liteeth_mac_wb_mii` | 30 | 0.4 | 5 5 | 1000 | Wishbone bus is wider |
-| `liteeth_udp_raw_rgmii` | 35 | 0.3 | 5 5 | 590 | `SYNTH_HIERARCHICAL=1` |
-| `liteeth_udp_stream_rgmii` | 35 | 0.5 | 5 5 | 700 | |
-| `liteeth_udp_stream_sgmii` | 40 | 0.3 | 5 5 | 1000 | `SKIP_CTS_REPAIR_TIMING=1` (ODB-1200) |
-| `liteeth_udp_usp_gth_sgmii` | 35 | 0.3 | — | 1000 | `SKIP_CTS_REPAIR_TIMING=1` (ODB-1200) |
+| `liteeth_mac_axi_mii` | 55 | 0.6 | 2 2 | 610 | area-tuned 2026-05-11 |
+| `liteeth_mac_wb_mii` | 60 | 0.65 | 5 5 | 1000 | area-tuned 2026-05-11; -50% die |
+| `liteeth_udp_raw_rgmii` | 45 | 0.5 | 2 2 | 590 | `SYNTH_HIERARCHICAL=1`; halo tightened 5→2 to clear MPL-0065 at higher util |
+| `liteeth_udp_stream_rgmii` | 55 | 0.6 | 5 5 | 700 | area-tuned 2026-05-11; 76 max-slew is design-level (same value across UTIL 35–58) |
+| `liteeth_udp_stream_sgmii` | 55 | 0.6 | 5 5 | 1000 | `SKIP_CTS_REPAIR_TIMING=1` (ODB-1200); area-tuned 2026-05-11 |
+| `liteeth_udp_usp_gth_sgmii` | 50 | 0.55 | — | 1000 | `SKIP_CTS_REPAIR_TIMING=1` (ODB-1200); area-tuned 2026-05-11 |
 
 ### Decisions
 - **2026-04-24 `87829fdb`**: `liteeth_udp_stream_sgmii` hit ODB-1200 in CTS repair_timing; added `SKIP_CTS_REPAIR_TIMING=1`.
 - **2026-04-30 `c8d96617`**: `liteeth_udp_usp_gth_sgmii` hit the same ODB-1200; same workaround applied.
+- **2026-05-11 — asap7 PPA area sweep (all 6 variants)**: bumped CORE_UTILIZATION from 30–40 → 45–60. Aggregate die: 132,196 → 90,611 µm² (**−31 %**); per-variant savings 22–50 %. Notable boundaries:
+  - `mac_wb_mii` is the headline win at UTIL=60 (UTIL=65 fails MPL-0003).
+  - `udp_raw_rgmii` is macro-dominated (5 macros, ~4500 std cells); MPL-0065 fires at UTIL=50 with halo 5,5; tightening halo to 2,2 lets UTIL=45 close cleanly (−22%).
+  - `udp_stream_sgmii` closed at UTIL=55 cleanly; UTIL=60 introduces 50 max-slew violations.
+  - `udp_stream_rgmii` carries 76 max-slew violations that are constant across UTIL 35–58 — pre-existing design-level signature, not a regression.
 
 ## nangate45
 
@@ -48,15 +53,19 @@ FakeRAM macros are shared across variants per platform under `designs/<platform>
 
 | Variant | Util | Density | Halo | Clock (ns) | Notes |
 |---|---:|---:|---:|---:|---|
-| `liteeth_mac_axi_mii` | (default) | 0.4 | 30 30 | (default ~10) | |
-| `liteeth_mac_wb_mii` | (default) | 0.35 | 30 30 | (default) | |
-| `liteeth_udp_raw_rgmii` | 35 | 0.6 | — | 10 | `SYNTH_HIERARCHICAL=1` |
-| `liteeth_udp_stream_rgmii` | 45 | 0.7 | — | 10 | `SYNTH_HIERARCHICAL=1` — packs tightest of all variants |
-| `liteeth_udp_stream_sgmii` | 60 | 0.85 | — | 10 | `SYNTH_HIERARCHICAL=1` — densest variant on nangate45; ODB-1200 doesn't trigger here, no CTS skip needed |
-| `liteeth_udp_usp_gth_sgmii` | 45 | 0.4 | — | 10 | `SYNTH_HIERARCHICAL=1` |
+| `liteeth_mac_axi_mii` | 40 | 0.45 | 15 15 | (default ~10) | area-tuned 2026-05-11 — switched from explicit DIE_AREA to CORE_UTILIZATION |
+| `liteeth_mac_wb_mii` | 40 | 0.45 | 15 15 | (default) | area-tuned 2026-05-11 — switched from DIE_AREA to CORE_UTILIZATION |
+| `liteeth_udp_raw_rgmii` | 45 | 0.6 | — | 10 | `SYNTH_HIERARCHICAL=1`; area-tuned 2026-05-11 |
+| `liteeth_udp_stream_rgmii` | 50 | 0.7 | — | 10 | `SYNTH_HIERARCHICAL=1`; area-tuned 2026-05-11 |
+| `liteeth_udp_stream_sgmii` | 60 | 0.85 | — | 10 | `SYNTH_HIERARCHICAL=1` — densest variant on nangate45; already at the ceiling, no further compaction; ODB-1200 doesn't trigger here |
+| `liteeth_udp_usp_gth_sgmii` | 60 | 0.65 | — | 10 | `SYNTH_HIERARCHICAL=1`; area-tuned 2026-05-11 |
 
 ### Decisions
 - nangate45 closes the SGMII variants without the ODB-1200 workaround that asap7 needs — the bug is sensitive to the specific resizer-state interaction triggered by asap7's smaller cells.
+- **2026-05-11 — nangate45 PPA area sweep (5 of 6 variants; udp_stream_sgmii was already at the ceiling)**: aggregate die 2,671,495 → 2,213,365 µm² (**−17 %**); per-variant 10–25 %. Notable boundaries:
+  - `mac_axi_mii` and `mac_wb_mii` originally used explicit DIE_AREA / CORE_AREA; switched to CORE_UTILIZATION for consistency and tunability. UTIL=50 fails MPL-0003 regardless of halo. UTIL=45 fails too. UTIL=40 + halo=15,15 is the practical limit — going to halo=5,5 or 30,30 trips either MPL-0003 (too tight to tile) or PDN-0179 (too tight for power channels). The macros on nangate45 are larger relative to the die than on sky130hd / asap7, so these mac variants cap out around 40 % util.
+  - `udp_raw_rgmii` and `udp_stream_rgmii` cleanly hit UTIL=45 / 50 respectively; UTIL=55 / 60 hit MPL-0004 / MPL-0040 (annealer fails).
+  - `udp_usp_gth_sgmii` is the headline win at UTIL=60 (45 → 60.4 % achieved, −25 % die).
 
 ## sky130hd
 

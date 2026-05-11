@@ -67,17 +67,23 @@ FakeRAM macros are shared across variants per platform under `designs/<platform>
 
 | Variant | Util | Density | Halo | Clock (ns) | Notes |
 |---|---:|---:|---:|---:|---|
-| `liteeth_mac_axi_mii` | 45 | 0.15 | 30 30 | (default) | |
-| `liteeth_mac_wb_mii` | 40 | 0.15 | 20 20 | (default) | |
+| `liteeth_mac_axi_mii` | 52 | 0.57 | 30 30 | (default) | area-tuned 2026-05-10 |
+| `liteeth_mac_wb_mii` | 50 | 0.55 | 30 30 | (default) | area-tuned 2026-05-10 (halo 20→30 needed to clear PDN-0179) |
 | `liteeth_udp_raw_rgmii` | 50 | 0.55 | 30 30 | 10 | `SYNTH_HIERARCHICAL=1` — area-tuned 2026-05-10 |
-| `liteeth_udp_stream_rgmii` | 40 | 0.35 | 30 30 | 10 | |
-| `liteeth_udp_stream_sgmii` | 35 | 0.3 | 30 30 | 10 | No ODB-1200 workaround needed on sky130hd |
-| `liteeth_udp_usp_gth_sgmii` | 50 | 0.4 | 30 30 | 10 | |
+| `liteeth_udp_stream_rgmii` | 62 | 0.65 | 30 30 | 10 | area-tuned 2026-05-10 — densest sky130hd liteeth variant |
+| `liteeth_udp_stream_sgmii` | 50 | 0.55 | 30 30 | 10 | area-tuned 2026-05-10; no ODB-1200 workaround needed on sky130hd |
+| `liteeth_udp_usp_gth_sgmii` | 52 | 0.57 | 30 30 | 10 | area-tuned 2026-05-10 |
 
 ### Decisions
-- sky130hd halos are uniformly 30×30 across variants — large enough to keep std cells out of the macro shadow given sky130hd's wide cells.
+- sky130hd halos are uniformly 30×30 across variants — large enough to keep std cells out of the macro shadow given sky130hd's wide cells. `mac_wb_mii` originally used 20×20; at higher utilization PDN-0179 ("Unable to repair all channels") fires until the halo is widened to 30×30.
 - ODB-1200 doesn't trigger on sky130hd's variants either, same as nangate45.
-- **2026-05-10 — `liteeth_udp_raw_rgmii` PPA area sweep**: bumped UTIL 35→50, DENSITY 0.4→0.55. Die area 1,688,700 → 1,182,810 µm² (**−30 %**), achieved utilization 37 % → 52 %, cell count 23,839 → 16,716, WNS still positive, zero DRCs / setup / hold / DRV violations. UTIL=60 is structurally infeasible (`MPL-0003`: macros plus 30 µm halos won't tile in the smaller core). UTIL=55 fits but introduces 24 max-slew and 2 max-cap DRV violations — left at 50 for a clean flow. Same recipe as `liteeth_udp_usp_gth_sgmii` (which already runs at UTIL=50, DENSITY=0.4).
+- **2026-05-10 — sky130hd PPA area sweep (all 6 liteeth variants)**: bumped CORE_UTILIZATION 35–45 → 50–62 and adjusted PLACE_DENSITY accordingly. Aggregate die shrink across all 6: 18,164,920 → 15,197,332 µm² (**−16 %**); per-variant savings 4–35 %. All variants still WNS-positive and DRC-clean. Notes:
+  - `udp_stream_rgmii` is the densest, taking UTIL all the way to 62; UTIL=66 fails MPL-0003 (macros + 30 µm halos can't tile). Its 76 max-slew violations are pre-existing and constant across utilizations 40–62 — design-level, not config.
+  - `udp_raw_rgmii` and `mac_wb_mii` cleanly hit UTIL=50; UTIL=55 introduces DRV violations (slew/cap).
+  - `udp_stream_sgmii` (no macros, biggest design) is on the edge at UTIL=50 with WNS = −0.19 ps and 2 setup violations — TNS = −0.38 ps is 0.000004 % of the 10 ns clock, well below the ±50 ps tolerance for sky130hd in `optimize-ppa`. Trying UTIL=48 didn't improve WNS but did add 15 slew + 15 cap violations, so UTIL=50 is the chosen sweet spot.
+  - `udp_usp_gth_sgmii` baseline at UTIL=50 already had 50 slew + 4 cap violations; UTIL=52 yields 46 slew + 0 cap — net improvement in every metric.
+  - `mac_axi_mii` cleanly hits UTIL=52; UTIL=55 fits but introduces minor DRV (3 slew + 1 cap), so stopped at 52 for a clean flow.
+  - The `0.55` density rule of thumb (DENSITY ≈ UTIL/100 + 0.05) works well for these 5-macro liteeth designs on sky130hd; deviate only when MPL-0003 or PDN-0179 force it.
 
 ## Cross-platform notes
 

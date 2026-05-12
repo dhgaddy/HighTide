@@ -70,16 +70,16 @@ Dev mode requires: `git submodule update --init designs/src/<design>/dev/repo` b
 
 | Platform | Node | Designs |
 |----------|------|---------|
-| asap7 | 7nm academic | coralnpu, gemmini, lfsr, minimax, sha3, vortex, liteeth (6 variants), NVDLA (partitions a/c/m/o/p), bp_processor (bp_uno, bp_quad), cnn, floonoc, NyuziProcessor, snitch_cluster |
-| nangate45 | 45nm | coralnpu, gemmini, lfsr, minimax, NyuziProcessor, sha3, liteeth (6 variants), bp_processor (bp_uno, bp_quad), cnn |
-| sky130hd | 130nm open | gemmini, lfsr, minimax, sha3, liteeth (mac_axi_mii, mac_wb_mii, udp_stream_rgmii, udp_usp_gth_sgmii), cnn, liteeth (udp_raw_rgmii, udp_stream_sgmii) |
+| asap7 | 7nm academic | coralnpu, gemmini, lfsr, litedram, minimax, sha3, vortex, liteeth (6 variants), NVDLA (partitions a/c/m/o/p), bp_processor (bp_uno, bp_quad), cnn, floonoc, NyuziProcessor, snitch_cluster |
+| nangate45 | 45nm | coralnpu, gemmini, lfsr, litedram, minimax, NyuziProcessor, sha3, liteeth (6 variants), bp_processor (bp_uno, bp_quad), cnn |
+| sky130hd | 130nm open | gemmini, lfsr, litedram, minimax, sha3, liteeth (mac_axi_mii, mac_wb_mii, udp_stream_rgmii, udp_usp_gth_sgmii), cnn, liteeth (udp_raw_rgmii, udp_stream_sgmii) |
 
-#### Build status (as of 2026-05-02)
+#### Build status (as of 2026-05-11)
 
 Designs reaching `_final` (cached on remote build cache):
-- **asap7**: coralnpu, gemmini, lfsr, minimax, sha3, vortex, all 6 liteeth variants, NVDLA partitions a/m/o
-- **nangate45**: coralnpu, gemmini, lfsr, minimax, NyuziProcessor, sha3, all 6 liteeth variants
-- **sky130hd**: gemmini, lfsr, minimax, sha3, all 6 liteeth variants, NVDLA partitions a/m/o/p
+- **asap7**: coralnpu, gemmini, lfsr, litedram, minimax, sha3, vortex, all 6 liteeth variants, NVDLA partitions a/m/o
+- **nangate45**: coralnpu, gemmini, lfsr, litedram, minimax, NyuziProcessor, sha3, all 6 liteeth variants
+- **sky130hd**: gemmini, lfsr, litedram, minimax, sha3, all 6 liteeth variants, NVDLA partitions a/m/o/p
 
 Not yet finishing (not cached):
 - **asap7**: cnn, floonoc, NyuziProcessor, snitch_cluster, bp_processor (bp_uno, bp_quad), NVDLA partitions c, p
@@ -126,7 +126,8 @@ Designs in this repo carry workarounds for upstream tool bugs. Update this table
 | **ODB-1200** in `repair_timing` — `InsertBufferBeforeLoads` iterates a stale load list and aborts the flow with `Load pin '...' is not connected to net '...'`. Triggered by the resizer's `SplitLoadMove` step in CTS-time repair_timing | asap7 `liteeth_udp_stream_sgmii`, `liteeth_udp_usp_gth_sgmii`; sky130hd `NyuziProcessor`; asap7 `bp_quad`; asap7 `gemmini` (this PR) | Most designs: `SKIP_CTS_REPAIR_TIMING = 1` (skips the whole repair pass; route still does its own hold-repair). Gemmini: drop `split_load` from `SETUP_MOVE_SEQUENCE` (`"unbuffer,sizeup,swap,buffer,clone"`) — keeps the rest of repair_timing working | `87829fdb` | [HighTide#75](https://github.com/VLSIDA/HighTide/issues/75) |
 | **DPL-0036** in CTS-internal `detailed_placement` — `cts.tcl` builds its own `dpl_args` ignoring `DETAIL_PLACEMENT_ARGS`, so CTS-inserted leaf clock buffers can land too far from a legal stdcell row | asap7 `snitch_cluster` | `PRE_CTS_TCL` wraps `detailed_placement` to inject `-max_displacement {2000 400}` for the CTS call | `0af20020` | None (ORFS layering issue; no upstream issue filed yet) |
 | **yosys-slang** phantom 1'x drivers on interface-array modport ports — extra driver wins at `opt_clean`, real driver silently dropped | asap7 `vortex` | Bumped `yosys-slang` 4e53d77 → eabdfd1 (vendored via `MODULE.bazel`) | `cb488bea` | [yosys-slang#304](https://github.com/povik/yosys-slang/issues/304) |
-| **`repair_timing` non-convergence** — repair loop spends iterations on the same RTL-bounded endpoint without making progress. Not a bug per se, but a flow pathology when the clock target is too tight for the design | asap7 `snitch_cluster` | `SKIP_INCREMENTAL_REPAIR = 1` to skip post-GRT `repair_timing` | `39ca8670` | None |
+| **`repair_timing` non-convergence** — repair loop spends iterations on the same RTL-bounded endpoint without making progress. Not a bug per se, but a flow pathology when the clock target is too tight for the design | asap7 `snitch_cluster`, asap7 `litedram` | `SKIP_INCREMENTAL_REPAIR = 1` to skip post-GRT `repair_timing` | `39ca8670` | None |
+| **LiteX GENSDRPHY `input sdram_dq`** — `litedram/gen.py` declares the bidirectional SDR DQ bus as a plain `input` port (Lattice-platform convention; the tristate buffer lives at the IOB), but the same module instantiates 16 `TRELLIS_IO` cells that internally drive the port via OE-gated logic. yosys' `check -assert -mapped` sees the conflict and aborts synth on all 3 platforms | asap7/nangate45/sky130hd `litedram` | Patch `litedram_core.v` to make `sdram_dq` an `inout` port (`patch/litedram_core.patch`). Combined with `SYNTH_HIERARCHICAL = 1` so abc keeps each `TRELLIS_IO` as a hierarchy boundary | (this PR) | None (LiteX `gen.py:870` carries a `# FIXME: Allow other Vendors.` note) |
 
 ### Useful ORFS env vars for these workarounds
 

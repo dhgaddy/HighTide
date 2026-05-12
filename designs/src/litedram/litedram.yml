@@ -1,0 +1,46 @@
+#
+# LiteDRAM standalone-core configuration for HighTide.
+#
+# Selects the vendor-agnostic Generic SDR PHY (GENSDRPHY) so the generated
+# Verilog has no Lattice/Xilinx-specific primitives in the controller core —
+# only a small handful at the SDR I/O boundary (FD1S3BX/OFS1P3BX/IFS1P3BX/
+# TRELLIS_IO), which `libraries/lattice/*.v` provides RTL stubs for.
+#
+# The CPU/UART/ROM are disabled (`cpu: None`) so we benchmark the DRAM
+# controller, bank machines, crossbar, refresh/init FSMs and AXI/Wishbone
+# frontends — not a SoC.
+#
+# Regenerate via `bazel build --define update_rtl=true ...`.
+
+{
+    # General ------------------------------------------------------------------
+    "device":  "LFE5U-45F-6BG381C", # FPGA device (placeholder; LatticePlatform target is unused for ASIC flow)
+    "cpu":     null,                # No CPU — bench just the DRAM controller core
+    "memtype": "SDR",               # SDR-class DRAM (vendor-agnostic PHY available)
+
+    # PHY ----------------------------------------------------------------------
+    "sdram_module":    "MT48LC16M16", # 256 Mbit SDR SDRAM (Micron datasheet timings)
+    "sdram_module_nb": 2,             # Two x8 byte groups → 16-bit data bus
+    "sdram_phy":       "GENSDRPHY",   # Generic SDR PHY — pure RTL + SDR I/O cells
+
+    # Frequency ----------------------------------------------------------------
+    "sys_clk_freq":     50e6,  # System clock frequency (SDR_clk = sys_clk)
+
+    # Core ---------------------------------------------------------------------
+    "cmd_buffer_depth": 16,    # Per-bank command FIFO depth
+
+    # User Ports ---------------------------------------------------------------
+    # Mix of AXI / Wishbone / native to exercise the full frontend crossbar.
+    "user_ports": {
+        "axi_0" : {
+            "type":     "axi",
+            "id_width": 32,
+        },
+        "wishbone_0" : {
+            "type": "wishbone",
+        },
+        "native_0" : {
+            "type": "native",
+        },
+    },
+}

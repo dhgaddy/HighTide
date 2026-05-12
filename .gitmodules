@@ -50,3 +50,6 @@
 [submodule "designs/src/ternip/dev/basejump_stl"]
 	path = designs/src/ternip/dev/basejump_stl
 	url = https://github.com/bespoke-silicon-group/basejump_stl
+[submodule "designs/src/litedram/dev/repo"]
+	path = designs/src/litedram/dev/repo
+	url = https://github.com/enjoy-digital/litedram.git

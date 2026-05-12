@@ -1,0 +1,36 @@
+load("//:defs.bzl", "hightide_design")
+
+hightide_design(
+    name = "litedram",
+    platform = "asap7",
+    top = "litedram_core",
+    verilog_files = ["//designs/src/litedram:litedram_rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+    },
+    arguments = {
+        "VERILOG_DEFINES": "-D USE_ASAP7_CELLS",
+        # GENSDRPHY drives the 16-bit SDR DQ bus through 16 TRELLIS_IO
+        # tristate buffers whose B port is wired to a top-level `input
+        # sdram_dq[*]` — flat synthesis trips the multi-driver check
+        # when ABC inlines the conditional `1'bz` assigns. Hierarchical
+        # synth keeps each TRELLIS_IO as a module boundary so abc sees
+        # only one driver per port; matches what liteeth_udp_raw_rgmii
+        # does for its rgmii_mdio MDIO pin.
+        "SYNTH_HIERARCHICAL": "1",
+        # All 9 internal memories are 16-deep — well below the SRAM
+        # inference threshold, so they synthesize as flop arrays. No
+        # FakeRAM needed for litedram on asap7.
+        "CORE_UTILIZATION": "45",
+        "PLACE_DENSITY": "0.55",
+        "TNS_END_PERCENT": "100",
+        # Post-GRT hold-fix trips ODB-1200 in InsertBufferBeforeLoads on
+        # this design regardless of HOLD_SLACK_MARGIN / SETUP_MOVE_SEQUENCE
+        # tweaks (the buggy function is called from both setup's
+        # SplitLoadMove and hold's separate buffer-insertion pass).
+        # Skip the entire post-GRT repair_timing — CTS-time repair_timing
+        # still runs, and the relaxed clock leaves enough headroom for
+        # the design to close WNS positive without it.
+        "SKIP_INCREMENTAL_REPAIR": "1",
+    },
+)

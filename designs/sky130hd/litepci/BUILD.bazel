@@ -1,0 +1,38 @@
+load("//:defs.bzl", "hightide_design")
+
+package(default_visibility = ["//designs/sky130hd/litepci:__subpackages__"])
+
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
+# LitePCIe core (kcu105 / USPCIEPHY config) on sky130hd.
+# See designs/asap7/litepci/BUILD.bazel for the design-side rationale.
+hightide_design(
+    name = "litepci",
+    top = "litepcie_core",
+    platform = "sky130hd",
+    verilog_files = ["//designs/src/litepci:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "VERILOG_DEFINES": "-D USE_SKY130HD_CELLS",
+        "CORE_UTILIZATION": "30",
+        "PLACE_DENSITY": "0.45",
+        "MACRO_PLACE_HALO": "20 20",
+        "GDS_ALLOW_EMPTY": "fakeram.*|pcie_us",
+        # See asap7 BUILD.bazel — flow does not yet patch litepcie's
+        # inferred memories to explicit fakeram instances.
+        "SYNTH_MOCK_LARGE_MEMORIES": "1",
+        "SYNTH_MEMORY_MAX_BITS": "4096",
+    },
+)

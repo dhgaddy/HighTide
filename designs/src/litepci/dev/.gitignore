@@ -1,0 +1,7 @@
+.venv/
+build/
+build_archive/
+generated/sram_*/
+csr.h
+soc.h
+mem.h

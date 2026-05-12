@@ -1,0 +1,71 @@
+# litepci (LitePCIe controller) — release + dev-regenerated Verilog.
+#
+# The release flow uses the checked-in litepcie_core.v + pcie_us_stub.v.
+# The dev flow re-runs setup.sh + gen.sh against the upstream submodule
+# and overwrites both files (the stub's port list is derived from the
+# freshly generated litepcie_core.v).
+
+# Xilinx primitive stubs the generated Verilog instantiates.  pcie_us is
+# the only true blackbox (Xilinx PCIe hard IP); FDPE / IBUFDS_GTE3 have
+# synthesizable stubs that map to platform-specific cells via VERILOG_DEFINES.
+filegroup(
+    name = "xilinx_libs",
+    srcs = [
+        "//designs/src/liteeth:xilinx_libs",
+        "libraries/xilinx/IBUFDS_GTE3.v",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Top + stub + Xilinx primitive shims.
+filegroup(
+    name = "rtl_release",
+    srcs = [
+        "litepcie_core.v",
+        "pcie_us_stub.v",
+        ":xilinx_libs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Dev mode regenerates litepcie_core.v + pcie_us_stub.v from the upstream
+# litepcie submodule (kcu105.yml, USPCIEPHY).  Requires:
+#   git submodule update --init designs/src/litepci/dev/repo
+#   designs/src/litepci/dev/setup.sh    (creates dev/.venv, installs migen/litex/litepcie)
+genrule(
+    name = "rtl_dev_gen",
+    srcs = [],
+    outs = [
+        "dev_litepcie_core.v",
+        "dev_pcie_us_stub.v",
+    ],
+    local = True,
+    cmd = """
+        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
+        cd $$WORKSPACE_ROOT
+        git submodule update --init designs/src/litepci/dev/repo >&2
+        bash designs/src/litepci/dev/setup.sh >&2
+        bash designs/src/litepci/dev/gen.sh \
+            designs/src/litepci/dev/repo/examples/kcu105.yml >&2
+        cp designs/src/litepci/litepcie_core.v $(location dev_litepcie_core.v)
+        cp designs/src/litepci/pcie_us_stub.v  $(location dev_pcie_us_stub.v)
+    """,
+    tools = ["//:tools/update_rtl.sh"],
+)
+
+filegroup(
+    name = "rtl_dev",
+    srcs = [
+        ":rtl_dev_gen",
+        ":xilinx_libs",
+    ],
+)
+
+alias(
+    name = "rtl",
+    actual = select({
+        "//:update_rtl": ":rtl_dev",
+        "//conditions:default": ":rtl_release",
+    }),
+    visibility = ["//visibility:public"],
+)

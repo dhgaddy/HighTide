@@ -53,3 +53,6 @@
 [submodule "designs/src/litedram/dev/repo"]
 	path = designs/src/litedram/dev/repo
 	url = https://github.com/enjoy-digital/litedram.git
+[submodule "designs/src/litepci/dev/repo"]
+	path = designs/src/litepci/dev/repo
+	url = https://github.com/enjoy-digital/litepcie.git

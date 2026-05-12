@@ -1,0 +1,111 @@
+# Ternip — SystemVerilog ternary matmul inference accelerator.
+#
+# Uses RTL directly from the dev/repo submodule with a custom config/
+# overlay containing HighTide-specific parameters.  BSG (BaseJump STL)
+# modules are sourced from dev/basejump_stl submodule.
+
+# File order follows the FuseSoC manifest (ternip.core): package first,
+# then leaf modules, then top-level ternip_core.sv last.
+_TERNIP_FILES = [
+    "ternip_pkg.sv",
+    "ternip_vector_registers.sv",
+    "common/ternip_gearbox_fifo.sv",
+    "common/ternip_multioperand_accumulator.sv",
+    "common/ternip_pipelined_interconnect.sv",
+    # common/ternip_pipelined_mem.sv replaced by ternip_pipelined_mem_fakeram7.v (FakeRAM, asap7)
+    "math/ternip_add.sv",
+    "math/ternip_sub.sv",
+    "math/ternip_mul.sv",
+    "math/ternip_div.sv",
+    "math/ternip_sqrt_int.sv",
+    "math/ternip_sqrt.sv",
+    "math/ternip_starmul.sv",
+    "math/ternip_fixed_point_convert.sv",
+    "math/ternip_round_robin_operation.sv",
+    "math/ternip_csig.sv",
+    "math/ternip_csig_parallelized.sv",
+    "math/ternip_sig.sv",
+    "math/ternip_sig_parallelized.sv",
+    "math/ternip_silu.sv",
+    "math/ternip_silu_parallelized.sv",
+    "fus/ternip_loadstore.sv",
+    "fus/ternip_rms.sv",
+    "fus/ternip_rowwise_operation.sv",
+    "fus/ternip_tmatmul.sv",
+    "axi/s_axi_ternip_const_rd.v",
+    "axi/s_axi_ternip_rst.v",
+    "axi/s_axi_ternip_wait_for_interrupt.v",
+    "axi/s_axi_ternip_write_byte.v",
+    "ternip/ternip_core.sv",
+]
+
+# BaseJump STL modules required by ternip (and their transitive deps).
+# Explicit list to avoid pulling in unrelated BSG modules with missing
+# includes (bsg_noc_links.svh, latch-based memories, etc.).
+_BSG_FILES = [
+    # defines (include file)
+    "bsg_misc/bsg_defines.sv",
+    # dataflow
+    "bsg_dataflow/bsg_parallel_in_serial_out.sv",
+    "bsg_dataflow/bsg_serial_in_parallel_out_full.sv",
+    "bsg_dataflow/bsg_fifo_1r1w_small.sv",
+    "bsg_dataflow/bsg_fifo_1r1w_small_unhardened.sv",
+    "bsg_dataflow/bsg_fifo_1r1w_small_hardened.sv",
+    "bsg_dataflow/bsg_fifo_tracker.sv",
+    "bsg_dataflow/bsg_round_robin_1_to_n.sv",
+    "bsg_dataflow/bsg_round_robin_n_to_1.sv",
+    "bsg_dataflow/bsg_two_fifo.sv",
+    "bsg_dataflow/bsg_one_fifo.sv",
+    # misc
+    "bsg_misc/bsg_array_reverse.sv",
+    "bsg_misc/bsg_counter_clear_up.sv",
+    "bsg_misc/bsg_mux.sv",
+    "bsg_misc/bsg_circular_ptr.sv",
+    "bsg_misc/bsg_dff.sv",
+    "bsg_misc/bsg_dff_reset.sv",
+    "bsg_misc/bsg_dff_en.sv",
+    "bsg_misc/bsg_dff_reset_en.sv",
+    "bsg_misc/bsg_dff_reset_set_clear.sv",
+    "bsg_misc/bsg_arb_round_robin.sv",
+    "bsg_misc/bsg_encode_one_hot.sv",
+    "bsg_misc/bsg_round_robin_arb.sv",
+    "bsg_misc/bsg_crossbar_o_by_i.sv",
+    "bsg_misc/bsg_mux_one_hot.sv",
+    "bsg_misc/bsg_scan.sv",
+    "bsg_misc/bsg_xnor.sv",
+    "bsg_misc/bsg_nor2.sv",
+    "bsg_misc/bsg_xor.sv",
+    "bsg_misc/bsg_adder_cin.sv",
+    "bsg_misc/bsg_imul_iterative.sv",
+    "bsg_misc/bsg_idiv_iterative.sv",
+    "bsg_misc/bsg_idiv_iterative_controller.sv",
+    # mem
+    "bsg_mem/bsg_mem_1r1w.sv",
+    "bsg_mem/bsg_mem_1r1w_synth.sv",
+    "bsg_mem/bsg_mem_1r1w_sync.sv",
+    "bsg_mem/bsg_mem_1r1w_sync_synth.sv",
+]
+
+filegroup(
+    name = "rtl",
+    srcs = ["dev/repo/rtl/" + f for f in _TERNIP_FILES] +
+           ["dev/basejump_stl/" + f for f in _BSG_FILES],
+    visibility = ["//visibility:public"],
+)
+
+# All .sv/.svh/.v files plus the custom config — staged into the synth
+# sandbox so that `include directives can resolve (config/hightide.svh,
+# ternip_readmem_path.svh, bsg_defines.sv).
+filegroup(
+    name = "rtl_data",
+    srcs = ["dev/repo/rtl/" + f for f in _TERNIP_FILES] +
+           ["dev/basejump_stl/" + f for f in _BSG_FILES] +
+           glob(
+               [
+                   "dev/repo/rtl/**/*.svh",
+                   "config/**/*.svh",
+               ],
+               allow_empty = True,
+           ),
+    visibility = ["//visibility:public"],
+)

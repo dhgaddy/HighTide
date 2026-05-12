@@ -1,0 +1,30 @@
+# RTL sources for the LiteDRAM standalone-core benchmark.
+#
+# litedram_core.v is pre-generated (release) from upstream
+# enjoy-digital/litedram by running:
+#     designs/src/litedram/dev/setup.sh       (one-time venv + pinned deps)
+#     designs/src/litedram/gen.sh \
+#         designs/src/litedram/litedram.yml \
+#         designs/src/litedram \
+#         litedram
+# The submodule at dev/repo pins the upstream commit used.
+#
+# `libraries/lattice/*.v` provides ASIC-synthesizable stubs for the four
+# Lattice ECP5 primitives that GENSDRPHY's I/O cells instantiate
+# (FD1S3BX, OFS1P3BX, IFS1P3BX, TRELLIS_IO) — the core controller logic
+# itself has no vendor dependency.
+
+filegroup(
+    name = "lattice_libs",
+    srcs = glob(["libraries/lattice/*.v"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "litedram_rtl",
+    srcs = [
+        ":lattice_libs",
+        "litedram_core.v",
+    ],
+    visibility = ["//visibility:public"],
+)

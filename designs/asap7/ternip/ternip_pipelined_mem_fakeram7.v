@@ -98,39 +98,87 @@ always_ff @(posedge clk_i) begin
     end
 end
 
-// FakeRAM SRAM macro — replaces the behavioral reg array.
-// The FakeRAM has a synchronous registered output, which replaces read_data_q2.
+// Banked FakeRAM SRAM macros — replace the behavioral reg array.
+// The FakeRAMs have a synchronous registered output, which replaces read_data_q2.
+//
+//   (16, 4096) → 8 × fakeram7_512x16  (depth-banked, 8 Kb per bank)
+//   (16, 1024) → 2 × fakeram7_512x16  (depth-banked, 8 Kb per bank)
+//   (1024, 16) → 8 × fakeram7_16x128  (width-banked, 2 Kb per bank)
+//
+// Depth banking: addr[high] selects which bank's ce_in fires; the bank's
+// rd_out is muxed back into read_data_q2 using request_addr_q2 (the
+// SRAM's read latency is 1 cycle, so by the time the data arrives,
+// addr_q2 holds the address that was driven into the SRAM last cycle).
+//
+// Width banking: every bank gets the same address/ce/we, and the data
+// bus is sliced/concatenated into BANK_WIDTH-bit groups across banks.
+
 wire fakeram_ce = !stall2 && (write_valid_q1 || read_valid_q1);
 wire fakeram_we = write_valid_q1;
 
 generate
     if (DATA_WIDTH == 16 && NUM_ENTRIES == 4096) begin : gen_sram
-        fakeram7_4096x16 sram (
-            .rw0_clk(clk_i),
-            .rw0_ce_in(fakeram_ce),
-            .rw0_we_in(fakeram_we),
-            .rw0_addr_in(request_addr_q1),
-            .rw0_wd_in(request_w_data_q1),
-            .rw0_rd_out(read_data_q2)
-        );
+        localparam int BANK_DEPTH      = 512;
+        localparam int NUM_BANKS       = 8;
+        localparam int BANK_ADDR_BITS  = 9;  // log2(512)
+        localparam int BANK_SEL_BITS   = 3;  // log2(8)
+
+        wire [BANK_SEL_BITS-1:0]  bank_sel  = request_addr_q1[ADDR_WIDTH-1 -: BANK_SEL_BITS];
+        wire [BANK_ADDR_BITS-1:0] bank_addr = request_addr_q1[BANK_ADDR_BITS-1:0];
+        wire [BANK_SEL_BITS-1:0]  bank_sel_q2 = request_addr_q2[ADDR_WIDTH-1 -: BANK_SEL_BITS];
+
+        logic [DATA_WIDTH-1:0] bank_rd_out [NUM_BANKS-1:0];
+
+        for (genvar b = 0; b < NUM_BANKS; b++) begin : gen_bank
+            wire bank_ce = fakeram_ce && (bank_sel == BANK_SEL_BITS'(b));
+            fakeram7_512x16 sram (
+                .rw0_clk(clk_i),
+                .rw0_ce_in(bank_ce),
+                .rw0_we_in(fakeram_we),
+                .rw0_addr_in(bank_addr),
+                .rw0_wd_in(request_w_data_q1),
+                .rw0_rd_out(bank_rd_out[b])
+            );
+        end
+        assign read_data_q2 = bank_rd_out[bank_sel_q2];
     end else if (DATA_WIDTH == 16 && NUM_ENTRIES == 1024) begin : gen_sram
-        fakeram7_1024x16 sram (
-            .rw0_clk(clk_i),
-            .rw0_ce_in(fakeram_ce),
-            .rw0_we_in(fakeram_we),
-            .rw0_addr_in(request_addr_q1),
-            .rw0_wd_in(request_w_data_q1),
-            .rw0_rd_out(read_data_q2)
-        );
+        localparam int BANK_DEPTH      = 512;
+        localparam int NUM_BANKS       = 2;
+        localparam int BANK_ADDR_BITS  = 9;  // log2(512)
+        localparam int BANK_SEL_BITS   = 1;  // log2(2)
+
+        wire [BANK_SEL_BITS-1:0]  bank_sel  = request_addr_q1[ADDR_WIDTH-1 -: BANK_SEL_BITS];
+        wire [BANK_ADDR_BITS-1:0] bank_addr = request_addr_q1[BANK_ADDR_BITS-1:0];
+        wire [BANK_SEL_BITS-1:0]  bank_sel_q2 = request_addr_q2[ADDR_WIDTH-1 -: BANK_SEL_BITS];
+
+        logic [DATA_WIDTH-1:0] bank_rd_out [NUM_BANKS-1:0];
+
+        for (genvar b = 0; b < NUM_BANKS; b++) begin : gen_bank
+            wire bank_ce = fakeram_ce && (bank_sel == BANK_SEL_BITS'(b));
+            fakeram7_512x16 sram (
+                .rw0_clk(clk_i),
+                .rw0_ce_in(bank_ce),
+                .rw0_we_in(fakeram_we),
+                .rw0_addr_in(bank_addr),
+                .rw0_wd_in(request_w_data_q1),
+                .rw0_rd_out(bank_rd_out[b])
+            );
+        end
+        assign read_data_q2 = bank_rd_out[bank_sel_q2];
     end else if (DATA_WIDTH == 1024 && NUM_ENTRIES == 16) begin : gen_sram
-        fakeram7_16x1024 sram (
-            .rw0_clk(clk_i),
-            .rw0_ce_in(fakeram_ce),
-            .rw0_we_in(fakeram_we),
-            .rw0_addr_in(request_addr_q1),
-            .rw0_wd_in(request_w_data_q1),
-            .rw0_rd_out(read_data_q2)
-        );
+        localparam int BANK_WIDTH = 128;
+        localparam int NUM_BANKS  = 8;  // 1024 / 128
+
+        for (genvar b = 0; b < NUM_BANKS; b++) begin : gen_bank
+            fakeram7_16x128 sram (
+                .rw0_clk(clk_i),
+                .rw0_ce_in(fakeram_ce),
+                .rw0_we_in(fakeram_we),
+                .rw0_addr_in(request_addr_q1),
+                .rw0_wd_in(request_w_data_q1[BANK_WIDTH*b +: BANK_WIDTH]),
+                .rw0_rd_out(read_data_q2[BANK_WIDTH*b +: BANK_WIDTH])
+            );
+        end
     end
 endgenerate
 

@@ -151,19 +151,24 @@
       border: 2px solid var(--gray-100);
     }
 
-    .design-image .placeholder {
+    .thumb-placeholder {
+      display: block;
+      color: var(--gray-600);
+      text-align: center;
+    }
+
+    .thumb-placeholder .ph-box {
       width: 100%;
-      max-width: 320px;
-      aspect-ratio: 4 / 1;
-      background: var(--gray-50);
+      aspect-ratio: 1;
+      border-radius: 6px;
       border: 2px dashed var(--gray-100);
-      border-radius: 8px;
+      background: var(--gray-50);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--gray-600);
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-style: italic;
+      color: var(--gray-600);
     }
 
     .design-thumbs {
@@ -414,6 +419,7 @@
       <div class="design-body">
         <div class="design-image">
           <div class="design-thumbs">
+            <div class="thumb-placeholder"><div class="ph-box">pending</div><span class="thumb-label asap7">asap7</span></div>
             <a class="thumb-link" href="figures/NyuziProcessor_nangate45_f55a93ea.png"><img src="figures/thumbs/NyuziProcessor_nangate45_f55a93ea.jpg" alt="Nyuzi nangate45 final"><span class="thumb-label nangate45">nangate45</span></a>
           </div>
         </div>
@@ -504,31 +510,16 @@
       <div class="design-body">
         <div class="design-image">
           <div class="design-thumbs">
-            <a class="thumb-link" href="figures/liteeth_mac_axi_mii_asap7_8ec5a224.png"><img src="figures/thumbs/liteeth_mac_axi_mii_asap7_8ec5a224.jpg" alt="LiteEth MAC/AXI/MII asap7 final"><span class="thumb-label asap7">asap7</span><span class="thumb-variant">mac_axi_mii</span></a>
-            <a class="thumb-link" href="figures/liteeth_mac_wb_mii_asap7_8ec5a224.png"><img src="figures/thumbs/liteeth_mac_wb_mii_asap7_8ec5a224.jpg" alt="LiteEth MAC/WB/MII asap7 final"><span class="thumb-label asap7">asap7</span><span class="thumb-variant">mac_wb_mii</span></a>
-            <a class="thumb-link" href="figures/liteeth_udp_raw_rgmii_asap7_8ec5a224.png"><img src="figures/thumbs/liteeth_udp_raw_rgmii_asap7_8ec5a224.jpg" alt="LiteEth UDP raw/RGMII asap7 final"><span class="thumb-label asap7">asap7</span><span class="thumb-variant">udp_raw_rgmii</span></a>
-            <a class="thumb-link" href="figures/liteeth_udp_stream_rgmii_asap7_8ec5a224.png"><img src="figures/thumbs/liteeth_udp_stream_rgmii_asap7_8ec5a224.jpg" alt="LiteEth UDP stream/RGMII asap7 final"><span class="thumb-label asap7">asap7</span><span class="thumb-variant">udp_stream_rgmii</span></a>
-            <a class="thumb-link" href="figures/liteeth_udp_stream_sgmii_asap7_8ec5a224.png"><img src="figures/thumbs/liteeth_udp_stream_sgmii_asap7_8ec5a224.jpg" alt="LiteEth UDP stream/SGMII asap7 final"><span class="thumb-label asap7">asap7</span><span class="thumb-variant">udp_stream_sgmii</span></a>
-            <a class="thumb-link" href="figures/liteeth_udp_usp_gth_sgmii_asap7_8ec5a224.png"><img src="figures/thumbs/liteeth_udp_usp_gth_sgmii_asap7_8ec5a224.jpg" alt="LiteEth UDP USP-GTH/SGMII asap7 final"><span class="thumb-label asap7">asap7</span><span class="thumb-variant">udp_usp_gth_sgmii</span></a>
-            <a class="thumb-link" href="figures/liteeth_mac_axi_mii_nangate45_8ec5a224.png"><img src="figures/thumbs/liteeth_mac_axi_mii_nangate45_8ec5a224.jpg" alt="LiteEth MAC/AXI/MII nangate45 final"><span class="thumb-label nangate45">nangate45</span><span class="thumb-variant">mac_axi_mii</span></a>
-            <a class="thumb-link" href="figures/liteeth_mac_wb_mii_nangate45_8ec5a224.png"><img src="figures/thumbs/liteeth_mac_wb_mii_nangate45_8ec5a224.jpg" alt="LiteEth MAC/WB/MII nangate45 final"><span class="thumb-label nangate45">nangate45</span><span class="thumb-variant">mac_wb_mii</span></a>
-            <a class="thumb-link" href="figures/liteeth_udp_raw_rgmii_nangate45_8ec5a224.png"><img src="figures/thumbs/liteeth_udp_raw_rgmii_nangate45_8ec5a224.jpg" alt="LiteEth UDP raw/RGMII nangate45 final"><span class="thumb-label nangate45">nangate45</span><span class="thumb-variant">udp_raw_rgmii</span></a>
-            <a class="thumb-link" href="figures/liteeth_udp_stream_rgmii_nangate45_8ec5a224.png"><img src="figures/thumbs/liteeth_udp_stream_rgmii_nangate45_8ec5a224.jpg" alt="LiteEth UDP stream/RGMII nangate45 final"><span class="thumb-label nangate45">nangate45</span><span class="thumb-variant">udp_stream_rgmii</span></a>
-            <a class="thumb-link" href="figures/liteeth_udp_stream_sgmii_nangate45_8ec5a224.png"><img src="figures/thumbs/liteeth_udp_stream_sgmii_nangate45_8ec5a224.jpg" alt="LiteEth UDP stream/SGMII nangate45 final"><span class="thumb-label nangate45">nangate45</span><span class="thumb-variant">udp_stream_sgmii</span></a>
-            <a class="thumb-link" href="figures/liteeth_udp_usp_gth_sgmii_nangate45_8ec5a224.png"><img src="figures/thumbs/liteeth_udp_usp_gth_sgmii_nangate45_8ec5a224.jpg" alt="LiteEth UDP USP-GTH/SGMII nangate45 final"><span class="thumb-label nangate45">nangate45</span><span class="thumb-variant">udp_usp_gth_sgmii</span></a>
-            <a class="thumb-link" href="figures/liteeth_mac_axi_mii_sky130hd_8ec5a224.png"><img src="figures/thumbs/liteeth_mac_axi_mii_sky130hd_8ec5a224.jpg" alt="LiteEth MAC/AXI/MII sky130hd final"><span class="thumb-label sky130hd">sky130hd</span><span class="thumb-variant">mac_axi_mii</span></a>
-            <a class="thumb-link" href="figures/liteeth_mac_wb_mii_sky130hd_8ec5a224.png"><img src="figures/thumbs/liteeth_mac_wb_mii_sky130hd_8ec5a224.jpg" alt="LiteEth MAC/WB/MII sky130hd final"><span class="thumb-label sky130hd">sky130hd</span><span class="thumb-variant">mac_wb_mii</span></a>
-            <a class="thumb-link" href="figures/liteeth_udp_raw_rgmii_sky130hd_8ec5a224.png"><img src="figures/thumbs/liteeth_udp_raw_rgmii_sky130hd_8ec5a224.jpg" alt="LiteEth UDP raw/RGMII sky130hd final"><span class="thumb-label sky130hd">sky130hd</span><span class="thumb-variant">udp_raw_rgmii</span></a>
-            <a class="thumb-link" href="figures/liteeth_udp_stream_rgmii_sky130hd_8ec5a224.png"><img src="figures/thumbs/liteeth_udp_stream_rgmii_sky130hd_8ec5a224.jpg" alt="LiteEth UDP stream/RGMII sky130hd final"><span class="thumb-label sky130hd">sky130hd</span><span class="thumb-variant">udp_stream_rgmii</span></a>
-            <a class="thumb-link" href="figures/liteeth_udp_stream_sgmii_sky130hd_8ec5a224.png"><img src="figures/thumbs/liteeth_udp_stream_sgmii_sky130hd_8ec5a224.jpg" alt="LiteEth UDP stream/SGMII sky130hd final"><span class="thumb-label sky130hd">sky130hd</span><span class="thumb-variant">udp_stream_sgmii</span></a>
-            <a class="thumb-link" href="figures/liteeth_udp_usp_gth_sgmii_sky130hd_8ec5a224.png"><img src="figures/thumbs/liteeth_udp_usp_gth_sgmii_sky130hd_8ec5a224.jpg" alt="LiteEth UDP USP-GTH/SGMII sky130hd final"><span class="thumb-label sky130hd">sky130hd</span><span class="thumb-variant">udp_usp_gth_sgmii</span></a>
+            <a class="thumb-link" href="figures/liteeth_udp_usp_gth_sgmii_asap7_62cb796e.png"><img src="figures/thumbs/liteeth_udp_usp_gth_sgmii_asap7_62cb796e.jpg" alt="LiteEth UDP USP-GTH/SGMII asap7 final"><span class="thumb-label asap7">asap7</span><span class="thumb-variant">udp_usp_gth_sgmii</span></a>
+            <a class="thumb-link" href="figures/liteeth_udp_usp_gth_sgmii_nangate45_62cb796e.png"><img src="figures/thumbs/liteeth_udp_usp_gth_sgmii_nangate45_62cb796e.jpg" alt="LiteEth UDP USP-GTH/SGMII nangate45 final"><span class="thumb-label nangate45">nangate45</span><span class="thumb-variant">udp_usp_gth_sgmii</span></a>
+            <a class="thumb-link" href="figures/liteeth_udp_usp_gth_sgmii_sky130hd_62cb796e.png"><img src="figures/thumbs/liteeth_udp_usp_gth_sgmii_sky130hd_62cb796e.jpg" alt="LiteEth UDP USP-GTH/SGMII sky130hd final"><span class="thumb-label sky130hd">sky130hd</span><span class="thumb-variant">udp_usp_gth_sgmii</span></a>
           </div>
         </div>
         <div class="design-info">
           <p>
             LiteEth is a small-footprint Ethernet IP core generated by the LiteX / Migen Python
-            framework. Variants cover MII, RGMII, and SGMII PHY interfaces with either an AXI or
-            Wishbone host bus, and either raw-frame or UDP / streaming endpoints.
+            framework. This configuration ships a UDP endpoint over the Xilinx UltraScale+ GTH
+            SGMII PHY — the most complex of the LiteEth PHY/protocol combinations.
           </p>
           <p class="source-link"><a href="https://github.com/enjoy-digital/liteeth">enjoy-digital/liteeth &rarr;</a></p>
         </div>
@@ -648,7 +639,9 @@
       </div>
       <div class="design-body">
         <div class="design-image">
-          <div class="placeholder">Die image pending</div>
+          <div class="design-thumbs">
+            <div class="thumb-placeholder"><div class="ph-box">pending</div><span class="thumb-label asap7">asap7</span></div>
+          </div>
         </div>
         <div class="design-info">
           <p>

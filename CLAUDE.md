@@ -70,16 +70,16 @@ Dev mode requires: `git submodule update --init designs/src/<design>/dev/repo` b
 
 | Platform | Node | Designs |
 |----------|------|---------|
-| asap7 | 7nm academic | coralnpu, gemmini, lfsr, litedram, minimax, sha3, vortex, liteeth (6 variants), NVDLA (partitions a/c/m/o/p), bp_processor (bp_uno, bp_quad), cnn, floonoc, NyuziProcessor, snitch_cluster |
-| nangate45 | 45nm | coralnpu, gemmini, lfsr, litedram, minimax, NyuziProcessor, sha3, liteeth (6 variants), bp_processor (bp_uno, bp_quad), cnn |
-| sky130hd | 130nm open | gemmini, lfsr, litedram, minimax, sha3, liteeth (mac_axi_mii, mac_wb_mii, udp_stream_rgmii, udp_usp_gth_sgmii), cnn, liteeth (udp_raw_rgmii, udp_stream_sgmii) |
+| asap7 | 7nm academic | coralnpu, gemmini, lfsr, litedram, minimax, sha3, vortex, liteeth_udp_usp_gth_sgmii, NVDLA (partitions a/c/m/o/p), bp_processor (bp_uno, bp_quad), cnn, floonoc, NyuziProcessor, snitch_cluster |
+| nangate45 | 45nm | coralnpu, gemmini, lfsr, litedram, minimax, NyuziProcessor, sha3, liteeth_udp_usp_gth_sgmii, bp_processor (bp_uno, bp_quad), cnn |
+| sky130hd | 130nm open | gemmini, lfsr, litedram, minimax, sha3, liteeth_udp_usp_gth_sgmii, cnn |
 
 #### Build status (as of 2026-05-11)
 
 Designs reaching `_final` (cached on remote build cache):
-- **asap7**: coralnpu, gemmini, lfsr, litedram, minimax, sha3, vortex, all 6 liteeth variants, NVDLA partitions a/m/o
-- **nangate45**: coralnpu, gemmini, lfsr, litedram, minimax, NyuziProcessor, sha3, all 6 liteeth variants
-- **sky130hd**: gemmini, lfsr, litedram, minimax, sha3, all 6 liteeth variants, NVDLA partitions a/m/o/p
+- **asap7**: coralnpu, gemmini, lfsr, litedram, minimax, sha3, vortex, liteeth_udp_usp_gth_sgmii, NVDLA partitions a/m/o
+- **nangate45**: coralnpu, gemmini, lfsr, litedram, minimax, NyuziProcessor, sha3, liteeth_udp_usp_gth_sgmii
+- **sky130hd**: gemmini, lfsr, litedram, minimax, sha3, liteeth_udp_usp_gth_sgmii, NVDLA partitions a/m/o/p
 
 Not yet finishing (not cached):
 - **asap7**: cnn, floonoc, NyuziProcessor, snitch_cluster, bp_processor (bp_uno, bp_quad), NVDLA partitions c, p
@@ -104,7 +104,7 @@ Designs with embedded memories use FakeRAM (LEF-only, no GDS). Controlled by `GD
 
 SRAM LEF/LIB files are organized per-platform:
 - `designs/<platform>/NyuziProcessor/sram/{lef,lib}/` — NyuziProcessor memories
-- `designs/<platform>/liteeth/sram/{lef,lib}/` — liteeth variant memories (shared across variants)
+- `designs/<platform>/liteeth/sram/{lef,lib}/` — liteeth memories (`fakeram_1rw1r_64w64d` + `fakeram_1rw1r_64w1024d`)
 - `designs/asap7/bp_processor/sram/{lef,lib}/` — bp_processor memories
 - `designs/src/cnn/fakeram_*.{lef,lib}` — CNN asap7 memories (shared with src dir)
 - `designs/{nangate45,sky130hd}/cnn/sram/{lef,lib}/` — CNN per-platform synthetic FakeRAMs (regenerable via `designs/src/cnn/dev/gen_fakeram_{nangate45,sky130hd}.py`)
@@ -123,7 +123,7 @@ Designs in this repo carry workarounds for upstream tool bugs. Update this table
 |-----|------------------|------------|--------------|-------|
 | **CTS-0105** false skip — yosys hierarchical synthesis output port buffers arrive in ODB with `dbSourceType::TIMING` instead of `NETLIST`; CTS skips them as pre-existing clock buffers and leaves the clock net unbuffered | asap7 NyuziProcessor; asap7/nangate45/sky130hd `bp_quad`, `bp_uno` | `PRE_CTS_TCL` script resets affected buffers' `dbSourceType` from `TIMING` → `NETLIST` before CTS runs | `81b0ed4b` | [OpenROAD#10177](https://github.com/The-OpenROAD-Project/OpenROAD/issues/10177) |
 | **MPL-0040** — `rtl_macro_placer` annealing failure on certain macro clusters | asap7 `bp_quad` (pipe_fma cluster), asap7 `cnn` | Hand-place fakeram macros in left-edge columns at FIRM status via `macros.tcl` so RTLMP only sees pre-placed macros; for cnn also drop `CORE_UTILIZATION` 65→60 | `09542e19` | [OpenROAD#9985](https://github.com/The-OpenROAD-Project/OpenROAD/issues/9985) |
-| **ODB-1200** in `repair_timing` — `InsertBufferBeforeLoads` iterates a stale load list and aborts the flow with `Load pin '...' is not connected to net '...'`. Triggered by the resizer's `SplitLoadMove` step in CTS-time repair_timing | asap7 `liteeth_udp_stream_sgmii`, `liteeth_udp_usp_gth_sgmii`; sky130hd `NyuziProcessor`; asap7 `bp_quad`; asap7 `gemmini` (this PR) | Most designs: `SKIP_CTS_REPAIR_TIMING = 1` (skips the whole repair pass; route still does its own hold-repair). Gemmini: drop `split_load` from `SETUP_MOVE_SEQUENCE` (`"unbuffer,sizeup,swap,buffer,clone"`) — keeps the rest of repair_timing working | `87829fdb` | [HighTide#75](https://github.com/VLSIDA/HighTide/issues/75) |
+| **ODB-1200** in `repair_timing` — `InsertBufferBeforeLoads` iterates a stale load list and aborts the flow with `Load pin '...' is not connected to net '...'`. Triggered by the resizer's `SplitLoadMove` step in CTS-time repair_timing | asap7 `liteeth_udp_usp_gth_sgmii`; sky130hd `NyuziProcessor`; asap7 `bp_quad`; asap7 `gemmini` (this PR) | Most designs: `SKIP_CTS_REPAIR_TIMING = 1` (skips the whole repair pass; route still does its own hold-repair). Gemmini: drop `split_load` from `SETUP_MOVE_SEQUENCE` (`"unbuffer,sizeup,swap,buffer,clone"`) — keeps the rest of repair_timing working | `87829fdb` | [HighTide#75](https://github.com/VLSIDA/HighTide/issues/75) |
 | **DPL-0036** in CTS-internal `detailed_placement` — `cts.tcl` builds its own `dpl_args` ignoring `DETAIL_PLACEMENT_ARGS`, so CTS-inserted leaf clock buffers can land too far from a legal stdcell row | asap7 `snitch_cluster` | `PRE_CTS_TCL` wraps `detailed_placement` to inject `-max_displacement {2000 400}` for the CTS call | `0af20020` | None (ORFS layering issue; no upstream issue filed yet) |
 | **yosys-slang** phantom 1'x drivers on interface-array modport ports — extra driver wins at `opt_clean`, real driver silently dropped | asap7 `vortex` | Bumped `yosys-slang` 4e53d77 → eabdfd1 (vendored via `MODULE.bazel`) | `cb488bea` | [yosys-slang#304](https://github.com/povik/yosys-slang/issues/304) |
 | **`repair_timing` non-convergence** — repair loop spends iterations on the same RTL-bounded endpoint without making progress. Not a bug per se, but a flow pathology when the clock target is too tight for the design | asap7 `snitch_cluster`, asap7 `litedram` | `SKIP_INCREMENTAL_REPAIR = 1` to skip post-GRT `repair_timing` | `39ca8670` | None |

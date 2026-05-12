@@ -201,6 +201,21 @@ Concretely: emit all asap7 thumbs (sorted by variant), then all nangate45 thumbs
 
 For cards with one thumb per platform (CoralNPU, Vortex, Gemmini, etc.), the variant secondary sort is a no-op — just preserve asap7 → nangate45 → sky130hd order.
 
+### Per-platform placeholders for cards with missing builds
+
+A design card lists one platform badge per technology it *targets*; not every target has a cached `_final` yet.  When a badged platform has no thumb at all (no cached build, no fallback variant), emit a placeholder in that platform's slot instead of leaving the row visually shorter than the badge count suggests:
+
+```html
+<div class="thumb-placeholder"><div class="ph-box">pending</div><span class="thumb-label asap7">asap7</span></div>
+```
+
+Rules:
+- One placeholder per badged platform that has zero thumbs in the card.  If even a single family member (e.g. one LiteEth variant, one NVDLA partition) has a thumb for that platform, do not emit a placeholder.
+- Place each placeholder in the (platform, variant) sort position it would occupy if a real thumb existed — i.e. inside the asap7 group, nangate45 group, etc.
+- Don't emit per-variant placeholders for missing variants within a platform that already has at least one thumb — those would clutter family cards (LiteEth, NVDLA) where the variant set is the user's choice, not a build-status signal.
+
+The legacy single `<div class="placeholder">Die image pending</div>` block is deprecated; replace it with the per-platform placeholder pattern above on first run.
+
 ## Step 8: Update the Design Portfolio platform badges in index.html
 
 `webpage/index.html` has a "Design Portfolio" table (`<section id="designs">`) where each row's last column is a list of `<span class="platform-badge badge-<platform>">…</span>` tags.  Those badges must reflect which platforms each design *actually* reaches `_final` on, derived from the same per-(platform, design) sweep used above.

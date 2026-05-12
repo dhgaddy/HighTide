@@ -38,21 +38,25 @@ from pathlib import Path
 #   grid_um:     manufacturing grid
 PLATFORMS = {
     # asap7: M4 routes horizontal → pins on left/right edges land on horizontal
-    # tracks at y = 0.012 + N*0.048.
+    # tracks at y = 0.012 + N*0.048.  Pin stride 2 (pitch 0.096) needs ~62 µm
+    # for the 651-per-edge pin column; 80 µm is the smallest tested size that
+    # still leaves the resizer comfortable room around the macro.
     "asap7": {
-        "size_um":     (200.0, 200.0),
+        "size_um":     (80.0, 80.0),
         "pin_layer":   "M4",
         "pin_w_um":    0.024,
         "pin_ext_um":  0.072,
         "track_off_um":   0.012,
         "track_pitch_um": 0.048,
-        "pin_stride":  3,
+        "pin_stride":  2,
         "grid_um":     0.001,
     },
     # nangate45: metal4 is VERTICAL → use metal3 (horizontal) for L/R edge pins.
     # metal3 track grid from make_tracks.tcl: y_offset 0.07, y_pitch 0.19.
+    # Stride 2 (pitch 0.38) gives the access-point algorithm room between pins;
+    # stride 1 hit DRT-0419 warnings and a non-converging repair_timing loop.
     "nangate45": {
-        "size_um":     (500.0, 500.0),
+        "size_um":     (280.0, 280.0),
         "pin_layer":   "metal3",
         "pin_w_um":    0.07,
         "pin_ext_um":  0.38,
@@ -62,9 +66,12 @@ PLATFORMS = {
         "grid_um":     0.005,
     },
     # sky130hd: met4 is VERTICAL → use met3 (horizontal).
-    # met3 track grid: y_offset 0.34, y_pitch 0.68.  Width 0.30.
+    # met3 track grid: y_offset 0.34, y_pitch 0.68.  Stride 1 produced
+    # `DRT-0073 No access point for pcie_us/...` because pitch = track pitch
+    # left no via-drop room; stride 2 needs 885 µm per edge for 651 pins so
+    # the macro must be ≥ 900 µm tall.
     "sky130hd": {
-        "size_um":     (1200.0, 1200.0),
+        "size_um":     (1000.0, 1000.0),
         "pin_layer":   "met3",
         "pin_w_um":    0.30,
         "pin_ext_um":  0.68,

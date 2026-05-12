@@ -74,31 +74,58 @@ would contribute. **TODO: write a generic LiteX-style `reg [W:0] storage[0:D];`
 → `fakeram_…` patcher in `dev/gen.sh`** (analogous to liteeth's per-variant
 hand-written patches but generated from the inferred memory map).
 
-## Per-platform notes
+## `SKIP_INCREMENTAL_REPAIR = 1`
+
+Set on all three platforms. The mocked-memory collapse leaves thousands of
+dangling single-pin nets (`[WARNING RSZ-0104]`). The post-GRT
+`repair_timing` loop walks those one endpoint per iteration and never
+converges — same pattern as the snitch_cluster row in the repo's
+CLAUDE.md bug table. Skipping the post-GRT repair pass dodges the
+non-convergence; the in-route hold-repair still runs.
+
+When the LiteX → fakeram patcher mentioned above lands and the mocked
+memories go away, revisit whether this flag is still needed.
+
+## pcie_us LEF sizing (PPA tune)
+
+The pcie_us LEF is a placeholder, but its size dominates die area because
+it contributes the only non-stdcell instance. The committed sizes are the
+smallest tested values that pass GRT pin-access and DRT:
+
+| Platform | LEF size | Pin layer | Stride | Pin column needed |
+|----------|----------|-----------|--------|-------------------|
+| asap7    | 80×80 µm  | M4 (horiz)     | 2 | ~62 µm  |
+| nangate45| 280×280 µm| metal3 (horiz) | 2 | ~247 µm |
+| sky130hd | 1000×1000 µm | met3 (horiz)| 2 | ~885 µm |
+
+Trying `pin_stride = 1` on nangate45 hit `DRT-0419` warnings (no track
+through pin center) followed by `repair_timing` non-convergence; on
+sky130hd it hit `[ERROR DRT-0073] No access point for pcie_us/...`
+because pin pitch matched the track pitch and the access-point algorithm
+couldn't drop a via.
+
+## Per-platform PPA-tuned settings
 
 ### asap7
 
-- `CORE_UTILIZATION = 40`, `PLACE_DENSITY = 0.55`, `MACRO_PLACE_HALO = 5 5`.
-- Single macro (the pcie_us blackbox) sits left-of-center; nothing else
-  needs RTLMP intervention.
-- Clean DRC, mocked memories → no register-to-register paths timed.
+- `CORE_UTILIZATION = 75`, `PLACE_DENSITY = 0.80`, `MACRO_PLACE_HALO = 5 5`.
+- Final die area 23,728 µm² (down from 128,774 baseline; −82%).
+- GRT congestion peak 32% on M2 — headroom remains.
 
 ### nangate45
 
-- `CORE_UTILIZATION = 35`, `PLACE_DENSITY = 0.5`, `MACRO_PLACE_HALO = 15 15`.
-- First attempt placed pcie_us pins on metal4 (VERTICAL routing layer),
-  causing `[ERROR DRT-0073] No access point for pcie_us/<pin>` at GRT.
-  Fix: re-emit the pcie_us LEF with pins on metal3 (HORIZONTAL) — see
-  `dev/gen_phy_lef.py:PLATFORMS["nangate45"]`.
+- `CORE_UTILIZATION = 60`, `PLACE_DENSITY = 0.70`, `MACRO_PLACE_HALO = 15 15`.
+- Final die area 369,780 µm² (down from 1,124,270 baseline; −67%).
+- GRT congestion peak 38% on metal2 — approaching the wall.
 
 ### sky130hd
 
-- `CORE_UTILIZATION = 30`, `PLACE_DENSITY = 0.45`, `MACRO_PLACE_HALO = 20 20`.
-- Same met4→met3 fix as nangate45.
-- sky130hd has no `CORE ANTENNACELL` diode, so detail_route's antenna
-  repair plateaus at a handful of unfixable violations (3 net, 3 pin in
-  the first cached build); ORFS gives up after the configured retry budget
-  and the flow reaches `6_final` cleanly.
+- `CORE_UTILIZATION = 55`, `PLACE_DENSITY = 0.65`, `MACRO_PLACE_HALO = 20 20`.
+- Final die area 3,031,790 µm² (down from 7,022,770 baseline; −57%).
+- GRT congestion peak 22% on met2 — most headroom of the three.
+- sky130hd's GRT antenna-repair loop reaches the iteration limit with a
+  handful of unfixable violations remaining; OpenROAD gives up after the
+  retry budget and the flow reaches `6_final` cleanly.
 
 ## `GDS_ALLOW_EMPTY`
 

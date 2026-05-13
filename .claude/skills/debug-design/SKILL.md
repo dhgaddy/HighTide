@@ -201,61 +201,17 @@ tail -200 logs/<platform>/<design>/base/5_*.log
 
 ### F. Timing Violations (Any Stage)
 
-Timing analysis should cover setup slack, hold slack, clock skew, and IO constraint realism. Since the RTL is fixed, the goal is to find the best achievable Fmax by tuning constraints and flow parameters.
+**First, diagnose.** Run the structured triage in `.claude/skills/shared/timing-analysis.md` to decide whether the dominant problem is (a) clock skew, (b) unreasonable clock period or IO delay, (c) wire vs. logic vs. macro delay, (d) a single problematic stage, (e) a multi-corner STA failure, or (f) something else. The shared reference gives the exact report/`jq` commands, the heuristic for each bucket, and the conclusion format. Targeting the right knob beats trying every fix below in sequence.
 
-**Read timing reports:**
-```bash
-# Setup timing (critical for Fmax)
-head -100 reports/<platform>/<design>/base/6_finish_setup.rpt 2>/dev/null
+**Important: utilization and clock period are coupled.** Tighter clock constraints cause synthesis and `repair_timing` to insert more buffers and decompose gates, which raises the effective utilization. A design that fits at 80% util with a relaxed clock may overflow at 80% with an aggressive clock. When diagnosing timing, also check whether cell count and instance area changed compared to a relaxed-clock build.
 
-# Hold timing
-head -100 reports/<platform>/<design>/base/6_finish_hold.rpt 2>/dev/null
+**Common fixes (after diagnosis):**
 
-# JSON metrics summary
-cat logs/<platform>/<design>/base/6_report.json 2>/dev/null
-```
-
-**Key metrics to extract and present:**
-- **WNS** (worst negative slack) — negative means violation
-- **TNS** (total negative slack) — sum of all violating paths
-- **Fmax** — maximum achievable frequency
-- **`report_clock_min_period`** — look for this in the finish report; it gives the true minimum achievable clock period directly, which is more reliable than computing it from WNS
-- **Top 5 worst paths**: start point, end point, path delay breakdown
-
-**Important: utilization and clock period are coupled.** Tighter clock constraints cause synthesis to produce more cells (more buffering, complex gate decompositions), which increases the effective utilization. A design that fits at 80% util with a relaxed clock may overflow at 80% with an aggressive clock. When diagnosing timing, also check if the cell count and instance area increased compared to a relaxed-clock build.
-
-**Clock skew analysis:**
-
-Clock tree insertion delay can cause timing violations when IO constraints assume ideal clocks. Check for this:
-
-1. **Read the clock tree report** to find insertion delay:
-   ```bash
-   grep -i "insertion\|skew\|latency" reports/<platform>/<design>/base/4_cts*.rpt 2>/dev/null
-   grep -i "insertion\|skew\|latency" logs/<platform>/<design>/base/4_*.log 2>/dev/null
-   ```
-
-2. **Compare insertion delay to IO constraints**: In the SDC, IO delays are typically set as a fraction of the clock period (`clk_io_pct`). If the clock tree insertion delay is significant compared to `clk_period * clk_io_pct`, the IO paths will have unrealistic timing targets.
-
-   For example, if `clk_period = 1.0ns` and `clk_io_pct = 0.2`, the IO delay budget is 0.2ns. If clock insertion delay is 0.15ns, that leaves almost no margin for actual IO path logic.
-
-3. **Check if failing paths are IO paths**: Look at the worst timing paths in the setup report. If they are input-to-register or register-to-output paths (not register-to-register), the IO constraints are likely the problem, not the core logic.
-
-4. **Fixes for clock-skew-related IO timing:**
-   - Increase `clk_io_pct` to account for clock tree insertion delay (e.g., 0.3 or 0.4)
-   - Use `set_clock_uncertainty` in the SDC to model expected skew
-   - Set different input/output delays that account for insertion delay:
-     ```tcl
-     # Instead of using clk_io_pct for both:
-     set_input_delay  [expr $clk_period * 0.3] -clock $clk_name $non_clock_inputs
-     set_output_delay [expr $clk_period * 0.4] -clock $clk_name [all_outputs]
-     ```
-   - For benchmarking purposes, if external IO timing is not meaningful, relax IO constraints significantly or use `set_false_path` on IO ports to focus on core register-to-register Fmax
-
-**Common timing fixes:**
-1. **Relax clock period** in `constraint.sdc` to find the achievable Fmax for this design/platform combination
-2. **Adjust IO constraints** as described above if clock skew is causing false IO violations
-3. **Set `TNS_END_PERCENT = 100`** in BUILD.bazel `arguments` to prioritize timing closure
-4. **Hold violations** are usually fixed automatically by the flow; if persistent, check for clock tree issues
+1. **Relax clock period** in `constraint.sdc` to find the achievable Fmax for this (design, platform) pair.
+2. **Lower `clk_io_pct`** when IO paths dominate. `clk_io_pct` multiplies `clk_period` to set both `set_input_delay` and `set_output_delay`; raising it makes IO timing *tighter*, lowering it gives the design more internal slack on IO paths. For benchmarking, `set_false_path` on non-meaningful IO ports lets the core register-to-register Fmax come through.
+3. **Set `TNS_END_PERCENT = 100`** in BUILD.bazel `arguments` to give the flow more budget for `repair_timing` iterations.
+4. **Add `set_clock_uncertainty`** in the SDC when CTS insertion delay is comparable to the IO budget — shared `(a)` covers when to suspect this.
+5. **Hold violations** are usually fixed automatically by the flow; persistent hold failures usually indicate clock-tree problems — shared `(a)` again.
 
 ---
 

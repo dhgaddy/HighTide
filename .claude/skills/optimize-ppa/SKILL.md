@@ -147,36 +147,9 @@ Reach for this when Step 2 plateaus before timing converges and std-cell utiliza
 
 ## Step 3: Maximize Clock Frequency (Performance Optimization)
 
-The goal is to find the highest Fmax by tightening the clock period until timing violations appear, then backing off slightly.
+The goal is to find the highest Fmax by tightening the clock period until timing violations appear, then backing off slightly. **Before tightening, run the structured diagnosis in `.claude/skills/shared/timing-analysis.md`** to identify *why* the current critical path is slow — clock skew, unreasonable clock period or IO delay, wire/logic/macro delay dominance, a single problematic stage, a multi-corner failure, or something else. The lever you reach for (tighten the clock vs. fix placement vs. retune SDC) depends on the answer; the steps below assume that triage is done.
 
-### 3a. Analyze current timing
-
-**Read the timing report and extract `report_clock_min_period`:**
-```bash
-grep "period_min\|fmax" reports/*/base/6_finish.rpt 2>/dev/null
-```
-
-This gives the true minimum period directly — use it as the starting point for clock tightening instead of computing from WNS.
-
-**Also determine where timing margin exists:**
-- If WNS is significantly positive (e.g., > 0.1ns), there is room to tighten the clock
-- Identify the critical path — is it register-to-register or involves IO?
-- Check both the overall worst path and the reg-to-reg worst path separately
-
-### 3b. Check for clock skew effects on IO paths
-
-Clock tree insertion delay can cause misleading timing results when IO constraints assume ideal clocks.
-
-1. **Find clock insertion delay** from the CTS log or finish report (`report_clock_skew` section)
-
-2. **Compare to IO delay budget**: IO delays are typically `clk_period * clk_io_pct`. If clock insertion delay is a significant fraction of this budget, IO paths have unrealistic constraints that will limit apparent Fmax.
-
-3. **Separate IO timing from core timing**: For benchmarking, the core register-to-register Fmax is what matters. If IO paths are the bottleneck:
-   - Increase `clk_io_pct` (e.g., 0.3–0.8) to give IO paths more slack
-   - Or set asymmetric input/output delays that account for insertion delay
-   - Add `set_clock_uncertainty` to model expected skew
-
-### 3c. Tighten clock period
+### 3a. Tighten clock period
 
 Use `report_clock_min_period` from the finish report as the starting target, then binary search:
 
@@ -191,11 +164,11 @@ Use `report_clock_min_period` from the finish report as the starting target, the
 
 **Remember the util/clock coupling:** after tightening the clock significantly, re-check that the design still fits. CTS repair_timing inserts buffers that increase cell area. You may need to lower utilization when the clock gets aggressive.
 
-### 3d. Watch for runtime blowup during clock tightening
+### 3b. Watch for runtime blowup during clock tightening
 
 As the clock period gets tighter, the CTS and routing stages will spend increasingly more time on repair_timing iterations. If a run is taking significantly longer than the baseline (2-3x+), the clock target is likely too aggressive — kill it, back off to the previous period, and declare that as the achievable Fmax.
 
-### 3e. Clock period guidance by platform
+### 3c. Clock period guidance by platform
 
 - **asap7 (7nm)**: 500-1000 ps typical; aggressive designs may reach 300-500 ps
 - **nangate45 (45nm)**: 2-10 ns typical

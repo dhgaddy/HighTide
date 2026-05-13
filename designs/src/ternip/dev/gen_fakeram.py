@@ -44,8 +44,14 @@ PLATFORM_PARAMS = {
         "min_area": 100,
         "pin_layer": "M4",
         "supply_layer": "M4",
-        "supply_track_offset": 0.024,
-        "supply_track_pitch": 0.048,
+        # Match liteeth / NVDLA asap7 fakerams: alternating VDD/VSS rails at
+        # 0.384 µm pitch (0.768 µm same-rail) with 0.096 µm rail width.  Our
+        # earlier 0.048 µm / 0.024 µm values matched the M4 routing track grid
+        # itself, leaving zero free M4 tracks between rails — every signal pin
+        # escape collided with a rail edge and tripped Lef58EolKeepOut.
+        "supply_track_offset": 0.480,
+        "supply_track_pitch": 0.384,
+        "supply_rail_w": 0.096,
         "obs_layers": ["M1", "M2", "M3"],
         "nom_voltage": 0.7,
         "op_cond_name": "tt_1.0_25.0",
@@ -151,6 +157,12 @@ def gen_lef(name, width, depth, outdir, platform):
     vdd_centers = track_centers[0::2]
     vss_centers = track_centers[1::2]
 
+    # Supply rails must keep clear of the signal-pin protrusions at the macro
+    # edges — they're on the same layer, so any overlap is a short.  Use a
+    # one-track gap after the pin tip (matches liteeth: pin protrusion 0.048,
+    # rail margin 0.096 → 0.048 µm gap).
+    supply_margin_xy = p["pin_protrusion"] + p["lr_pitch"]
+
     def add_supply(net, use, centers):
         lines.extend([
             f"  PIN {net}",
@@ -161,11 +173,11 @@ def gen_lef(name, width, depth, outdir, platform):
         ])
         for c in sorted(centers):
             if direction == "horizontal":
-                x0, x1 = p["snap_w"], w - p["snap_w"]
+                x0, x1 = supply_margin_xy, w - supply_margin_xy
                 y0, y1 = c - rail_w / 2, c + rail_w / 2
             else:
                 x0, x1 = c - rail_w / 2, c + rail_w / 2
-                y0, y1 = p["snap_h"], h - p["snap_h"]
+                y0, y1 = supply_margin_xy, h - supply_margin_xy
             lines.append(f"      RECT {x0:.3f} {y0:.3f} {x1:.3f} {y1:.3f} ;")
         lines.extend([
             "    END",

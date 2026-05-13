@@ -17,7 +17,7 @@ on:
         description: "Per-target fetch timeout (seconds)"
         default: "120"
   schedule:
-    - cron: "0 12 * * *"  # Daily at 12:00 UTC
+    - cron: "0 12 * * 1"  # Weekly on Monday at 12:00 UTC
 
 jobs:
   status-report:
@@ -30,7 +30,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          # Top-level only: bazel-orfs is required by MODULE.bazel's
+          # local_path_override.  Recursive would try to clone nested
+          # submodules of design repos (e.g. NyuziProcessor's stale
+          # http://git.veripool.org/git/verilator) and break checkout.
+          submodules: true
 
       - name: Install Bazelisk
         run: |

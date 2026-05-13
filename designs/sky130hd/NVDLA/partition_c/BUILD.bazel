@@ -14,9 +14,11 @@ hightide_design(
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
         "VERILOG_INCLUDE_DIRS": "designs/src/NVDLA/vmod/include designs/src/NVDLA/vmod/vlibs",
-        "CORE_UTILIZATION": "25",
-        "PLACE_DENSITY_LB_ADDON": "0.30",
-        "MACRO_PLACE_HALO": "30 30",
+        "CORE_UTILIZATION": "20",
+        "PLACE_DENSITY_LB_ADDON": "0.25",
+        "MACRO_PLACE_HALO": "20 20",
+        "RTLMP_MAX_MACRO": "16",
+        "RTLMP_MAX_INST": "30000",
         "TNS_END_PERCENT": "100",
     },
 )

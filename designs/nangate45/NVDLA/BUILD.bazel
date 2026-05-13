@@ -36,7 +36,7 @@ filegroup(
 filegroup(
     name = "sram_lefs_c",
     srcs = [
-        "sram/lef/fakeram_64x256_1r1w.lef",
+        "sram/lef/fakeram_64x128_1r1w.lef",
         "sram/lef/fakeram_64x16_1r1w.lef",
         "sram/lef/fakeram_6x128_1r1w.lef",
         "sram/lef/fakeram_66x8_1r1w.lef",
@@ -47,7 +47,7 @@ filegroup(
 filegroup(
     name = "sram_libs_c",
     srcs = [
-        "sram/lib/fakeram_64x256_1r1w.lib",
+        "sram/lib/fakeram_64x128_1r1w.lib",
         "sram/lib/fakeram_64x16_1r1w.lib",
         "sram/lib/fakeram_6x128_1r1w.lib",
         "sram/lib/fakeram_66x8_1r1w.lib",

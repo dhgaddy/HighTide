@@ -11869,17 +11869,34 @@ module RAMPDP_256X64_GL_M2_D2 (
     // NC (no fakeram equivalent — declared for compatibility, tied off):
     // IDDQ, SVOP_0, SVOP_1, SVOP_2, SVOP_3, SVOP_4, SVOP_5, SVOP_6, SVOP_7, SLEEP_EN_0, SLEEP_EN_1, SLEEP_EN_2, SLEEP_EN_3, SLEEP_EN_4, SLEEP_EN_5, SLEEP_EN_6, SLEEP_EN_7, RET_EN
 
-    fakeram_64x256_1r1w sram (
-        .r0_clk     (CLK),
-        .w0_clk     (CLK),
-        .r0_ce_in   (RE),
-        .w0_ce_in   (1'b1),
-        .w0_we_in   (WE),
-        .r0_addr_in ({RADR_7, RADR_6, RADR_5, RADR_4, RADR_3, RADR_2, RADR_1, RADR_0}),
-        .w0_addr_in ({WADR_7, WADR_6, WADR_5, WADR_4, WADR_3, WADR_2, WADR_1, WADR_0}),
-        .w0_wd_in   ({WD_63, WD_62, WD_61, WD_60, WD_59, WD_58, WD_57, WD_56, WD_55, WD_54, WD_53, WD_52, WD_51, WD_50, WD_49, WD_48, WD_47, WD_46, WD_45, WD_44, WD_43, WD_42, WD_41, WD_40, WD_39, WD_38, WD_37, WD_36, WD_35, WD_34, WD_33, WD_32, WD_31, WD_30, WD_29, WD_28, WD_27, WD_26, WD_25, WD_24, WD_23, WD_22, WD_21, WD_20, WD_19, WD_18, WD_17, WD_16, WD_15, WD_14, WD_13, WD_12, WD_11, WD_10, WD_9, WD_8, WD_7, WD_6, WD_5, WD_4, WD_3, WD_2, WD_1, WD_0}),
-        .r0_rd_out  (rd_bus)
+    // Depth-split: 1 x fakeram_64x256_1r1w -> 2 x fakeram_64x128_1r1w.
+    // Top address bit (RADR_7 / WADR_7) selects bank; lower 7 bits go to
+    // the bank. Read-side bank-select is registered to match the macro's
+    // 1-cycle sync read latency.
+    wire [6:0] r_bank_addr = {RADR_6, RADR_5, RADR_4, RADR_3, RADR_2, RADR_1, RADR_0};
+    wire [6:0] w_bank_addr = {WADR_6, WADR_5, WADR_4, WADR_3, WADR_2, WADR_1, WADR_0};
+    wire [1:0] r_cs = (RE) ? (2'b01 << RADR_7) : 2'b00;
+    wire [1:0] w_cs = (2'b01 << WADR_7);
+    reg  [1:0] r_cs_q;
+    always @(posedge CLK) r_cs_q <= r_cs;
+
+    wire [63:0] wd = {WD_63, WD_62, WD_61, WD_60, WD_59, WD_58, WD_57, WD_56, WD_55, WD_54, WD_53, WD_52, WD_51, WD_50, WD_49, WD_48, WD_47, WD_46, WD_45, WD_44, WD_43, WD_42, WD_41, WD_40, WD_39, WD_38, WD_37, WD_36, WD_35, WD_34, WD_33, WD_32, WD_31, WD_30, WD_29, WD_28, WD_27, WD_26, WD_25, WD_24, WD_23, WD_22, WD_21, WD_20, WD_19, WD_18, WD_17, WD_16, WD_15, WD_14, WD_13, WD_12, WD_11, WD_10, WD_9, WD_8, WD_7, WD_6, WD_5, WD_4, WD_3, WD_2, WD_1, WD_0};
+    wire [63:0] rd_b0, rd_b1;
+
+    fakeram_64x128_1r1w sram0 (
+        .r0_clk(CLK), .w0_clk(CLK),
+        .r0_ce_in(r_cs[0]), .w0_ce_in(w_cs[0]), .w0_we_in(WE),
+        .r0_addr_in(r_bank_addr), .w0_addr_in(w_bank_addr),
+        .w0_wd_in(wd), .r0_rd_out(rd_b0)
     );
+    fakeram_64x128_1r1w sram1 (
+        .r0_clk(CLK), .w0_clk(CLK),
+        .r0_ce_in(r_cs[1]), .w0_ce_in(w_cs[1]), .w0_we_in(WE),
+        .r0_addr_in(r_bank_addr), .w0_addr_in(w_bank_addr),
+        .w0_wd_in(wd), .r0_rd_out(rd_b1)
+    );
+
+    assign rd_bus = r_cs_q[0] ? rd_b0 : rd_b1;
 
 endmodule // RAMPDP_256X64_GL_M2_D2
 

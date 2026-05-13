@@ -39,12 +39,14 @@ use with vanilla `OpenROAD-flow-scripts`:
 
 ```bash
 tools/bazel_to_config_mk.sh designs/asap7/lfsr > /tmp/lfsr.config.mk
-make -C OpenROAD-flow-scripts/flow DESIGN_CONFIG=$(pwd)/tmp/lfsr.config.mk
+make -C ~/OpenROAD-flow-scripts/flow DESIGN_CONFIG=/tmp/lfsr.config.mk
 ```
 
 The script builds the design through `bazel-orfs` (cached after the
-first run), then unions the per-stage `*.short.mk` files Bazel writes
-and strips Bazel-internal vars.
+first run), unions the per-stage `*.short.mk` files Bazel writes,
+strips Bazel-internal vars, and emits absolute paths for every
+source / SDC / tcl / LEF / LIB reference so the config.mk works no
+matter where you invoke `make` from.
 
 ## Documentation
 

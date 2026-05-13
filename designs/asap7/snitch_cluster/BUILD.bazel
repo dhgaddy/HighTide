@@ -23,7 +23,7 @@ hightide_design(
         "DIE_AREA": "0 0 2000 2000",
         "CORE_AREA": "5 5 1995 1995",
         "PLACE_DENSITY": "0.35",
-        "MACRO_PLACE_HALO": "2 2",
+        "MACRO_PLACE_HALO": "8 8",
         "DETAIL_PLACEMENT_ARGS": "-max_displacement {2000 400}",
         "SKIP_CTS_REPAIR_TIMING": "1",
         "SKIP_INCREMENTAL_REPAIR": "1",

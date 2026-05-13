@@ -1,0 +1,46 @@
+load("//:defs.bzl", "hightide_design")
+
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
+# Eyeriss v2 sparse-CNN accelerator. The ASIC top is `TOP` — the FPGA-only
+# wrappers (TOP_integration*, UART, display, IO_processing) are dropped at
+# RTL-generation time. With a 2x2 cluster-group array, each cluster group
+# instantiates 39 SRAM macros (9 iact-addr + 9 iact-data + 3 psum-data in GLB
+# plus 9 iact-spad + 9 weight-spad + 9 psum-spad per PE cluster), so the full
+# top brings in ~157 SRAM blocks plus one 4096x8 psum-rearrange BRAM.
+hightide_design(
+    name = "eyeriss",
+    top = "TOP",
+    platform = "asap7",
+    verilog_files = ["//designs/src/eyeriss:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "CORE_UTILIZATION": "40",
+        "PLACE_DENSITY_LB_ADDON": "0.25",
+        "MACRO_PLACE_HALO": "5 5",
+        "TNS_END_PERCENT": "100",
+        # ODB-1200 in CTS repair_timing — split_load load-list invalidation
+        # trips InsertBufferBeforeLoads on the GLB iact SRAMs (OpenROAD #75).
+        "SKIP_CTS_REPAIR_TIMING": "1",
+        # Post-GRT repair_timing on the Psum spad/SRAM write paths makes
+        # ~5 ps of slack progress per iteration on the 193-macro design,
+        # which never converges in reasonable time. The clock is already
+        # loose at 5 ns (post-place WNS ~−130 ps net over many macro hops),
+        # so skip the incremental + last-gasp repair passes.
+        "SKIP_INCREMENTAL_REPAIR": "1",
+        "SKIP_LAST_GASP": "1",
+    },
+)

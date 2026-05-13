@@ -56,3 +56,6 @@
 [submodule "designs/src/litepci/dev/repo"]
 	path = designs/src/litepci/dev/repo
 	url = https://github.com/enjoy-digital/litepcie.git
+[submodule "designs/src/eyeriss/dev/repo"]
+	path = designs/src/eyeriss/dev/repo
+	url = https://github.com/BoooC/CNN-Accelerator-Based-on-Eyeriss-v2

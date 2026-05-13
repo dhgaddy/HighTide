@@ -1,0 +1,41 @@
+load("//:defs.bzl", "hightide_design")
+
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
+# Eyeriss v2 sparse-CNN accelerator on nangate45. Same RTL as asap7 — 2x2
+# cluster group array with 9 PEs per cluster — but FakeRAMs are regenerated
+# for the 45nm metal stack via designs/nangate45/eyeriss/sram/fakeram_nangate45.cfg.
+hightide_design(
+    name = "eyeriss",
+    top = "TOP",
+    platform = "nangate45",
+    verilog_files = ["//designs/src/eyeriss:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "CORE_UTILIZATION": "30",
+        "PLACE_DENSITY_LB_ADDON": "0.20",
+        # 193 macros with default halo leaves M4 PDN channels of only 3 µm
+        # between macros and the core boundary → PDN-0179 "Unable to repair
+        # all channels". 20 µm halo widens those channels enough.
+        "MACRO_PLACE_HALO": "20 20",
+        "TNS_END_PERCENT": "100",
+        # Same ODB-1200 + repair_timing non-convergence pattern as asap7
+        # (193 macros + long inter-cluster psum chains; CLAUDE.md table).
+        "SKIP_CTS_REPAIR_TIMING": "1",
+        "SKIP_INCREMENTAL_REPAIR": "1",
+        "SKIP_LAST_GASP": "1",
+    },
+)

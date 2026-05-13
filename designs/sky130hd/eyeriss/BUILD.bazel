@@ -1,0 +1,43 @@
+load("//:defs.bzl", "hightide_design")
+
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
+# Eyeriss v2 sparse-CNN accelerator on sky130hd. Same RTL as asap7/nangate45
+# but FakeRAMs regenerated for the 130nm metal stack via
+# designs/sky130hd/eyeriss/sram/fakeram_sky130hd.cfg. The sky130hd memories
+# are roughly 30x the asap7 area, so floorplan utilization is intentionally
+# loose to give the placer room around ~157 macros.
+hightide_design(
+    name = "eyeriss",
+    top = "TOP",
+    platform = "sky130hd",
+    verilog_files = ["//designs/src/eyeriss:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        # 193 large sky130 fakerams (e.g. 21x512_1r1w is 391×617 µm) need
+        # generous spacing, otherwise RTLMP fails with MPL-0040 on the
+        # ClusterGroup_0_1 cluster.
+        "CORE_UTILIZATION": "20",
+        "PLACE_DENSITY_LB_ADDON": "0.15",
+        "MACRO_PLACE_HALO": "40 40",
+        "TNS_END_PERCENT": "100",
+        # Same ODB-1200 + repair_timing non-convergence pattern as asap7
+        # (193 macros + long inter-cluster psum chains; CLAUDE.md table).
+        "SKIP_CTS_REPAIR_TIMING": "1",
+        "SKIP_INCREMENTAL_REPAIR": "1",
+        "SKIP_LAST_GASP": "1",
+    },
+)

@@ -1,0 +1,34 @@
+filegroup(
+    name = "rtl_release",
+    srcs = ["eyeriss.v"],
+)
+
+# update-rtl mode: init submodule + concatenate FPGA_design source files
+# (skipping the FPGA-only TOP wrappers, UART, display, and IO modules) and
+# append fakeram wrappers for the Xilinx BRAM IPs.
+genrule(
+    name = "rtl_dev_gen",
+    srcs = [
+        "dev/setup.sh",
+        "dev/macros_template.v",
+    ],
+    outs = ["dev_eyeriss.v"],
+    local = True,
+    cmd = """
+        WORKSPACE_ROOT=$$(readlink -f $(location //:tools/update_rtl.sh) | sed 's|/tools/update_rtl.sh||')
+        cd $$WORKSPACE_ROOT
+        git submodule update --init designs/src/eyeriss/dev/repo >&2
+        bash designs/src/eyeriss/dev/setup.sh >&2
+        cp designs/src/eyeriss/dev/generated/eyeriss.v $$OLDPWD/$(location dev_eyeriss.v)
+    """,
+    tools = ["//:tools/update_rtl.sh"],
+)
+
+alias(
+    name = "rtl",
+    actual = select({
+        "//:update_rtl": ":rtl_dev_gen",
+        "//conditions:default": ":rtl_release",
+    }),
+    visibility = ["//visibility:public"],
+)

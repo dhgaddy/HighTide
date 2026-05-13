@@ -141,31 +141,9 @@ When congestion blocks further utilization increases, generate heatmaps to ident
 
 ### 2g. Repartition FakeRAM macros (split or merge)
 
-For macro-heavy designs, the **geometry** of the FakeRAM banks is a tuning lever that's often more powerful than placement density.  There's a real trade-off:
+For macro-heavy designs, FakeRAM **geometry** is often a more powerful tuning lever than placement density: splitting wide banks into many narrow ones makes placement easier (at the cost of memory density); combining narrow banks into wider ones is denser but harder to place — especially on sky130hd's coarse pitches.
 
-| Direction | Effect on memory area | Effect on placement / routing |
-|---|---|---|
-| **Combine** many narrow banks into fewer wider/deeper ones | **Denser** memory (less perimeter wasted on per-macro overhead, fewer access ports needed at the boundary) | **Harder to place** — fewer larger blockages make floorplanning fragile, easier to create routing channels too narrow for stdcells around them.  Especially painful on sky130hd's coarse pitches. |
-| **Split** wide banks into many narrower ones | **Less dense** memory (more perimeter, more pin clusters per bit) | **Easier to place** — small blockages distribute around the die; stdcells can flow between them.  Often unlocks higher overall `CORE_UTILIZATION` despite the macros themselves being less dense. |
-
-**When to consider this:**
-- Macro-heavy designs (>10 macros, std-cell utilization noticeably below `CORE_UTILIZATION`) where Step 2 plateaus before timing converges.
-- `partition_c`-style designs whose global placement overflow plateaus around 0.3 — local density hot spots near macro pin clusters that no global parameter can smooth out.
-- A design that closes on `asap7`/`nangate45` but stalls on `sky130hd` solely because the same macro geometry creates routing bottlenecks at the coarser pitch.
-
-**How to act** — this is a structural change to the FakeRAM LEF/LIB set, not a knob in `BUILD.bazel`:
-
-1. Identify the candidate macros from the floorplan placement image and from `6_finish.rpt`'s instance counts.
-2. Decide direction (split / merge / re-shape) based on the table above.  Sky130hd usually benefits from splitting; asap7 from merging.
-3. Generate the new FakeRAM at the target geometry via `/generate-sram` (the skill wraps `bsg_fakeram`).  Place the new LEF/LIB at the platform's `designs/<platform>/<design>/sram/{lef,lib}/` location and update `BUILD.bazel`'s `sram_lefs_*` / `sram_libs_*` filegroups.
-4. **Wrapper Verilog**, not RTL changes.  HighTide's RTL is fixed; if the new geometry doesn't match the original macro interface verbatim, the change goes in a HighTide-side **wrapper** under `designs/src/<design>/` (a SystemVerilog module that exposes the original interface and instantiates the new geometry internally).  Wrappers are not "design RTL" — they're glue, same category as `pdn.tcl` / `io.tcl`.
-5. Rebuild and compare on the same axes — die area, std-cell utilization, slack, runtime.  If the change regressed Fmax or made closure marginal, revert.
-
-**What to record in DECISIONS.md afterwards:**
-- The old vs new geometry (e.g., "8 × `fakeram_64x16` → 2 × `fakeram_64x64`")
-- Why the change was made (which axis it was trying to improve)
-- The PPA delta vs the prior commit
-- Wrapper module path if one was added
+Reach for this when Step 2 plateaus before timing converges and std-cell utilization is noticeably below `CORE_UTILIZATION` (i.e., the routability bottleneck is the macros, not the std cells).  See `.claude/skills/shared/sram-repartition.md` for the trade-off table, the per-platform direction guide, the 5-step procedure (uses `/generate-sram`), the DECISIONS.md template, and — as a last resort, with explicit user approval — guidance on shrinking a memory.
 
 ## Step 3: Maximize Clock Frequency (Performance Optimization)
 

@@ -127,6 +127,7 @@ tail -200 logs/<platform>/<design>/base/2_*.log
    - Increase `MACRO_PLACE_HALO` (e.g., `6 6` or `8 8`)
    - Lower `CORE_UTILIZATION` or increase die area — macros + std cells may not fit
    - Consider explicit `DIE_AREA` and `CORE_AREA` instead of utilization-based sizing
+   - **If the design has many FakeRAM macros and platform-knob tuning isn't unsticking it**, consider repartitioning the FakeRAM banks for **this platform only** — splitting wide banks into more numerous narrow ones (or merging them) often fixes macro-driven floorplan failures that no halo/density value can.  See `.claude/skills/shared/sram-repartition.md`.
 
 2. **PDN failures**: Power grid cannot be constructed.
    - Check if `pdn.tcl` exists and metal layer names match the platform (M1-M7 for asap7, met1-met5 for sky130hd)
@@ -154,6 +155,7 @@ tail -200 logs/<platform>/<design>/base/3_*.log
    - Look for "Congestion" warnings in the log
    - Generate a placement density and RUDY heatmap (see Step 4)
    - Follow the congestion fix priority in `.claude/skills/shared/congestion-analysis.md`
+   - For macro-heavy designs where local-density hot spots near macro pins are the culprit (GP overflow plateaus around 0.2–0.4), consider repartitioning the FakeRAM banks for **this platform only** — see `.claude/skills/shared/sram-repartition.md`.
 
 ---
 

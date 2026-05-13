@@ -1,0 +1,466 @@
+library(vpu_64x32_3r2w_vpurf) {
+    technology (cmos);
+    delay_model : table_lookup;
+    revision : 1.0;
+    comment : "SRAM";
+    time_unit : "1ns";
+    voltage_unit : "1V";
+    current_unit : "1uA";
+    leakage_power_unit : "1uW";
+    nom_process : 1;
+    nom_temperature : 25.000;
+    nom_voltage : 0.7;
+    capacitive_load_unit (1,pf);
+    pulling_resistance_unit : "1kohm";
+    operating_conditions(tt_1.0_25.0) {
+        process : 1;
+        temperature : 25.000;
+        voltage : 0.7;
+        tree_type : balanced_tree;
+    }
+    default_cell_leakage_power : 0;
+    default_fanout_load : 1;
+    default_inout_pin_cap : 0.0;
+    default_input_pin_cap : 0.0;
+    default_output_pin_cap : 0.0;
+    default_max_transition : 0.227;
+    default_operating_conditions : tt_1.0_25.0;
+    default_leakage_power_density : 0.0;
+    slew_derate_from_library : 1.000;
+    slew_lower_threshold_pct_fall : 20.000;
+    slew_upper_threshold_pct_fall : 80.000;
+    slew_lower_threshold_pct_rise : 20.000;
+    slew_upper_threshold_pct_rise : 80.000;
+    input_threshold_pct_fall : 50.000;
+    input_threshold_pct_rise : 50.000;
+    output_threshold_pct_fall : 50.000;
+    output_threshold_pct_rise : 50.000;
+    lu_table_template(vpu_64x32_3r2w_vpurf_delay_template) {
+        variable_1 : input_net_transition;
+        variable_2 : total_output_net_capacitance;
+        index_1 ("1000, 1001");
+        index_2 ("1000, 1001");
+    }
+    lu_table_template(vpu_64x32_3r2w_vpurf_slew_template) {
+        variable_1 : total_output_net_capacitance;
+        index_1 ("1000, 1001");
+    }
+    lu_table_template(vpu_64x32_3r2w_vpurf_constraint_template) {
+        variable_1 : related_pin_transition;
+        variable_2 : constrained_pin_transition;
+        index_1 ("1000, 1001");
+        index_2 ("1000, 1001");
+    }
+    library_features(report_delay_calculation);
+    type (vpu_64x32_3r2w_vpurf_WR_ADDR0) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 6;
+        bit_from : 5;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    type (vpu_64x32_3r2w_vpurf_WR_DATA0) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 32;
+        bit_from : 31;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    type (vpu_64x32_3r2w_vpurf_WR_ADDR1) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 6;
+        bit_from : 5;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    type (vpu_64x32_3r2w_vpurf_WR_DATA1) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 32;
+        bit_from : 31;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    type (vpu_64x32_3r2w_vpurf_RD_ADDR0) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 6;
+        bit_from : 5;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    type (vpu_64x32_3r2w_vpurf_RD_ADDR1) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 6;
+        bit_from : 5;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    type (vpu_64x32_3r2w_vpurf_RD_ADDR2) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 6;
+        bit_from : 5;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    type (vpu_64x32_3r2w_vpurf_RD_DATA0) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 32;
+        bit_from : 31;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    type (vpu_64x32_3r2w_vpurf_RD_DATA1) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 32;
+        bit_from : 31;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    type (vpu_64x32_3r2w_vpurf_RD_DATA2) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 32;
+        bit_from : 31;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    cell(vpu_64x32_3r2w_vpurf) {
+        area : 922.838;
+        interface_timing : true;
+        memory() {
+            type : ram;
+            address_width : 6;
+            word_width : 32;
+        }
+        pin(clk) {
+            direction : input;
+            capacitance : 0.025;
+            clock : true;
+            min_period : 0.157 ;
+        }
+        pin(wr_enable0) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        bus(wr_addr0) {
+            bus_type : vpu_64x32_3r2w_vpurf_WR_ADDR0 ;
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        bus(wr_data0) {
+            bus_type : vpu_64x32_3r2w_vpurf_WR_DATA0 ;
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        pin(wr_enable1) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        bus(wr_addr1) {
+            bus_type : vpu_64x32_3r2w_vpurf_WR_ADDR1 ;
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        bus(wr_data1) {
+            bus_type : vpu_64x32_3r2w_vpurf_WR_DATA1 ;
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        pin(rd_enable0) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        bus(rd_addr0) {
+            bus_type : vpu_64x32_3r2w_vpurf_RD_ADDR0 ;
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        pin(rd_enable1) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        bus(rd_addr1) {
+            bus_type : vpu_64x32_3r2w_vpurf_RD_ADDR1 ;
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        pin(rd_enable2) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        bus(rd_addr2) {
+            bus_type : vpu_64x32_3r2w_vpurf_RD_ADDR2 ;
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(vpu_64x32_3r2w_vpurf_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        bus(rd_data0) {
+            bus_type : vpu_64x32_3r2w_vpurf_RD_DATA0;
+            direction : output;
+            max_capacitance : 0.500;
+            memory_read() {
+                address : addr;
+            }
+            timing() {
+                related_pin : "clk" ;
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_64x32_3r2w_vpurf_delay_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.005, 0.500");
+                    values ("0.218, 0.218", "0.218, 0.218");
+                }
+                cell_fall(vpu_64x32_3r2w_vpurf_delay_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.005, 0.500");
+                    values ("0.218, 0.218", "0.218, 0.218");
+                }
+                rise_transition(vpu_64x32_3r2w_vpurf_slew_template) {
+                    index_1 ("0.005, 0.500");
+                    values ("0.009, 0.227");
+                }
+                fall_transition(vpu_64x32_3r2w_vpurf_slew_template) {
+                    index_1 ("0.005, 0.500");
+                    values ("0.009, 0.227");
+                }
+            }
+        }
+        bus(rd_data1) {
+            bus_type : vpu_64x32_3r2w_vpurf_RD_DATA1;
+            direction : output;
+            max_capacitance : 0.500;
+            memory_read() {
+                address : addr;
+            }
+            timing() {
+                related_pin : "clk" ;
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_64x32_3r2w_vpurf_delay_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.005, 0.500");
+                    values ("0.218, 0.218", "0.218, 0.218");
+                }
+                cell_fall(vpu_64x32_3r2w_vpurf_delay_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.005, 0.500");
+                    values ("0.218, 0.218", "0.218, 0.218");
+                }
+                rise_transition(vpu_64x32_3r2w_vpurf_slew_template) {
+                    index_1 ("0.005, 0.500");
+                    values ("0.009, 0.227");
+                }
+                fall_transition(vpu_64x32_3r2w_vpurf_slew_template) {
+                    index_1 ("0.005, 0.500");
+                    values ("0.009, 0.227");
+                }
+            }
+        }
+        bus(rd_data2) {
+            bus_type : vpu_64x32_3r2w_vpurf_RD_DATA2;
+            direction : output;
+            max_capacitance : 0.500;
+            memory_read() {
+                address : addr;
+            }
+            timing() {
+                related_pin : "clk" ;
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_64x32_3r2w_vpurf_delay_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.005, 0.500");
+                    values ("0.218, 0.218", "0.218, 0.218");
+                }
+                cell_fall(vpu_64x32_3r2w_vpurf_delay_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.005, 0.500");
+                    values ("0.218, 0.218", "0.218, 0.218");
+                }
+                rise_transition(vpu_64x32_3r2w_vpurf_slew_template) {
+                    index_1 ("0.005, 0.500");
+                    values ("0.009, 0.227");
+                }
+                fall_transition(vpu_64x32_3r2w_vpurf_slew_template) {
+                    index_1 ("0.005, 0.500");
+                    values ("0.009, 0.227");
+                }
+            }
+        }
+    }
+}

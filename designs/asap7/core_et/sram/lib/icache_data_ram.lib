@@ -1,0 +1,199 @@
+library(icache_data_ram) {
+    technology (cmos);
+    delay_model : table_lookup;
+    revision : 1.0;
+    comment : "SRAM";
+    time_unit : "1ns";
+    voltage_unit : "1V";
+    current_unit : "1uA";
+    leakage_power_unit : "1uW";
+    nom_process : 1;
+    nom_temperature : 25.000;
+    nom_voltage : 0.7;
+    capacitive_load_unit (1,pf);
+    pulling_resistance_unit : "1kohm";
+    operating_conditions(tt_1.0_25.0) {
+        process : 1;
+        temperature : 25.000;
+        voltage : 0.7;
+        tree_type : balanced_tree;
+    }
+    default_cell_leakage_power : 0;
+    default_fanout_load : 1;
+    default_inout_pin_cap : 0.0;
+    default_input_pin_cap : 0.0;
+    default_output_pin_cap : 0.0;
+    default_max_transition : 0.227;
+    default_operating_conditions : tt_1.0_25.0;
+    default_leakage_power_density : 0.0;
+    slew_derate_from_library : 1.000;
+    slew_lower_threshold_pct_fall : 20.000;
+    slew_upper_threshold_pct_fall : 80.000;
+    slew_lower_threshold_pct_rise : 20.000;
+    slew_upper_threshold_pct_rise : 80.000;
+    input_threshold_pct_fall : 50.000;
+    input_threshold_pct_rise : 50.000;
+    output_threshold_pct_fall : 50.000;
+    output_threshold_pct_rise : 50.000;
+    lu_table_template(icache_data_ram_delay_template) {
+        variable_1 : input_net_transition;
+        variable_2 : total_output_net_capacitance;
+        index_1 ("1000, 1001");
+        index_2 ("1000, 1001");
+    }
+    lu_table_template(icache_data_ram_slew_template) {
+        variable_1 : total_output_net_capacitance;
+        index_1 ("1000, 1001");
+    }
+    lu_table_template(icache_data_ram_constraint_template) {
+        variable_1 : related_pin_transition;
+        variable_2 : constrained_pin_transition;
+        index_1 ("1000, 1001");
+        index_2 ("1000, 1001");
+    }
+    library_features(report_delay_calculation);
+    type (icache_data_ram_ADDR) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 9;
+        bit_from : 8;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    type (icache_data_ram_DIN) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 144;
+        bit_from : 143;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    type (icache_data_ram_DOUT) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 144;
+        bit_from : 143;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    cell(icache_data_ram) {
+        area : 5895.081;
+        interface_timing : true;
+        memory() {
+            type : ram;
+            address_width : 9;
+            word_width : 144;
+        }
+        pin(clk) {
+            direction : input;
+            capacitance : 0.025;
+            clock : true;
+            min_period : 0.157 ;
+        }
+        pin(ce) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(icache_data_ram_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(icache_data_ram_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        pin(we) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(icache_data_ram_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(icache_data_ram_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        bus(addr) {
+            bus_type : icache_data_ram_ADDR ;
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(icache_data_ram_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(icache_data_ram_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        bus(din) {
+            bus_type : icache_data_ram_DIN ;
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : clk;
+                timing_type : setup_rising ;
+                rise_constraint(icache_data_ram_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+                fall_constraint(icache_data_ram_constraint_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.009, 0.227");
+                    values ("0.050, 0.050", "0.050, 0.050");
+                }
+            }
+        }
+        bus(dout) {
+            bus_type : icache_data_ram_DOUT;
+            direction : output;
+            max_capacitance : 0.500;
+            memory_read() {
+                address : addr;
+            }
+            timing() {
+                related_pin : "clk" ;
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(icache_data_ram_delay_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.005, 0.500");
+                    values ("0.218, 0.218", "0.218, 0.218");
+                }
+                cell_fall(icache_data_ram_delay_template) {
+                    index_1 ("0.009, 0.227");
+                    index_2 ("0.005, 0.500");
+                    values ("0.218, 0.218", "0.218, 0.218");
+                }
+                rise_transition(icache_data_ram_slew_template) {
+                    index_1 ("0.005, 0.500");
+                    values ("0.009, 0.227");
+                }
+                fall_transition(icache_data_ram_slew_template) {
+                    index_1 ("0.005, 0.500");
+                    values ("0.009, 0.227");
+                }
+            }
+        }
+    }
+}

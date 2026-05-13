@@ -1,0 +1,123 @@
+# ESR *_auto.v files are `include'd inside their parent modules; they must NOT
+# appear in the top-level RTL glob but must be accessible via include paths.
+_ESR_AUTO_REL = [
+    "rtl/shire/esr/esr_cache_bank_auto.v",
+    "rtl/shire/esr/esr_ddrc_auto.v",
+    "rtl/shire/esr/esr_memshire_auto.v",
+    "rtl/shire/esr/esr_neigh_auto.v",
+    "rtl/shire/esr/esr_rbox_auto.v",
+    "rtl/shire/esr/esr_shire_other_auto.v",
+    "rtl/shire/esr/esr_spio_auto.v",
+]
+
+_ESR_AUTO_DEV = [
+    "dev/repo/rtl/shire/esr/esr_cache_bank_auto.v",
+    "dev/repo/rtl/shire/esr/esr_ddrc_auto.v",
+    "dev/repo/rtl/shire/esr/esr_memshire_auto.v",
+    "dev/repo/rtl/shire/esr/esr_neigh_auto.v",
+    "dev/repo/rtl/shire/esr/esr_rbox_auto.v",
+    "dev/repo/rtl/shire/esr/esr_shire_other_auto.v",
+    "dev/repo/rtl/shire/esr/esr_spio_auto.v",
+]
+
+# CSR auto file is `include'd inside intpipe_csr_file.v
+_CSR_AUTO_REL = [
+    "rtl/shire/minion/intpipe/csr/intpipe_csr_file_auto.v",
+]
+
+_CSR_AUTO_DEV = [
+    "dev/repo/rtl/shire/minion/intpipe/csr/intpipe_csr_file_auto.v",
+]
+
+# Macro files replaced by FakeRAM LEF/LIB stubs
+_FAKERAM_MACROS_REL = [
+    "rtl/libs/macros/icache_data_ram.v",
+    "rtl/libs/macros/dcache_128x32_1r1w_lram.v",
+    "rtl/libs/macros/icache_tag_data_array.v",
+    "rtl/libs/macros/icache_lru_state_array.v",
+    "rtl/libs/macros/vpu_64x32_3r2w_vpurf.v",
+    "rtl/libs/macros/vpu_tensorc_rf_buffer_array.v",
+]
+
+_FAKERAM_MACROS_DEV = [
+    "dev/repo/rtl/libs/macros/icache_data_ram.v",
+    "dev/repo/rtl/libs/macros/dcache_128x32_1r1w_lram.v",
+    "dev/repo/rtl/libs/macros/icache_tag_data_array.v",
+    "dev/repo/rtl/libs/macros/icache_lru_state_array.v",
+    "dev/repo/rtl/libs/macros/vpu_64x32_3r2w_vpurf.v",
+    "dev/repo/rtl/libs/macros/vpu_tensorc_rf_buffer_array.v",
+]
+
+# Release RTL: pre-patched SV/V tree committed under rtl/.
+# Patch history: synthesis.patch — adds ifndef guards to fp_types.vh +
+# tbox_types.vh, adds `include "soc_defines.vh" to 6 lib files, and creates
+# tbox_ifs.sv to instantiate TBOX SV interfaces exactly once.
+filegroup(
+    name = "rtl_release",
+    srcs = glob(
+        [
+            "rtl/**/*.v",
+            "rtl/**/*.sv",
+        ],
+        exclude =
+            _ESR_AUTO_REL +
+            _CSR_AUTO_REL +
+            _FAKERAM_MACROS_REL + [
+                # Code-generation scripts, not synthesisable RTL
+                "rtl/shire/esr/scripts/**",
+                # Older 6-stage FMA (synthesis uses txfma_7s)
+                "rtl/shire/minion/vpu/txfma_6s/**",
+                # DPI-C simulation-only stub (not for synthesis)
+                "rtl/shire/minion/vpu/txfma_top_fake.v",
+            ],
+    ) + [":stubs"],
+    visibility = ["//visibility:public"],
+)
+
+# Dev RTL: requires git submodule update --init + bash dev/setup.sh first.
+filegroup(
+    name = "rtl_dev",
+    srcs = glob(
+        [
+            "dev/repo/rtl/**/*.v",
+            "dev/repo/rtl/**/*.sv",
+        ],
+        exclude =
+            _ESR_AUTO_DEV +
+            _CSR_AUTO_DEV +
+            _FAKERAM_MACROS_DEV + [
+                "dev/repo/rtl/shire/esr/scripts/**",
+                "dev/repo/rtl/shire/minion/vpu/txfma_6s/**",
+                "dev/repo/rtl/shire/minion/vpu/txfma_top_fake.v",
+            ],
+        allow_empty = True,
+    ) + [":stubs"],
+    visibility = ["//visibility:public"],
+)
+
+# FakeRAM blackbox stubs — empty port-only module declarations so yosys
+# treats them as external black-box cells.
+filegroup(
+    name = "stubs",
+    srcs = ["stubs.v"],
+)
+
+# Include files for the synthesis sandbox: .vh headers plus the `include'd
+# auto-generated .v snippets that live in the ESR and CSR directories.
+filegroup(
+    name = "rtl_data",
+    srcs = select({
+        "//:update_rtl": glob(["dev/repo/rtl/inc/**/*.vh"], allow_empty = True) + _ESR_AUTO_DEV + _CSR_AUTO_DEV,
+        "//conditions:default": glob(["rtl/inc/**/*.vh"]) + _ESR_AUTO_REL + _CSR_AUTO_REL,
+    }),
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "rtl",
+    actual = select({
+        "//:update_rtl": ":rtl_dev",
+        "//conditions:default": ":rtl_release",
+    }),
+    visibility = ["//visibility:public"],
+)

@@ -56,3 +56,7 @@
 [submodule "designs/src/litepci/dev/repo"]
 	path = designs/src/litepci/dev/repo
 	url = https://github.com/enjoy-digital/litepcie.git
+[submodule "designs/src/core_et/dev/repo"]
+	path = designs/src/core_et/dev/repo
+	url = https://github.com/openhwgroup/core-et
+	branch = erbium

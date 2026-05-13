@@ -1,0 +1,54 @@
+load("//:defs.bzl", "hightide_design")
+
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
+# Include path string for yosys-slang. Both release (rtl/) and dev
+# (dev/repo/rtl/) paths are listed — yosys-slang ignores non-existent dirs,
+# so only the set staged via stage_data will resolve.
+_INCLUDE_DIRS = " ".join([
+    "designs/src/core_et/rtl/inc",
+    "designs/src/core_et/rtl/shire/esr",
+    "designs/src/core_et/rtl/shire/minion/intpipe/csr",
+    "designs/src/core_et/dev/repo/rtl/inc",
+    "designs/src/core_et/dev/repo/rtl/shire/esr",
+    "designs/src/core_et/dev/repo/rtl/shire/minion/intpipe/csr",
+])
+
+hightide_design(
+    name = "core_et",
+    top = "cpu_subsystem_top",
+    platform = "asap7",
+    verilog_files = ["//designs/src/core_et:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "CORE_UTILIZATION": "40",
+        "CORE_ASPECT_RATIO": "1",
+        "CORE_MARGIN": "4",
+        "PLACE_DENSITY": "0.60",
+        "TNS_END_PERCENT": "100",
+        "SYNTH_HDL_FRONTEND": "slang",
+        "SYNTH_HIERARCHICAL": "1",
+        "SYNTH_MINIMUM_KEEP_SIZE": "500",
+        "SYNTH_MEMORY_MAX_BITS": "4096",
+        "VERILOG_DEFINES": "-D ENABLE_VERILATOR_MODEL",
+        "VERILOG_INCLUDE_DIRS": _INCLUDE_DIRS,
+        "SYNTH_SLANG_ARGS": "--single-unit",
+        "MACRO_PLACE_HALO": "5 5",
+        "ABC_AREA": "1",
+    },
+    stage_data = {
+        "synth": ["//designs/src/core_et:rtl_data"],
+    },
+)

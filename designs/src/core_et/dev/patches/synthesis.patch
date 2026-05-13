@@ -1,0 +1,145 @@
+diff --git a/rtl/inc/fp_types.vh b/rtl/inc/fp_types.vh
+index e5bc0ee..b2298cb 100644
+--- a/rtl/inc/fp_types.vh
++++ b/rtl/inc/fp_types.vh
+@@ -1,6 +1,9 @@
+ // Copyright (c) 2026 Ainekko
+ // SPDX-License-Identifier: Apache-2.0
+ 
++`ifndef _FP_TYPES_VH_
++`define _FP_TYPES_VH_
++
+ ////////////////////////////////////////////////////////////////////////////////
+ // ENUMS
+ ////////////////////////////////////////////////////////////////////////////////
+@@ -35,4 +38,5 @@ typedef struct packed {
+   logic [`FLOAT32_M-1:0] m;
+ } float32_t;
+ 
++`endif // _FP_TYPES_VH_
+ 
+diff --git a/rtl/inc/tbox_types.vh b/rtl/inc/tbox_types.vh
+index d10dedf..e2bc709 100644
+--- a/rtl/inc/tbox_types.vh
++++ b/rtl/inc/tbox_types.vh
+@@ -1,6 +1,9 @@
+ // Copyright (c) 2026 Ainekko
+ // SPDX-License-Identifier: Apache-2.0
+ 
++`ifndef _TBOX_TYPES_VH_
++`define _TBOX_TYPES_VH_
++
+ typedef struct packed{
+     logic [10:0]    data;
+     logic [7:0]     id;
+@@ -556,9 +559,11 @@ typedef struct packed{
+     logic [LOD_SZ_FRAC-1:0] mip_beta_inv;
+ } triliniear_conf_t;
+ 
+-// `ifndef _TBOX_IFS_
+-//  `define _TBOX_IFS_
+-// and allow some of the previous structs to be used as read/ready interfaces
++`endif // _TBOX_TYPES_VH_
++
++// Interface macros. Interfaces are instantiated in tbox_ifs.sv (compiled
++// once as a source file) to avoid duplicate-definition errors when this
++// header is included by multiple compilation units.
+ `define ENQIO_IF(if_name, bits_type) \
+ interface if_name; \
+    logic valid; \
+@@ -577,29 +582,3 @@ interface if_name; \
+    modport master (output  valid, output bits);  \
+    modport slave (input  valid, input bits);  \
+ endinterface
+-
+-//`endif
+-
+-localparam IMG_INFO_TABLE_WIDTH = $bits(imageInformationTableEntry_t);
+-localparam VADDR_MEM_WIDTH = $bits(imageInformationVaddressEntry_t);
+-
+-`ENQIO_IF(sample_request_if, sample_request_t)
+-`ENQIO_IF(addressInTableOutIO_if, addressInTableOutIO_t)
+-`ENQIO_IF(addressOutIO_if, addressOutIO_t)
+-`ENQIO_IF(futureTagsDataIO_if, futureTagsDataIO_t)
+-`ENQIO_IF(decompressL2IO_if, decompressL2IO_t)
+-`ENQIO_IF(imageInformationL2Req_if, logic [PA_SIZE_TBOX-1:0])
+-`VALID_IF(imageInformationL2Rep_if, logic [MEM_ENTRY_SZ-1:0])
+-`ENQIO_IF(imageInformationRdRep_if, logic [IMG_INFO_TABLE_WIDTH+ENTRY_IDX_SZ-1:0])
+-`ENQIO_IF(l2ReorderFifo_req_if, l2ReorderFifo_req_t)
+-`VALID_IF(l2ReorderFifo_rep_if, l2ReorderFifo_rep_t)
+-`ENQIO_IF(virtualAddressL2IO_if, virtualAddressL2IO_t)
+-`ENQIO_IF(futureTagsVirtualAddressIO_if, futureTagsVirtualAddressIO_t)
+-`VALID_IF(imageInformationVAddrIO_if, imageInformationVAddrIO_t)
+-`VALID_IF(addressInIO_if, addressInIO_t)
+-`ENQIO_IF(cacheDataL2IO_if, logic [TEX_L1_DATA_SZ-1:0])
+-`ENQIO_IF(tmuxInIO_if, tmuxInIO_t)
+-`ENQIO_IF(tmuxOutIO_if, tmuxOutIO_t)
+-`VALID_IF(addressAckOut_if, addressAckOut_t)
+-`ENQIO_IF(pixelAccumOutIO_if, pixelAccumOutIO_t)
+-`ENQIO_IF(blenderOutIO_if, blenderOutIO_t)
+diff --git a/rtl/libs/arbiters/arb_prio_data_held.v b/rtl/libs/arbiters/arb_prio_data_held.v
+index 4ca852d..8a68b91 100644
+--- a/rtl/libs/arbiters/arb_prio_data_held.v
++++ b/rtl/libs/arbiters/arb_prio_data_held.v
+@@ -1,5 +1,6 @@
+ // Copyright (c) 2026 Ainekko
+ // SPDX-License-Identifier: Apache-2.0
++`include "soc_defines.vh"
+ 
+ // This module implements an arbiter, giving priority to the highest index
+ 
+diff --git a/rtl/libs/arbiters/rr_sel.v b/rtl/libs/arbiters/rr_sel.v
+index b1173f2..fb88e4c 100644
+--- a/rtl/libs/arbiters/rr_sel.v
++++ b/rtl/libs/arbiters/rr_sel.v
+@@ -1,5 +1,6 @@
+ // Copyright (c) 2026 Ainekko
+ // SPDX-License-Identifier: Apache-2.0
++`include "soc_defines.vh"
+ 
+ // This module implements selection for a round robin queue
+ module rr_sel
+diff --git a/rtl/libs/mems_and_fifos/apb_cdc.v b/rtl/libs/mems_and_fifos/apb_cdc.v
+index f9ae066..eee9a5d 100644
+--- a/rtl/libs/mems_and_fifos/apb_cdc.v
++++ b/rtl/libs/mems_and_fifos/apb_cdc.v
+@@ -1,5 +1,6 @@
+ // Copyright (c) 2026 Ainekko
+ // SPDX-License-Identifier: Apache-2.0
++`include "soc_defines.vh"
+ 
+ 
+ module apb_cdc 
+diff --git a/rtl/libs/mems_and_fifos/signals_cdc.v b/rtl/libs/mems_and_fifos/signals_cdc.v
+index 0d82a75..7f34d78 100644
+--- a/rtl/libs/mems_and_fifos/signals_cdc.v
++++ b/rtl/libs/mems_and_fifos/signals_cdc.v
+@@ -1,5 +1,6 @@
+ // Copyright (c) 2026 Ainekko
+ // SPDX-License-Identifier: Apache-2.0
++`include "soc_defines.vh"
+ 
+ 
+ module signals_cdc 
+diff --git a/rtl/libs/registers/apb_ff.v b/rtl/libs/registers/apb_ff.v
+index 6569764..e7ce7ef 100644
+--- a/rtl/libs/registers/apb_ff.v
++++ b/rtl/libs/registers/apb_ff.v
+@@ -1,5 +1,6 @@
+ // Copyright (c) 2026 Ainekko
+ // SPDX-License-Identifier: Apache-2.0
++`include "soc_defines.vh"
+ 
+ 
+ //------------------------------------------------------------------------------
+diff --git a/rtl/libs/registers/en_ff_gated_struct.v b/rtl/libs/registers/en_ff_gated_struct.v
+index bfa3588..d632af9 100644
+--- a/rtl/libs/registers/en_ff_gated_struct.v
++++ b/rtl/libs/registers/en_ff_gated_struct.v
+@@ -1,5 +1,6 @@
+ // Copyright (c) 2026 Ainekko
+ // SPDX-License-Identifier: Apache-2.0
++`include "soc_defines.vh"
+ 
+ module en_ff_gated_struct #(
+    parameter WIDTH = 8,

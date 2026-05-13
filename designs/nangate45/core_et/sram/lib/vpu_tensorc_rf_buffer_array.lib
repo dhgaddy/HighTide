@@ -1,0 +1,1452 @@
+library(vpu_tensorc_rf_buffer_array) {
+    technology (cmos);
+    delay_model : table_lookup;
+    revision : 1.0;
+    date : "2025-01-01 00:00:00Z";
+    comment : "SRAM";
+    time_unit : "1ns";
+    voltage_unit : "1V";
+    current_unit : "1uA";
+    leakage_power_unit : "1uW";
+    pulling_resistance_unit : "1kohm";
+    capacitive_load_unit (1,pf);
+    nom_process : 1.0;
+    nom_temperature : 25.0;
+    nom_voltage : 1.1;
+    operating_conditions(tt_1.0_25.0) {
+        process : 1.0;
+        temperature : 25.0;
+        voltage : 1.1;
+        tree_type : balanced_tree;
+    }
+    default_operating_conditions : tt_1.0_25.0;
+    lu_table_template(vpu_tensorc_rf_buffer_array_delay) {
+        variable_1 : input_net_transition;
+        variable_2 : total_output_net_capacitance;
+        index_1 ("0.010, 0.100");
+        index_2 ("0.0005, 0.500");
+    }
+    lu_table_template(vpu_tensorc_rf_buffer_array_slew) {
+        variable_1 : total_output_net_capacitance;
+        index_1 ("0.0005, 0.500");
+    }
+    cell(vpu_tensorc_rf_buffer_array) {
+        area : 3467.310;
+        interface_timing : true;
+        pg_pin(VDD) { voltage_name : VDD; pg_type : primary_power; }
+        pg_pin(VSS) { voltage_name : VSS; pg_type : primary_ground; }
+        pin(clk) {
+            direction : input;
+            capacitance : 0.020;
+            clock : true;
+        }
+        pin(wr_enable) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(rd_enable) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_addr[0]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_addr[1]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_addr[2]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_addr[3]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[0]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[1]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[2]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[3]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[4]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[5]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[6]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[7]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[8]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[9]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[10]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[11]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[12]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[13]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[14]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[15]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[16]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[17]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[18]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[19]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[20]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[21]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[22]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[23]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[24]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[25]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[26]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[27]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[28]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[29]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[30]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(wr_data[31]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(rd_addr[0]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(rd_addr[1]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(rd_addr[2]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(rd_addr[3]) {
+            direction : input;
+            capacitance : 0.005;
+            timing() {
+                related_pin : "clk";
+                timing_type : setup_rising;
+                rise_constraint(scalar) { values("0.100"); }
+                fall_constraint(scalar) { values("0.100"); }
+            }
+            timing() {
+                related_pin : "clk";
+                timing_type : hold_rising;
+                rise_constraint(scalar) { values("0.050"); }
+                fall_constraint(scalar) { values("0.050"); }
+            }
+        }
+        pin(rd_data[0]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[1]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[2]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[3]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[4]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[5]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[6]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[7]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[8]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[9]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[10]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[11]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[12]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[13]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[14]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[15]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[16]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[17]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[18]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[19]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[20]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[21]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[22]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[23]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[24]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[25]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[26]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[27]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[28]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[29]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[30]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+        pin(rd_data[31]) {
+            direction : output;
+            max_capacitance : 0.500;
+            timing() {
+                related_pin : "clk";
+                timing_type : rising_edge;
+                timing_sense : non_unate;
+                cell_rise(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                cell_fall(vpu_tensorc_rf_buffer_array_delay) {
+                    index_1 ("0.010, 0.100"); index_2 ("0.0005, 0.500");
+                    values("0.200, 0.800", "0.250, 0.850");
+                }
+                rise_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+                fall_transition(vpu_tensorc_rf_buffer_array_slew) {
+                    index_1 ("0.0005, 0.500"); values("0.015, 0.300");
+                }
+            }
+        }
+    }
+}

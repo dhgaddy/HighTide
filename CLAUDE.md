@@ -70,9 +70,9 @@ Dev mode requires: `git submodule update --init designs/src/<design>/dev/repo` b
 
 | Platform | Node | Designs |
 |----------|------|---------|
-| asap7 | 7nm academic | coralnpu, gemmini, lfsr, litedram, minimax, sha3, vortex, liteeth_udp_usp_gth_sgmii, NVDLA (partitions a/c/m/o/p), bp_processor (bp_uno, bp_quad), cnn, floonoc, NyuziProcessor, snitch_cluster |
-| nangate45 | 45nm | coralnpu, gemmini, lfsr, litedram, minimax, NyuziProcessor, sha3, liteeth_udp_usp_gth_sgmii, bp_processor (bp_uno, bp_quad), cnn |
-| sky130hd | 130nm open | gemmini, lfsr, litedram, minimax, sha3, liteeth_udp_usp_gth_sgmii, cnn |
+| asap7 | 7nm academic | coralnpu, core_et, gemmini, lfsr, litedram, minimax, sha3, vortex, liteeth_udp_usp_gth_sgmii, NVDLA (partitions a/c/m/o/p), bp_processor (bp_uno, bp_quad), cnn, floonoc, NyuziProcessor, snitch_cluster |
+| nangate45 | 45nm | coralnpu, core_et, gemmini, lfsr, litedram, minimax, NyuziProcessor, sha3, liteeth_udp_usp_gth_sgmii, bp_processor (bp_uno, bp_quad), cnn |
+| sky130hd | 130nm open | core_et, gemmini, lfsr, litedram, minimax, sha3, liteeth_udp_usp_gth_sgmii, cnn |
 
 #### Build status (as of 2026-05-11)
 
@@ -82,9 +82,9 @@ Designs reaching `_final` (cached on remote build cache):
 - **sky130hd**: gemmini, lfsr, litedram, minimax, sha3, liteeth_udp_usp_gth_sgmii, NVDLA partitions a/m/o/p
 
 Not yet finishing (not cached):
-- **asap7**: cnn, floonoc, NyuziProcessor, snitch_cluster, bp_processor (bp_uno, bp_quad), NVDLA partitions c, p
-- **nangate45**: cnn, bp_processor (bp_uno, bp_quad)
-- **sky130hd**: cnn, NVDLA partition c
+- **asap7**: core_et (synth only, not yet fully flowed), cnn, floonoc, NyuziProcessor, snitch_cluster, bp_processor (bp_uno, bp_quad), NVDLA partitions c, p
+- **nangate45**: core_et (synth only), cnn, bp_processor (bp_uno, bp_quad)
+- **sky130hd**: core_et (synth only), cnn, NVDLA partition c
 
 `sky130hd/NVDLA/partition_c` global placement plateaus at overflow ~0.31 (target 0.10) — 84 macros at sky130hd's coarse pitches create local density hot spots near macro pin clusters that the placer can't smooth out. Loosening `CORE_UTILIZATION` / `PLACE_DENSITY_LB_ADDON` / `MACRO_PLACE_HALO` to match working partitions doesn't fix it. Likely needs a manual `macros.tcl` to spread the 84 SRAMs into a regular grid.
 
@@ -106,6 +106,7 @@ SRAM LEF/LIB files are organized per-platform:
 - `designs/<platform>/NyuziProcessor/sram/{lef,lib}/` — NyuziProcessor memories
 - `designs/<platform>/liteeth/sram/{lef,lib}/` — liteeth memories (`fakeram_1rw1r_64w64d` + `fakeram_1rw1r_64w1024d`)
 - `designs/asap7/bp_processor/sram/{lef,lib}/` — bp_processor memories
+- `designs/{asap7,nangate45,sky130hd}/core_et/sram/{lef,lib}/` — core_et memories (nangate45/sky130hd regenerable via `designs/src/core_et/dev/gen_fakeram.py {nangate45|sky130hd}`)
 - `designs/src/cnn/fakeram_*.{lef,lib}` — CNN asap7 memories (shared with src dir)
 - `designs/{nangate45,sky130hd}/cnn/sram/{lef,lib}/` — CNN per-platform synthetic FakeRAMs (regenerable via `designs/src/cnn/dev/gen_fakeram_{nangate45,sky130hd}.py`)
 
@@ -128,6 +129,7 @@ Designs in this repo carry workarounds for upstream tool bugs. Update this table
 | **yosys-slang** phantom 1'x drivers on interface-array modport ports — extra driver wins at `opt_clean`, real driver silently dropped | asap7 `vortex` | Bumped `yosys-slang` 4e53d77 → eabdfd1 (vendored via `MODULE.bazel`) | `cb488bea` | [yosys-slang#304](https://github.com/povik/yosys-slang/issues/304) |
 | **`repair_timing` non-convergence** — repair loop spends iterations on the same RTL-bounded endpoint without making progress. Not a bug per se, but a flow pathology when the clock target is too tight for the design | asap7 `snitch_cluster`, asap7 `litedram` | `SKIP_INCREMENTAL_REPAIR = 1` to skip post-GRT `repair_timing` | `39ca8670` | None |
 | **LiteX GENSDRPHY `input sdram_dq`** — `litedram/gen.py` declares the bidirectional SDR DQ bus as a plain `input` port (Lattice-platform convention; the tristate buffer lives at the IOB), but the same module instantiates 16 `TRELLIS_IO` cells that internally drive the port via OE-gated logic. yosys' `check -assert -mapped` sees the conflict and aborts synth on all 3 platforms | asap7/nangate45/sky130hd `litedram` | Patch `litedram_core.v` to make `sdram_dq` an `inout` port (`patch/litedram_core.patch`). Combined with `SYNTH_HIERARCHICAL = 1` so abc keeps each `TRELLIS_IO` as a hierarchy boundary | (this PR) | None (LiteX `gen.py:870` carries a `# FIXME: Allow other Vendors.` note) |
+| **yosys-slang `--single-unit` required (VCS-style design)** — CORE-ET was written for VCS single-compilation-unit synthesis; ~114/434 source files carry no include directives and rely on macros being set up by earlier files in the same unit. In per-file mode (default), `tbox_types.vh` also instantiates SV interfaces at file scope, producing duplicate global interface definitions across every source file that transitively includes it. | asap7/nangate45/sky130hd `core_et` | `SYNTH_SLANG_ARGS = "--single-unit"`; move SV interface instantiation calls from `tbox_types.vh` to a dedicated `tbox_ifs.sv` source file; add `ifndef` guards to `fp_types.vh` and the type-definition section of `tbox_types.vh`; add `` `include "soc_defines.vh" `` to 6 lib files that relied on VCS include ordering. Changes captured in `dev/patches/synthesis.patch`, applied by `dev/setup.sh`. | (this PR) | None |
 
 ### Useful ORFS env vars for these workarounds
 

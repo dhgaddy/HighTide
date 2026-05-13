@@ -1203,8 +1203,10 @@ sudo chmod +x /usr/local/bin/bazel</span></code></div>
         <div class="step-num">2</div>
         <div class="step-content">
           <h3>Clone the Repository</h3>
+          <p>Initialize the <code>bazel-orfs</code> submodule after cloning — the build won't resolve targets without it.</p>
           <div class="code-block"><code><span class="cmd">git clone https://github.com/VLSIDA/HighTide.git
-cd HighTide</span></code></div>
+cd HighTide
+git submodule update --init bazel-orfs</span></code></div>
         </div>
       </div>
 

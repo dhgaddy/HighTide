@@ -13,7 +13,7 @@ hightide_design(
         "SYNTH_HDL_FRONTEND": "slang",
         "VERILOG_INCLUDE_DIRS": "designs/src/floonoc/dev/generated/deps/include designs/src/floonoc/dev/generated",
         "VERILOG_DEFINES": "-D VERILATOR",
-        "DIE_AREA": "0 0 250 250",
-        "CORE_AREA": "2 2 248 248",
+        "DIE_AREA": "0 0 165 165",
+        "CORE_AREA": "2 2 163 163",
     },
 )

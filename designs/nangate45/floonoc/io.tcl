@@ -30,7 +30,7 @@ set ver_offset 0.095 ;# metal6 x_offset
 set ver_pitch  0.28  ;# metal6 x_pitch
 
 set edge_margin 5.0      ;# distance from die edge (well > pin width / 2)
-set end_margin  5.0      ;# distance from corner along the edge
+set end_margin  15.0      ;# distance from corner along the edge
 
 proc bus_pins {name high {low 0}} {
     set pins {}
@@ -59,10 +59,12 @@ proc place_pins_on_edge {edge layer pins} {
             set lo [expr {$ly + $sm}]
             set hi [expr {$uy - $sm}]
             for {set i 0} {$i < $n} {incr i} {
+                set name [lindex $pins $i]
+                if {$name eq "__SKIP__"} continue
                 set frac [expr {($i + 0.5) / double($n)}]
                 set raw_y [expr {$lo + $frac * ($hi - $lo)}]
                 set y [snap $raw_y $ho $hp]
-                place_pin -pin_name [lindex $pins $i] -layer $layer \
+                place_pin -pin_name $name -layer $layer \
                     -location [list $fixed_x $y]
             }
         }
@@ -71,10 +73,12 @@ proc place_pins_on_edge {edge layer pins} {
             set lo [expr {$lx + $sm}]
             set hi [expr {$ux - $sm}]
             for {set i 0} {$i < $n} {incr i} {
+                set name [lindex $pins $i]
+                if {$name eq "__SKIP__"} continue
                 set frac [expr {($i + 0.5) / double($n)}]
                 set raw_x [expr {$lo + $frac * ($hi - $lo)}]
                 set x [snap $raw_x $vo $vp]
-                place_pin -pin_name [lindex $pins $i] -layer $layer \
+                place_pin -pin_name $name -layer $layer \
                     -location [list $x $fixed_y]
             }
         }
@@ -100,12 +104,15 @@ set right_pins [concat \
 set bottom_pins [concat \
     [bus_pins hbm_wide_out_rsp_i 2103 1276] \
     [bus_pins hbm_narrow_out_req_o 769 0]]
-# LEFT (bottom → top): wide_rsp[1275..0] then narrow_rsp[319..0] then ctrl
-# ([1275] at bottom-left adjacent to [1276] on bottom edge)
+# LEFT (bottom → top): wide_rsp[1275..0] then narrow_rsp[319..0] then ctrl.
+# 10 __SKIP__ slots before clk_i create a clearance gap that prevents a
+# Metal Spacing DRC between clk_i and hbm_narrow_out_rsp_i[0] at small
+# die sizes (the bus-to-ctrl transition is otherwise the worst-case pair).
 set left_pins [concat \
     [lreverse [bus_pins hbm_wide_out_rsp_i 1275 0]] \
     [lreverse [bus_pins hbm_narrow_out_rsp_i 319 0]] \
-    {clk_i rst_ni test_enable_i}]
+    [lrepeat 10 __SKIP__] \
+    {clk_i __SKIP__ __SKIP__ rst_ni __SKIP__ __SKIP__ test_enable_i}]
 
 place_pins_on_edge top    $ver_layer $top_pins
 place_pins_on_edge right  $hor_layer $right_pins

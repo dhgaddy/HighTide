@@ -17,9 +17,12 @@
 #                  clk_i, rst_ni, test_enable_i (wraparound; not bus-continuous
 #                  with top-left corner — unavoidable since bus indices terminate)
 #
-# Pins are placed 5 um INSIDE the die boundary (not exactly on it) so the
-# pin shape is fully contained — earlier attempts with -force_to_die_boundary
-# triggered GRT-0209 "pin completely outside die" on bigger-pin platforms.
+# Pins are placed 1 um INSIDE the die boundary so the pin shape is fully
+# contained but stays out of the first standard-cell row's met1 power rail
+# region. With edge_margin=5 the bottom met2 pin shapes overlapped the first
+# cell row at y=5.44um, blocking the met2→met3→met4 via stack that connects
+# the row's met1 followpin to the vertical met4 PDN stripes — PSM-0069
+# reported the entire bottom row's VSS as electrically isolated.
 
 # ── asap7 layer config (from platforms/asap7/config.mk + make_tracks.tcl) ──
 set hor_layer  met3    ;# IO_PLACER_H — pins on left/right edges
@@ -29,7 +32,7 @@ set hor_pitch  0.68  ;# met3 y_pitch
 set ver_offset 0.23  ;# met2 x_offset
 set ver_pitch  0.46  ;# met2 x_pitch
 
-set edge_margin 5.0      ;# distance from die edge (well > pin width / 2)
+set edge_margin 1.0      ;# stay in the 5um die-to-core gap, away from cell rows
 set end_margin  5.0      ;# distance from corner along the edge
 
 proc bus_pins {name high {low 0}} {
@@ -59,10 +62,12 @@ proc place_pins_on_edge {edge layer pins} {
             set lo [expr {$ly + $sm}]
             set hi [expr {$uy - $sm}]
             for {set i 0} {$i < $n} {incr i} {
+                set name [lindex $pins $i]
+                if {$name eq "__SKIP__"} continue
                 set frac [expr {($i + 0.5) / double($n)}]
                 set raw_y [expr {$lo + $frac * ($hi - $lo)}]
                 set y [snap $raw_y $ho $hp]
-                place_pin -pin_name [lindex $pins $i] -layer $layer \
+                place_pin -pin_name $name -layer $layer \
                     -location [list $fixed_x $y]
             }
         }
@@ -71,10 +76,12 @@ proc place_pins_on_edge {edge layer pins} {
             set lo [expr {$lx + $sm}]
             set hi [expr {$ux - $sm}]
             for {set i 0} {$i < $n} {incr i} {
+                set name [lindex $pins $i]
+                if {$name eq "__SKIP__"} continue
                 set frac [expr {($i + 0.5) / double($n)}]
                 set raw_x [expr {$lo + $frac * ($hi - $lo)}]
                 set x [snap $raw_x $vo $vp]
-                place_pin -pin_name [lindex $pins $i] -layer $layer \
+                place_pin -pin_name $name -layer $layer \
                     -location [list $x $fixed_y]
             }
         }
@@ -100,11 +107,14 @@ set right_pins [concat \
 set bottom_pins [concat \
     [bus_pins hbm_wide_out_rsp_i 2103 1276] \
     [bus_pins hbm_narrow_out_req_o 769 0]]
-# LEFT (bottom → top): wide_rsp[1275..0] then narrow_rsp[319..0] then ctrl
-# ([1275] at bottom-left adjacent to [1276] on bottom edge)
+# LEFT (bottom → top): wide_rsp[1275..0] then narrow_rsp[319..0] then ctrl.
+# 10 __SKIP__ slots between narrow_rsp[0] and clk_i create a ~10x track gap
+# that eliminates the Metal Spacing DRC violation between clk_i and
+# hbm_narrow_out_rsp_i[0] seen at small die sizes.
 set left_pins [concat \
     [lreverse [bus_pins hbm_wide_out_rsp_i 1275 0]] \
     [lreverse [bus_pins hbm_narrow_out_rsp_i 319 0]] \
+    [lrepeat 10 __SKIP__] \
     {clk_i rst_ni test_enable_i}]
 
 place_pins_on_edge top    $ver_layer $top_pins

@@ -31,6 +31,21 @@ bazel build --define update_rtl=true //designs/asap7/lfsr:lfsr_final
 
 The release RTL is then run through the [OpenROAD-flow-scripts](https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts) RTL-to-GDSII flow: synthesis (Yosys) → floorplan → placement → clock tree synthesis → routing → GDSII output. Each design has per-platform configuration (clock constraints, utilization targets, pin placement) tuned for the target technology node.
 
+## Running a design in upstream ORFS
+
+The Bazel flow is the supported entry point, but every design's
+parameters can be extracted into an ORFS-compatible `config.mk` for
+use with vanilla `OpenROAD-flow-scripts`:
+
+```bash
+tools/bazel_to_config_mk.sh designs/asap7/lfsr > /tmp/lfsr.config.mk
+make -C OpenROAD-flow-scripts/flow DESIGN_CONFIG=$(pwd)/tmp/lfsr.config.mk
+```
+
+The script builds the design through `bazel-orfs` (cached after the
+first run), then unions the per-stage `*.short.mk` files Bazel writes
+and strips Bazel-internal vars.
+
 ## Documentation
 
 - **[Quick Start Guide](docs/quickstart.md)** — install, build, and view results

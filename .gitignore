@@ -1,6 +1,7 @@
 .venv
 sv2v
 **/dev/liteeth_builds
+.claude/scheduled_tasks.lock
 bazel-*
 !patches/bazel-*
 !bazel-orfs

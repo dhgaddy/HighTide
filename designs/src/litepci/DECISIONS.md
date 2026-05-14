@@ -121,17 +121,23 @@ single-clock SDC, and the post-GRT `repair_timing` block skipped (see
 the workaround notes below).  Final numbers from the first real-STA
 build (commit history has the convergence path):
 
-| Platform  | Target clk | period_min | Fmax    | die area    | inst util | TNS setup |
-|-----------|-----------:|-----------:|--------:|------------:|----------:|----------:|
-| asap7     |   3.6 ns   |   3.47 ns  | 288 MHz |   0.147 mm² |    60.5 % |  −0.44 ns |
-| nangate45 |   2.0 ns   |   0.40 ns† | (clean) |   6.236 mm² |    40.3 % |     0     |
-| sky130hd  |  10.0 ns   |   2.02 ns† | (clean) |  90.2  mm² |    16.5 % |     0     |
+| Platform  | Target clk | period_min | Fmax     | die area    | inst util | TNS setup |
+|-----------|-----------:|-----------:|---------:|------------:|----------:|----------:|
+| asap7     |   3.6 ns   |   3.47 ns  |  288 MHz |   0.147 mm² |    60.5 % |  −0.44 ns |
+| nangate45 |   2.0 ns   |   0.40 ns† | 2.48 GHz |   6.236 mm² |    40.3 % |     0     |
+| sky130hd  |  10.0 ns   |   2.02 ns† |  496 MHz |  90.2  mm² |    16.5 % |     0     |
 
-† nangate45 / sky130hd `period_min` is implausibly low; this is the
-period at which STA stops constraining the critical path, but the
-real-silicon timing through FakeRAM is bounded by macro clk-to-Q +
-combinational + setup which the simple stub lib doesn't fully model.
-The target clk values above are the cleanly-met ones we ship.
+† On nangate45 / sky130hd the `report_clock_min_period` Fmax reflects
+the one worst path STA found, which on those builds isn't a DMA path
+through a FakeRAM but a shorter CSR / MMAP register-to-register path.
+The bsg_fakeram libs *do* carry real arcs — `clock : true` on the
+clk pins, rising-edge clk-to-Q on the `rd_out` buses (~0.22 / 0.38 /
+0.63 ns clk-to-Q on asap7 / nangate45 / sky130hd), and setup/hold
+constraints on the address / data / enable inputs — so paths through
+the FakeRAMs contribute roughly that clk-to-Q + combinational +
+setup, which is what produces asap7's 3.5 ns period_min.  We leave
+the SDC targets (3.6 / 2.0 / 10 ns) above the FakeRAM-bounded DMA
+paths' typical worst-case so all three platforms close cleanly.
 
 asap7 misses TNS by −440 ps on a single endpoint
 (`u_storage_14_fakeram_1rw1r_130w1024d_sram/rw0_wd_in[52]` — the DMA

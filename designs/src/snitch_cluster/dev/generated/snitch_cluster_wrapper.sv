@@ -53,16 +53,16 @@ module snitch_cluster_wrapper (
   output snitch_cluster_pkg::dca_rsp_t           dca_rsp_o
 );
 
-  localparam int unsigned NumIntOutstandingLoads [9] = '{4, 4, 4, 4, 4, 4, 4, 4, 4};
-  localparam int unsigned NumIntOutstandingMem [9] = '{4, 4, 4, 4, 4, 4, 4, 4, 4};
-  localparam int unsigned NumFPOutstandingLoads [9] = '{4, 4, 4, 4, 4, 4, 4, 4, 4};
-  localparam int unsigned NumFPOutstandingMem [9] = '{4, 4, 4, 4, 4, 4, 4, 4, 4};
-  localparam int unsigned NumDTLBEntries [9] = '{1, 1, 1, 1, 1, 1, 1, 1, 1};
-  localparam int unsigned NumITLBEntries [9] = '{1, 1, 1, 1, 1, 1, 1, 1, 1};
-  localparam int unsigned NumSequencerInstr [9] = '{32, 32, 32, 32, 32, 32, 32, 32, 16};
-  localparam int unsigned NumSequencerLoops [9] = '{2, 2, 2, 2, 2, 2, 2, 2, 1};
-  localparam int unsigned NumSsrs [9] = '{3, 3, 3, 3, 3, 3, 3, 3, 1};
-  localparam int unsigned SsrMuxRespDepth [9] = '{4, 4, 4, 4, 4, 4, 4, 4, 4};
+  localparam int unsigned NumIntOutstandingLoads [5] = '{4, 4, 4, 4, 4};
+  localparam int unsigned NumIntOutstandingMem [5] = '{4, 4, 4, 4, 4};
+  localparam int unsigned NumFPOutstandingLoads [5] = '{4, 4, 4, 4, 4};
+  localparam int unsigned NumFPOutstandingMem [5] = '{4, 4, 4, 4, 4};
+  localparam int unsigned NumDTLBEntries [5] = '{1, 1, 1, 1, 1};
+  localparam int unsigned NumITLBEntries [5] = '{1, 1, 1, 1, 1};
+  localparam int unsigned NumSequencerInstr [5] = '{32, 32, 32, 32, 16};
+  localparam int unsigned NumSequencerLoops [5] = '{2, 2, 2, 2, 1};
+  localparam int unsigned NumSsrs [5] = '{3, 3, 3, 3, 1};
+  localparam int unsigned SsrMuxRespDepth [5] = '{4, 4, 4, 4, 4};
 
   // Snitch cluster under test.
   snitch_cluster #(
@@ -93,13 +93,13 @@ module snitch_cluster_wrapper (
     .x_commit_t (snitch_cluster_pkg::x_commit_t),
     .x_result_t (snitch_cluster_pkg::x_result_t),
     .NrHives (1),
-    .NrCores (9),
+    .NrCores (5),
     .TCDMDepth (512),
     .ZeroMemorySize (snitch_cluster_pkg::ZeroMemorySize),
     .ExtMemorySize (snitch_cluster_pkg::ExtMemorySize),
     .BootRomSize (snitch_cluster_pkg::BootromSize),
     .ClusterPeriphSize (snitch_cluster_pkg::ClusterPeriphSize),
-    .NrBanks (32),
+    .NrBanks (16),
     .NrHyperBanks (1),
     .DMANumAxInFlight (24),
     .DMAReqFifoDepth (8),
@@ -115,31 +115,31 @@ module snitch_cluster_wrapper (
     .EnableNarrowCollectives (snitch_cluster_pkg::EnableNarrowCollectives),
     .EnableXif (0),
     .XifIdWidth (snitch_cluster_pkg::XifIdWidth),
-    .RVE (9'b000000000),
-    .RVF (9'b111111111),
-    .RVD (9'b111111111),
-    .XDivSqrt (9'b000000000),
-    .XF16 (9'b011111111),
-    .XF16ALT (9'b011111111),
-    .XF8 (9'b011111111),
-    .XF8ALT (9'b011111111),
-    .XFVEC (9'b011111111),
-    .XFDOTP (9'b011111111),
-    .Xdma (9'b100000000),
-    .Xssr (9'b011111111),
-    .Xfrep (9'b011111111),
-    .Xcopift (9'b011111111),
-    .Xpulppostmod (9'b000000000),
-    .Xpulpabs (9'b000000000),
-    .Xpulpbitop(9'b000000000),
-    .Xpulpbr(9'b000000000),
-    .Xpulpclip(9'b000000000),
-    .Xpulpmacsi(9'b000000000),
-    .Xpulpminmax(9'b000000000),
-    .Xpulpslet(9'b000000000),
-    .Xpulpvect(9'b000000000),
-    .Xpulpvectshufflepack(9'b000000000),
-    .PrivateIpu (9'b000000000),
+    .RVE (5'b00000),
+    .RVF (5'b11111),
+    .RVD (5'b11111),
+    .XDivSqrt (5'b00000),
+    .XF16 (5'b01111),
+    .XF16ALT (5'b01111),
+    .XF8 (5'b01111),
+    .XF8ALT (5'b01111),
+    .XFVEC (5'b01111),
+    .XFDOTP (5'b01111),
+    .Xdma (5'b10000),
+    .Xssr (5'b01111),
+    .Xfrep (5'b01111),
+    .Xcopift (5'b01111),
+    .Xpulppostmod (5'b00000),
+    .Xpulpabs (5'b00000),
+    .Xpulpbitop(5'b00000),
+    .Xpulpbr(5'b00000),
+    .Xpulpclip(5'b00000),
+    .Xpulpmacsi(5'b00000),
+    .Xpulpminmax(5'b00000),
+    .Xpulpslet(5'b00000),
+    .Xpulpvect(5'b00000),
+    .Xpulpvectshufflepack(5'b00000),
+    .PrivateIpu (5'b00000),
     .FPUImplementation (snitch_cluster_pkg::FPUImplementation),
     .SnitchPMACfg (snitch_cluster_pkg::SnitchPMACfg),
     .NumIntOutstandingLoads (NumIntOutstandingLoads),
@@ -203,10 +203,10 @@ module snitch_cluster_wrapper (
     .cluster_base_offset_i (snitch_cluster_pkg::CfgClusterBaseOffset),
     .clk_d2_bypass_i (1'b0),
     .sram_cfgs_i (sram_cfgs_i),
-    .x_issue_resp_i ({9{snitch_cluster_pkg::x_issue_resp_t'('0)}}),
+    .x_issue_resp_i ({5{snitch_cluster_pkg::x_issue_resp_t'('0)}}),
     .x_issue_ready_i ('0),
     .x_register_ready_i ('0),
-    .x_result_i ({9{snitch_cluster_pkg::x_result_t'('0)}}),
+    .x_result_i ({5{snitch_cluster_pkg::x_result_t'('0)}}),
     .x_result_valid_i ('0),
     .x_issue_req_o (),
     .x_issue_valid_o (),

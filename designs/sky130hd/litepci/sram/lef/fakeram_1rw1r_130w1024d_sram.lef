@@ -1,7 +1,7 @@
 VERSION 5.7 ;
 BUSBITCHARS "[]" ;
-MACRO fakeram130_1rw1r_130w1024d
-  FOREIGN fakeram130_1rw1r_130w1024d 0 0 ;
+MACRO fakeram_1rw1r_130w1024d_sram
+  FOREIGN fakeram_1rw1r_130w1024d_sram 0 0 ;
   SYMMETRY X Y R90 ;
   SIZE 1515.240 BY 1000.960 ;
   CLASS BLOCK ;
@@ -4042,6 +4042,6 @@ MACRO fakeram130_1rw1r_130w1024d
     LAYER met4 ;
     RECT 0 0 1515.240 1000.960 ;
   END
-END fakeram130_1rw1r_130w1024d
+END fakeram_1rw1r_130w1024d_sram
 
 END LIBRARY

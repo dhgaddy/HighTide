@@ -37,6 +37,12 @@ python3 "$LITEPCI_DIR/dev/gen_phy_stub.py" \
     --module pcie_us \
     --out "$LITEPCI_DIR/pcie_us_stub.v"
 
+# Replace the large inferred-memory reg arrays with explicit fakeram
+# instances so STA sees real launch / capture points on the DMA + TLP
+# datapath.  Mirrors the role of liteeth/patch/*.patch, but driven from
+# the LiteX block template instead of hand-written per-variant diffs.
+python3 "$LITEPCI_DIR/dev/inline_fakeram.py" "$LITEPCI_DIR/litepcie_core.v"
+
 # Archive the full build tree (csr.json, xdc, mem.init, …) for traceability.
 ARCHIVE_DIR="$LITEPCI_DIR/dev/build_archive/litepcie_core_${TIMESTAMP}"
 mkdir -p "$ARCHIVE_DIR"

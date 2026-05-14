@@ -43,48 +43,47 @@ sandbox that doesn't have the `.init` file alongside the `.v`, so the read
 fails at synthesis time. `dev/inline_readmemh.py` rewrites the call into
 explicit `mem[i] = 8'hXX;` initial assignments — no runtime file IO needed.
 
-## Memories — mocked, not mapped (TODO)
+## Memories — FakeRAM-mapped via the generic LiteX patcher
 
-Each `litepcie_core.v` build infers 28 memory blocks with five distinct
-geometries:
+`gen.sh` runs `dev/inline_fakeram.py` over the freshly-generated
+`litepcie_core.v`, which finds each LiteX-emitted memory block
+(`// Memory <name>: <D>-words x <W>-bit` … through the closing
+`assign <sig>_rdport_dat_r = …;`) and — if `W × D ≥ 4096` — replaces
+the `reg` array + two `always` blocks with a `(* keep *)`
+`fakeram_1rw1r_<W>w<D>d_sram` instantiation.  Liteeth does the same
+job with hand-written per-variant `.patch` files; litepci has 20 such
+memories across 5 geometries, so a regex over the always-the-same
+block template is more maintainable than 20 hunks of unified diff.
 
-| Width × depth | Bits | Instances | Purpose (approx) |
-|--------------:|-----:|----------:|------------------|
-| 92  × 256     | 23 552  | 4 | DMA writer/reader table SRAMs |
-| 130 × 128     | 16 640  | 2 | DMA buffering FIFOs (small) |
-| 130 × 512     | 66 560  | 4 | DMA data FIFOs (medium) |
-| 130 × 1024    | 133 120 | 2 | DMA data FIFOs (largest) |
-| 230 × 128     | 29 440  | 8 | TLP packetizer/depacketizer buffers |
+| Width × depth | Bits | Instances | Subsystem |
+|--------------:|-----:|----------:|-----------|
+| 92  × 256     | 23 552  | 4 | DMA channel 0/1 writer + reader **descriptor tables** |
+| 130 × 128     | 16 640  | 2 | DMA channel 0/1 writer **data FIFO** |
+| 130 × 512     | 66 560  | 4 | DMA channel 0/1 buffering **syncfifo** 0–3 |
+| 130 × 1024    | 133 120 | 2 | DMA channel 0/1 reader **data FIFO** |
+| 230 × 128     | 29 440  | 8 | TLP packetizer/depacketizer **fragment FIFOs** |
 
-bsg_fakeram-generated LEF/LIB pairs for all five sizes are committed under
-each `designs/<platform>/litepci/sram/`, but the **inferred reg-array
-memories are not yet patched to explicit fakeram instances** the way
-liteeth does via `designs/src/liteeth/patch/*.patch`. To unblock the
-first build, every platform sets:
+Each platform's `designs/<platform>/litepci/sram/` carries the matching
+bsg_fakeram LEF/LIB pair under the uniform `fakeram_1rw1r_<W>w<D>d_sram`
+name (configs at `dev/generated/fakeram_<platform>.cfg`).  The 8 smaller-
+than-4 Kb memories — the four 16×146 AXI-Stream CDC FIFOs, the 4×10 MSI
+CDC FIFO, and three TLP sub-fragment FIFOs — stay as inferred `reg`
+arrays and synthesize to flop arrays naturally.
 
-```
-"SYNTH_MOCK_LARGE_MEMORIES": "1",
-"SYNTH_MEMORY_MAX_BITS":     "4096",
-```
+### Async-read → sync-read latency caveat
 
-…so yosys collapses each oversized memory to a single row. The resulting
-flow exercises end-to-end synthesis → P&R → final reporting, but the
-area/timing numbers under-estimate what the real ~1 Mb of on-chip memory
-would contribute. **TODO: write a generic LiteX-style `reg [W:0] storage[0:D];`
-→ `fakeram_…` patcher in `dev/gen.sh`** (analogous to liteeth's per-variant
-hand-written patches but generated from the inferred memory map).
-
-## `SKIP_INCREMENTAL_REPAIR = 1`
-
-Set on all three platforms. The mocked-memory collapse leaves thousands of
-dangling single-pin nets (`[WARNING RSZ-0104]`). The post-GRT
-`repair_timing` loop walks those one endpoint per iteration and never
-converges — same pattern as the snitch_cluster row in the repo's
-CLAUDE.md bug table. Skipping the post-GRT repair pass dodges the
-non-convergence; the in-route hold-repair still runs.
-
-When the LiteX → fakeram patcher mentioned above lands and the mocked
-memories go away, revisit whether this flag is still needed.
+LiteX declares `Port 1 | Read: Async` for the four DMA descriptor
+tables (`storage_5`, `storage_7`, `storage_11`, `storage_13` — the
+writer/reader self tables for channels 0/1).  The committed FakeRAM
+only exposes a sync read port, so the patcher routes
+`<sig>_rdport_dat_r` through the FakeRAM's registered `r0_rd_out`,
+adding one cycle of latency.  For the *benchmarking* flow we
+target — synthesis, P&R, STA — that's harmless: yosys-slang and
+OpenROAD see a clean memory cell, and STA now finds the
+register-to-register paths through the DMA datapath that mocked
+memories used to hide.  Functional simulation of the patched netlist
+against the original RTL **would** show a 1-cycle skew on the
+descriptor read path; we don't run that.
 
 ## pcie_us LEF sizing (PPA tune)
 
@@ -104,28 +103,64 @@ sky130hd it hit `[ERROR DRT-0073] No access point for pcie_us/...`
 because pin pitch matched the track pitch and the access-point algorithm
 couldn't drop a via.
 
-## Per-platform PPA-tuned settings
+## SDC topology (one clock, not two)
 
-### asap7
+litepcie_core exposes `clk` as an *output* port — it's a fanout of
+`pcie_us/user_clk`, not the clock source.  Earlier drafts wrote
+`create_clock -name sys_clk [get_ports clk]`, which STA silently accepted
+but never propagated, producing `No launch/capture paths found` under
+sys_clk.  The current SDC creates the single user clock on
+`pcie_us/user_clk` (the actual driver of the `sys_clk = pcie_clk = clk`
+chain inside litepcie_core), so STA times all DMA / TLP register-to-
+register paths through the FakeRAMs.
 
-- `CORE_UTILIZATION = 75`, `PLACE_DENSITY = 0.80`, `MACRO_PLACE_HALO = 5 5`.
-- Final die area 23,728 µm² (down from 128,774 baseline; −82%).
-- GRT congestion peak 32% on M2 — headroom remains.
+## Per-platform PPA-tuned settings (real-timing build)
 
-### nangate45
+All three platforms run with FakeRAM-mapped DMA / TLP memories, the
+single-clock SDC, and the post-GRT `repair_timing` block skipped (see
+the workaround notes below).  Final numbers from the first real-STA
+build (commit history has the convergence path):
 
-- `CORE_UTILIZATION = 60`, `PLACE_DENSITY = 0.70`, `MACRO_PLACE_HALO = 15 15`.
-- Final die area 369,780 µm² (down from 1,124,270 baseline; −67%).
-- GRT congestion peak 38% on metal2 — approaching the wall.
+| Platform  | Target clk | period_min | Fmax    | die area    | inst util | TNS setup |
+|-----------|-----------:|-----------:|--------:|------------:|----------:|----------:|
+| asap7     |   3.6 ns   |   3.47 ns  | 288 MHz |   0.147 mm² |    60.5 % |  −0.44 ns |
+| nangate45 |   2.0 ns   |   0.40 ns† | (clean) |   6.236 mm² |    40.3 % |     0     |
+| sky130hd  |  10.0 ns   |   2.02 ns† | (clean) |  90.2  mm² |    16.5 % |     0     |
 
-### sky130hd
+† nangate45 / sky130hd `period_min` is implausibly low; this is the
+period at which STA stops constraining the critical path, but the
+real-silicon timing through FakeRAM is bounded by macro clk-to-Q +
+combinational + setup which the simple stub lib doesn't fully model.
+The target clk values above are the cleanly-met ones we ship.
 
-- `CORE_UTILIZATION = 55`, `PLACE_DENSITY = 0.65`, `MACRO_PLACE_HALO = 20 20`.
-- Final die area 3,031,790 µm² (down from 7,022,770 baseline; −57%).
-- GRT congestion peak 22% on met2 — most headroom of the three.
-- sky130hd's GRT antenna-repair loop reaches the iteration limit with a
-  handful of unfixable violations remaining; OpenROAD gives up after the
-  retry budget and the flow reaches `6_final` cleanly.
+asap7 misses TNS by −440 ps on a single endpoint
+(`u_storage_14_fakeram_1rw1r_130w1024d_sram/rw0_wd_in[52]` — the DMA
+ch0 reader data FIFO 1024-deep write port).  Relaxing the clock to
+~4 ns would close it, at the cost of −10 % Fmax.
+
+### Knob summary
+
+| Platform  | CORE_UTILIZATION | PLACE_DENSITY | MACRO_PLACE_HALO |
+|-----------|------------------|---------------|------------------|
+| asap7     | 60               | 0.65          | 5 5              |
+| nangate45 | 40               | 0.50          | 15 15            |
+| sky130hd  | 15               | 0.25          | 80 80            |
+
+sky130hd needs the giant halo and low util to stop GRT from spinning
+on capacity-0 overflow around the 20-FakeRAM pin clusters.  Without
+it, GRT hits two NDR-disable retries on `clk` / `pcie_clk_p` and
+detail_route refuses to start.
+
+## Bug workarounds in the real-FakeRAM build
+
+| Knob | Reason |
+|------|--------|
+| `SETUP_MOVE_SEQUENCE = "unbuffer,sizeup,swap,buffer,clone"` (no `split_load`) | Resizer's setup-pass SplitLoadMove triggers ODB-1200 (same as gemmini-asap7 row in CLAUDE.md) |
+| `SKIP_INCREMENTAL_REPAIR = 1` | ODB-1200 still fires from the *hold*-pass inside post-GRT `repair_timing_helper`, which doesn't go through SETUP_MOVE_SEQUENCE; skipping the whole block keeps the rest of the flow alive |
+
+sky130hd's GRT antenna-repair loop also plateaus at a few residual
+violations and OpenROAD gives up after its retry budget; the flow
+reaches `6_final` cleanly.
 
 ## `GDS_ALLOW_EMPTY`
 

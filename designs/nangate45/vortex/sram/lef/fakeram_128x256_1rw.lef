@@ -1734,7 +1734,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[63]
   PIN rw0_wd_in[64]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1743,7 +1743,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[64]
   PIN rw0_wd_in[65]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1752,7 +1752,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[65]
   PIN rw0_wd_in[66]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1761,7 +1761,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[66]
   PIN rw0_wd_in[67]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1770,7 +1770,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[67]
   PIN rw0_wd_in[68]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1779,7 +1779,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[68]
   PIN rw0_wd_in[69]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1788,7 +1788,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[69]
   PIN rw0_wd_in[70]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1797,7 +1797,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[70]
   PIN rw0_wd_in[71]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1806,7 +1806,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[71]
   PIN rw0_wd_in[72]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1815,7 +1815,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[72]
   PIN rw0_wd_in[73]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1824,7 +1824,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[73]
   PIN rw0_wd_in[74]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1833,7 +1833,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[74]
   PIN rw0_wd_in[75]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1842,7 +1842,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[75]
   PIN rw0_wd_in[76]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1851,7 +1851,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[76]
   PIN rw0_wd_in[77]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1860,7 +1860,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[77]
   PIN rw0_wd_in[78]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1869,7 +1869,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[78]
   PIN rw0_wd_in[79]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1878,7 +1878,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[79]
   PIN rw0_wd_in[80]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1887,7 +1887,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[80]
   PIN rw0_wd_in[81]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1896,7 +1896,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[81]
   PIN rw0_wd_in[82]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1905,7 +1905,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[82]
   PIN rw0_wd_in[83]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1914,7 +1914,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[83]
   PIN rw0_wd_in[84]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1923,7 +1923,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[84]
   PIN rw0_wd_in[85]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1932,7 +1932,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[85]
   PIN rw0_wd_in[86]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1941,7 +1941,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[86]
   PIN rw0_wd_in[87]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1950,7 +1950,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[87]
   PIN rw0_wd_in[88]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1959,7 +1959,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[88]
   PIN rw0_wd_in[89]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1968,7 +1968,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[89]
   PIN rw0_wd_in[90]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1977,7 +1977,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[90]
   PIN rw0_wd_in[91]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1986,7 +1986,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[91]
   PIN rw0_wd_in[92]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -1995,7 +1995,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[92]
   PIN rw0_wd_in[93]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2004,7 +2004,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[93]
   PIN rw0_wd_in[94]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2013,7 +2013,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[94]
   PIN rw0_wd_in[95]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2022,7 +2022,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[95]
   PIN rw0_wd_in[96]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2031,7 +2031,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[96]
   PIN rw0_wd_in[97]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2040,7 +2040,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[97]
   PIN rw0_wd_in[98]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2049,7 +2049,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[98]
   PIN rw0_wd_in[99]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2058,7 +2058,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[99]
   PIN rw0_wd_in[100]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2067,7 +2067,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[100]
   PIN rw0_wd_in[101]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2076,7 +2076,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[101]
   PIN rw0_wd_in[102]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2085,7 +2085,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[102]
   PIN rw0_wd_in[103]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2094,7 +2094,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[103]
   PIN rw0_wd_in[104]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2103,7 +2103,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[104]
   PIN rw0_wd_in[105]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2112,7 +2112,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[105]
   PIN rw0_wd_in[106]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2121,7 +2121,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[106]
   PIN rw0_wd_in[107]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2130,7 +2130,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[107]
   PIN rw0_wd_in[108]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2139,7 +2139,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[108]
   PIN rw0_wd_in[109]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2148,7 +2148,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[109]
   PIN rw0_wd_in[110]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2157,7 +2157,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[110]
   PIN rw0_wd_in[111]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2166,7 +2166,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[111]
   PIN rw0_wd_in[112]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2175,7 +2175,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[112]
   PIN rw0_wd_in[113]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2184,7 +2184,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[113]
   PIN rw0_wd_in[114]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2193,7 +2193,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[114]
   PIN rw0_wd_in[115]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2202,7 +2202,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[115]
   PIN rw0_wd_in[116]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2211,7 +2211,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[116]
   PIN rw0_wd_in[117]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2220,7 +2220,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[117]
   PIN rw0_wd_in[118]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2229,7 +2229,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[118]
   PIN rw0_wd_in[119]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2238,7 +2238,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[119]
   PIN rw0_wd_in[120]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2247,7 +2247,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[120]
   PIN rw0_wd_in[121]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2256,7 +2256,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[121]
   PIN rw0_wd_in[122]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2265,7 +2265,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[122]
   PIN rw0_wd_in[123]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2274,7 +2274,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[123]
   PIN rw0_wd_in[124]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2283,7 +2283,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[124]
   PIN rw0_wd_in[125]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2292,7 +2292,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[125]
   PIN rw0_wd_in[126]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
@@ -2301,7 +2301,7 @@ MACRO fakeram_128x256_1rw
     END
   END rw0_wd_in[126]
   PIN rw0_wd_in[127]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT

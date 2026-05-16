@@ -24,7 +24,7 @@ MACRO fakeram_3x64_1r1w
     END
   END w0_wd_in[1]
   PIN w0_wd_in[2]
-    DIRECTION OUTPUT ;
+    DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT

@@ -2,7 +2,7 @@ library(fakeram_2048x128_1rw) {
     technology (cmos);
     delay_model : table_lookup;
     revision : 1.0;
-    date : "2026-04-25 01:28:03Z";
+    date : "2026-05-15 14:21:03Z";
     comment : "SRAM";
     time_unit : "1ns";
     voltage_unit : "1V";
@@ -392,7 +392,7 @@ cell(fakeram_2048x128_1rw) {
         }
     }
     bus(rw0_wmask_in)   {
-        bus_type : fakeram_2048x128_1rw_DATA;
+        bus_type : fakeram_2048x128_1rw_WMASK;
         memory_write() {
             address : rw0_addr_in;
             clocked_on : "rw0_clk";

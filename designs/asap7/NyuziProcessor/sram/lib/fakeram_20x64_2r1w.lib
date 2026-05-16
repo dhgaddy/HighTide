@@ -2,7 +2,7 @@ library(fakeram_20x64_2r1w) {
     technology (cmos);
     delay_model : table_lookup;
     revision : 1.0;
-    date : "2026-01-05 00:10:33Z";
+    date : "2026-05-15 14:21:07Z";
     comment : "SRAM";
     time_unit : "1ns";
     voltage_unit : "1V";
@@ -90,13 +90,13 @@ library(fakeram_20x64_2r1w) {
     type (fakeram_20x64_2r1w_WMASK) {
         base_type : array ;
         data_type : bit ;
-        bit_width : 2;
-        bit_from : 1;
+        bit_width : 20;
+        bit_from : 19;
         bit_to : 0 ;
         downto : true ;
     }
 cell(fakeram_20x64_2r1w) {
-    area : 187.130;
+    area : 877.973;
     interface_timing : true;
     memory() {
         type : ram;
@@ -516,7 +516,7 @@ cell(fakeram_20x64_2r1w) {
         }
     }
     bus(w0_wmask_in)   {
-        bus_type : fakeram_20x64_2r1w_DATA;
+        bus_type : fakeram_20x64_2r1w_WMASK;
         memory_write() {
             address : w0_addr_in;
             clocked_on : "w0_clk";

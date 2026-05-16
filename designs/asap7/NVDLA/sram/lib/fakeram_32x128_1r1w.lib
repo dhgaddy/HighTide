@@ -2,7 +2,7 @@ library(fakeram_32x128_1r1w) {
     technology (cmos);
     delay_model : table_lookup;
     revision : 1.0;
-    date : "2026-03-02 20:40:55Z";
+    date : "2026-05-15 13:21:51Z";
     comment : "SRAM";
     time_unit : "1ns";
     voltage_unit : "1V";
@@ -88,7 +88,7 @@ library(fakeram_32x128_1r1w) {
         downto : true ;
     }
 cell(fakeram_32x128_1r1w) {
-    area : 232.454;
+    area : 1793.544;
     interface_timing : true;
     memory() {
         type : ram;

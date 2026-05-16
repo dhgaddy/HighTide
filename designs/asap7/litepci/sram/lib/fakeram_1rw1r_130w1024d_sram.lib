@@ -2,7 +2,7 @@ library(fakeram_1rw1r_130w1024d_sram) {
     technology (cmos);
     delay_model : table_lookup;
     revision : 1.0;
-    date : "2026-05-11 03:56:55Z";
+    date : "2026-05-15 13:21:46Z";
     comment : "SRAM";
     time_unit : "1ns";
     voltage_unit : "1V";
@@ -88,7 +88,7 @@ library(fakeram_1rw1r_130w1024d_sram) {
         downto : true ;
     }
 cell(fakeram_1rw1r_130w1024d_sram) {
-    area : 8590.065;
+    area : 70114.875;
     interface_timing : true;
     memory() {
         type : ram;

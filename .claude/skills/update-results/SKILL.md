@@ -1,6 +1,6 @@
 ---
 name: update-results
-description: Refresh webpage/results.html, webpage/index.html (Design Portfolio platform badges), webpage/gallery.html, and webpage/figures/ to reflect each (platform, design) pair's latest cached build. Detects stale rows by comparing a per-row data-commit attribute to the design's most recent commit, refetches the cached 6_report.json via tools/fetch_cache.sh, regenerates the gallery image at <design>_<platform>_<sha>.png, deletes the previous versioned image, and rewrites the table between RESULTS_START / RESULTS_END markers. Also handles the one-time migration from canonical filenames (cnn_asap7.png) to commit-versioned ones. Use after a build sweep lands new artifacts in the remote cache.
+description: Refresh webpage/results.html, webpage/index.html (Design Portfolio platform badges), webpage/gallery.html, and webpage/figures/ to reflect each (platform, design) pair's latest cached build. Detects stale rows by comparing a per-row data-commit attribute to the design's most recent commit, refetches the cached 6_report.json via tools/fetch_cache.sh, regenerates the gallery image at <design>_<platform>_<sha>.png, deletes the previous versioned image, and rewrites the table between RESULTS_START / RESULTS_END markers. Use after a build sweep lands new artifacts in the remote cache.
 argument-hint: "[platform] [design]"
 ---
 
@@ -28,33 +28,9 @@ If `webpage` is behind `origin/webpage`, fast-forward it before doing any work:
 git -C "$WT" pull --ff-only
 ```
 
-## Step 2: Detect first-time migration
+## Step 2: (removed — image set is fully versioned)
 
-Look for canonical filenames (no SHA component) in **both** the full-resolution PNGs and the JPEG thumbnails — they migrate together so `<img src=…>` and `<a href=…>` always reference the same SHA.  Either may predate this skill and need a one-time rename to the versioned convention:
-
-```bash
-# full-res PNGs
-ls "$WT"/figures/*.png 2>/dev/null \
-    | grep -vE '_[0-9a-f]{7,}\.png$' \
-    | grep -vE '/(HighTideFLOW|lighthouse|final_placement_)'   # exclude infra figures, not per-design
-
-# JPEG thumbnails
-ls "$WT"/figures/thumbs/*.jpg 2>/dev/null \
-    | grep -vE '_[0-9a-f]{7,}\.jpg$'
-```
-
-Anything that comes back is on the canonical-name convention.  For each, decode `<design>_<platform>` from the filename, compute the design's current SHA (Step 4 below), then:
-
-```bash
-git mv "$WT"/figures/<design>_<platform>.png \
-       "$WT"/figures/<design>_<platform>_<sha>.png
-git mv "$WT"/figures/thumbs/<design>_<platform>.jpg \
-       "$WT"/figures/thumbs/<design>_<platform>_<sha>.jpg
-```
-
-Use `git mv` so the rename history is preserved.  Both renames must use the *same* SHA for a given (design, platform) — if either side already has a versioned name, use that SHA for the other side rather than recomputing.
-
-After all migrations, the existing single `<tr>` in results.html (currently a hardcoded lfsr row) should be replaced with a freshly-generated row in Step 6.  Don't try to migrate the row in place — just regenerate it.
+The one-time canonical→`<design>_<platform>_<sha>` migration is complete: every per-design figure already carries a SHA component and the old canonical-name images no longer exist.  No migration is performed.  (The only un-versioned files left are infra figures — `HighTideFLOW`, `lighthouse`, `final_placement_*` — which are intentionally not per-design and must be left alone.)  Proceed directly to Step 3.
 
 ## Step 3: Determine the design list
 
@@ -191,7 +167,7 @@ If a (platform, design) is currently NOT CACHED (Step 5 skipped it), preserve an
 
 The full-res `href` and the thumbnail `src` MUST share the same SHA — they describe the same routed view; mismatched SHAs means the user clicks a thumb of one build and lands on a different build's full image.
 
-Same migration rule applies on first run for both the `.png` and `.jpg` references.
+Both references always use the versioned `<design>_<platform>_<sha>` name (no canonical fallback exists anymore).
 
 ### Thumbnail order within each design card
 
@@ -272,12 +248,9 @@ Surface the change set to the user, list any designs that were skipped because t
 
 ```
 > Locating webpage worktree at /home/mrg/HighTide/webpage … clean (origin/webpage @ 1d9ccec4).
-> Migration check: 38 canonical-name PNGs found, renaming to <design>_<platform>_<sha>.png …
->   figures/cnn_asap7.png        → cnn_asap7_a1b2c3d.png
->   figures/coralnpu_asap7.png   → coralnpu_asap7_e4f5g6h.png
->   …
+> Image set already fully versioned — no migration.
 > Sweep: 56 (platform, design) pairs.
->   asap7/cnn         a1b2c3d  STALE (table commit was canonical-only)
+>   asap7/cnn         a1b2c3d  STALE (data-commit changed)
 >     ./tools/fetch_cache.sh asap7 cnn → cached
 >     bazel build //designs/asap7/cnn:cnn_gallery → 0.4s, cache hit
 >     wrote figures/cnn_asap7_a1b2c3d.png (replaces cnn_asap7.png)

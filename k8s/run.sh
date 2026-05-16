@@ -194,7 +194,11 @@ discover_designs() {
 
     local relpath="${dir#$REPO_DIR/designs/}"
     local platform="${relpath%%/*}"
-    local target="//designs/$relpath:${name}_final"
+    # Build through the gallery, not just _final: <name>_gallery has
+    # src=:<name>_final, so this runs the whole RTL-to-GDS flow AND
+    # renders+caches the gallery PNG. That makes update-results a pure
+    # fast cache fetch instead of re-rendering every design locally.
+    local target="//designs/$relpath:${name}_gallery"
 
     echo "$platform|$name|$relpath|$target"
   done

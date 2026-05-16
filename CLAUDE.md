@@ -13,8 +13,9 @@ Requires an Ubuntu machine with [Bazelisk](https://github.com/bazelbuild/bazelis
 ## Build Commands
 
 ```bash
-# Build the full RTL-to-GDS flow for one design
-bazel build //designs/asap7/lfsr:lfsr_final
+# Build the full RTL-to-GDS flow for one design (through the gallery
+# render — caches the layout PNG too, so update-results is a pure fetch)
+bazel build //designs/asap7/lfsr:lfsr_gallery
 
 # Build a design across all available platforms
 bazel build //designs/asap7/minimax:minimax_final \
@@ -35,7 +36,7 @@ bazel build //designs/asap7/lfsr:lfsr_synth
 bazel build //designs/asap7/lfsr:lfsr_place
 ```
 
-Note: `hightide_design()` exposes only the per-stage `orfs_flow` targets (`_synth` … `_final`) plus `_generate_abstract` / `_generate_metadata`. There is no aggregate `:<design>` target — use `:<design>_final` for the full flow.
+Note: `hightide_design()` exposes the per-stage `orfs_flow` targets (`_synth` … `_final`), `_generate_abstract` / `_generate_metadata`, and `_<design>_gallery` (renders the layout PNG; `src = :<design>_final`). There is no aggregate `:<design>` target. **Build `:<design>_gallery` for sweeps** — it runs the whole flow *and* renders+caches the gallery image, so `update-results` (and k8s/run.sh, which now targets `_gallery`) becomes a pure cache fetch with no per-design local re-render. Use `:<design>_final` only when you explicitly don't want the image.
 
 ## Architecture
 

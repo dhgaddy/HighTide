@@ -1,6 +1,6 @@
 ---
 name: update-results
-description: Refresh webpage/results.html, webpage/index.html (Design Portfolio platform badges), webpage/gallery.html, and webpage/figures/ to reflect each (platform, design) pair's latest cached build. Detects stale rows by comparing a per-row data-commit attribute to the design's most recent commit, refetches the cached 6_report.json via tools/fetch_cache.sh, regenerates the gallery image at <design>_<platform>_<sha>.png, deletes the previous versioned image, and rewrites the table between RESULTS_START / RESULTS_END markers. Use after a build sweep lands new artifacts in the remote cache.
+description: Refresh webpage/results.html, webpage/index.html (Design Portfolio platform badges), webpage/gallery.html, and webpage/figures/ to reflect each (platform, design) pair's latest cached build. Detects stale rows by comparing a per-row data-commit attribute to the design's most recent commit, then does ONE batched bazel build of all stale designs' lightweight _gallery targets against the (localhost, on the cache host) remote cache — using the build-event log for an authoritative cached/missing split — regenerates the gallery image at <design>_<platform>_<sha>.png, deletes the previous versioned image, and rewrites the table between RESULTS_START / RESULTS_END markers. Use after a build sweep lands new artifacts in the remote cache.
 argument-hint: "[platform] [design]"
 ---
 
@@ -62,33 +62,68 @@ sha=$(git log -1 --format=%h -- \
 
 7 chars (default `%h`), matching GitHub's commit-link convention.  If the design has no `designs/src/<leaf>/` (no per-design RTL submodule, e.g. lfsr's RTL is in `designs/src/lfsr/` but for designs whose RTL lives elsewhere, just drop the second arg).
 
-## Step 5: Refresh stale designs
+## Step 5: Refresh stale designs (batched `_gallery` build)
 
 Parse `webpage/results.html` for existing rows.  Each row is keyed by `data-design` + `data-platform`; its current commit is `data-commit`.  A row is **stale** if `data-commit` ≠ the SHA from Step 4, or the row is missing entirely.
 
-For each stale (platform, design):
+> **Two failure modes to avoid — the timeout must be *kept*, but applied correctly:**
+> 1. **A per-design timeout that's too short on a *cold* server → false negatives.**  Cold Bazel analysis of the 56-design repo is ~250 s; a short per-design timeout SIGKILLs designs mid-analysis and mislabels them "NOT CACHED" before Bazel ever queries the cache.  *Fix: warm the server once first (Step 5b) so analysis is paid a single time, then per-design builds are fast for hits.*
+> 2. **No per-design timeout → uncached designs build the full flow.**  A `_gallery` target is **not** a cache-only probe: if the design isn't cached, Bazel will run the *entire* RTL-to-GDS flow (synth→…→route→final) to produce the routed DB, then render the image — hours per design.  A single overall wall cap does **not** prevent this; you must bound *each* design so an uncached one fails fast instead of kicking off a multi-hour build.  *Fix: keep a per-design `timeout`, sized post-warm.*
+>
+> Also never enumerate via `_final`: it carries multi-GB ODB/GDS/SPEF, so `--remote_download_toplevel` over 56 designs never completes.  Use the lightweight `_gallery` target.
+
+### 5a. Point Bazel at the cache, bypassing Cloudflare on the cache host
+
+The remote cache is self-hosted `bazel-remote`; the public `https://cache.hightide-benchmarks.dev` URL is just a Cloudflare tunnel (slow, 100 MB cap).  **On the host that runs `bazel-remote`**, hit it directly — ~100× lower latency, no cap.  This is already wired via the gitignored, host-local `.bazelrc.user` (`build --remote_cache=http://USER:TOKEN@127.0.0.1:8080`); if absent, pass `--remote_cache=http://127.0.0.1:8080` explicitly.  Other users / k8s keep the committed Cloudflare URL.
+
+### 5b. Warm the server once, then per-design timeout-bounded gallery build
+
+**First, warm the Bazel server** with a single no-timeout build of a design known to be cached (e.g. `lfsr`, whose inputs rarely change).  This pays the ~250 s cold full-repo analysis (loading every BUILD file + external repos) exactly once; subsequent per-design builds reuse that warm analysis cache and resolve a hit in seconds.
 
 ```bash
-# Pull the cached JSON.  No local build — if cache miss, log + skip.
-./tools/fetch_cache.sh "$platform" "$leaf" || { echo "WARN: $platform/$leaf NOT CACHED, skipping"; continue; }
+# one-time warm-up (also a cache-soundness probe — lfsr MUST be a hit)
+bazel --output_base=/tmp/ob_results build //designs/asap7/lfsr:lfsr_gallery \
+  --remote_cache=http://127.0.0.1:8080
+```
 
-# Build only this design's gallery target.
-bazel build "$gallery_target"
+**Then, per stale design, a timeout-bounded gallery build on the now-warm server:**
 
-# Copy versioned full-res image, delete the previous one.
+```bash
+# authoritative gallery labels (handles leaf≠name, e.g. bp_quad → bp_processor_gallery)
+if timeout 240 bazel --output_base=/tmp/ob_results build "$gallery_target" \
+     --remote_cache=http://127.0.0.1:8080 2>/dev/null; then
+  : # cached → image + report available under bazel-bin
+else
+  echo "NOT CACHED: $platform/$leaf (preserve existing row)"; continue
+fi
+```
+
+Why this is correct where the earlier attempts weren't:
+- **Warm server** ⇒ a *cache hit* completes in seconds (per-target analysis is incremental, not the 250 s cold cost), so a modest per-design `timeout` (≈240 s — generous for the largest design's incremental analysis + cache fetch) does **not** false-negative hits.
+- **Per-design `timeout`** ⇒ an *uncached* design, which would otherwise run the full multi-hour RTL-to-GDS flow to synthesize the image, is killed at the bound — bounded waste (`timeout × #misses`), correctly classified "not cached", and the from-scratch build never runs.
+- Use the lightweight `_gallery` target (one PNG + the flow's small `6_report.json`), never `_final`.
+
+A design is **cached** iff its bounded build exits 0; otherwise it's **genuinely missing** — preserve its existing row (Step 6).  (For a whole-sweep audit you may instead batch with `--keep_going --build_event_json_file=…` and read `targetCompleted.completed.success` from the BEP, but only *after* warm-up and still under an overall `timeout`; the per-design form above is the safe default because it bounds each miss independently.)
+
+### 5c. Per cached design: versioned image + thumbnail
+
+For each design whose `_gallery` succeeded (`sha` from Step 4):
+
+```bash
 new_img="$WT/figures/${leaf}_${platform}_${sha}.png"
 old_img=$(ls "$WT"/figures/${leaf}_${platform}_*.png 2>/dev/null | grep -v "_${sha}.png$" | head -1)
 cp "bazel-bin/designs/$design_dir/${leaf}_gallery.png" "$new_img"
 [[ -n "$old_img" ]] && git -C "$WT" rm -f "$old_img"
 git -C "$WT" add "$new_img"
 
-# Generate the versioned thumbnail, delete the previous one.
 python3 tools/gallery/make_thumbnails.py "$WT/figures"   # rebuilds thumbs/ for any new PNG
 new_thumb="$WT/figures/thumbs/${leaf}_${platform}_${sha}.jpg"
 old_thumb=$(ls "$WT"/figures/thumbs/${leaf}_${platform}_*.jpg "$WT"/figures/thumbs/${leaf}_${platform}.jpg 2>/dev/null | grep -v "_${sha}.jpg$" | head -1)
 [[ -n "$old_thumb" ]] && git -C "$WT" rm -f "$old_thumb"
 git -C "$WT" add "$new_thumb"
 ```
+
+Then read `bazel-bin/designs/$design_dir/logs/$platform/<top>/base/6_report.json` (+ `reports/.../6_finish.rpt`) for QoR — both are flow outputs already materialized by the cached gallery build.
 
 Capture QoR from the JSON using the same metric keys `tools/summary.sh` reads:
 
@@ -249,14 +284,13 @@ Surface the change set to the user, list any designs that were skipped because t
 ```
 > Locating webpage worktree at /home/mrg/HighTide/webpage … clean (origin/webpage @ 1d9ccec4).
 > Image set already fully versioned — no migration.
-> Sweep: 56 (platform, design) pairs.
->   asap7/cnn         a1b2c3d  STALE (data-commit changed)
->     ./tools/fetch_cache.sh asap7 cnn → cached
->     bazel build //designs/asap7/cnn:cnn_gallery → 0.4s, cache hit
->     wrote figures/cnn_asap7_a1b2c3d.png (replaces cnn_asap7.png)
->   sky130hd/NVDLA/partition_c   stale  NOT CACHED → skipped
->   …
-> Rewrote results.html (56 rows, 1 skipped → preserved as comment).
+> Sweep: 56 (platform, design) pairs; 41 stale vs results.html data-commit.
+> Cache: localhost endpoint (http://127.0.0.1:8080), Cloudflare bypassed.
+> Batched: bazel build 56 _gallery --keep_going --build_event_json_file …
+>   BEP: 53 _gallery succeeded (cached), 3 genuinely missing
+>        (asap7/floonoc, nangate45/floonoc, sky130hd/NVDLA/partition_c).
+>   wrote figures/cnn_asap7_a1b2c3d.png (replaces cnn_asap7_<old>.png)  … ×53
+> Rewrote results.html (56 rows, 3 missing → preserved as comment).
 > Rewrote gallery.html (38 image references updated).
 > Updated index.html design portfolio: 12 rows, 3 platform badges added (cnn nangate45, gemmini sky130hd, sha3 sky130hd), 1 removed (floonoc nangate45 → cache cold).
 > Diff:

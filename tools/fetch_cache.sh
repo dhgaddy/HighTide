@@ -19,7 +19,10 @@ set -uo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_DIR"
 
-REMOTE_CACHE="https://cache.hightide-benchmarks.dev"
+# Defaults to the public Cloudflare-fronted endpoint. On the host that
+# actually runs bazel-remote, export REMOTE_CACHE=http://127.0.0.1:8080
+# to hit it directly — ~100x lower latency and no Cloudflare 100 MB cap.
+REMOTE_CACHE="${REMOTE_CACHE:-https://cache.hightide-benchmarks.dev}"
 TIMEOUT=300
 STAGE="final"
 FILTER_PLATFORM=""

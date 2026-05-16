@@ -1,8 +1,10 @@
 # Ternip — SystemVerilog ternary matmul inference accelerator.
 #
-# Uses RTL directly from the dev/repo submodule with a custom config/
-# overlay containing HighTide-specific parameters.  BSG (BaseJump STL)
-# modules are sourced from dev/basejump_stl submodule.
+# RTL is committed under dev/rtl/ (ternip core) and dev/bsg/ (the BaseJump
+# STL modules ternip needs), copied from the dev/repo and dev/basejump_stl
+# submodules so the build does not depend on submodule init (k8s clones
+# only init bazel-orfs). Regenerate the committed copies from the
+# submodules via dev/setup.sh when bumping upstream.
 
 # File order follows the FuseSoC manifest (ternip.core): package first,
 # then leaf modules, then top-level ternip_core.sv last.
@@ -88,8 +90,8 @@ _BSG_FILES = [
 
 filegroup(
     name = "rtl",
-    srcs = ["dev/repo/rtl/" + f for f in _TERNIP_FILES] +
-           ["dev/basejump_stl/" + f for f in _BSG_FILES],
+    srcs = ["dev/rtl/" + f for f in _TERNIP_FILES] +
+           ["dev/bsg/" + f for f in _BSG_FILES],
     visibility = ["//visibility:public"],
 )
 
@@ -98,11 +100,11 @@ filegroup(
 # ternip_readmem_path.svh, bsg_defines.sv).
 filegroup(
     name = "rtl_data",
-    srcs = ["dev/repo/rtl/" + f for f in _TERNIP_FILES] +
-           ["dev/basejump_stl/" + f for f in _BSG_FILES] +
+    srcs = ["dev/rtl/" + f for f in _TERNIP_FILES] +
+           ["dev/bsg/" + f for f in _BSG_FILES] +
            glob(
                [
-                   "dev/repo/rtl/**/*.svh",
+                   "dev/rtl/**/*.svh",
                    "config/**/*.svh",
                ],
                allow_empty = True,

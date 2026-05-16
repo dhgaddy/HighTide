@@ -37,7 +37,6 @@ NAMESPACE="vlsida"
 BRANCH="main"
 CLI_CPU=""             # --cpu N (empty = use design_resources.conf)
 CLI_MEM=""             # --mem N (empty = use design_resources.conf)
-TARGET_SUFFIX="_final" # --target SUFFIX (e.g. _gallery to build the gallery png)
 DRY_RUN=false
 MODE="submit"
 UPLOAD_ARTIFACTS="false"
@@ -78,10 +77,6 @@ while [[ $# -gt 0 ]]; do
     ;;
   --mem)
     CLI_MEM="$2"
-    shift 2
-    ;;
-  --target)
-    TARGET_SUFFIX="$2"
     shift 2
     ;;
   --upload-artifacts)
@@ -199,7 +194,7 @@ discover_designs() {
 
     local relpath="${dir#$REPO_DIR/designs/}"
     local platform="${relpath%%/*}"
-    local target="//designs/$relpath:${name}${TARGET_SUFFIX}"
+    local target="//designs/$relpath:${name}_final"
 
     echo "$platform|$name|$relpath|$target"
   done

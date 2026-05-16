@@ -9,14 +9,28 @@ hightide_design(
         "SDC_FILE": [":constraint.sdc"],
         "ADDITIONAL_LEFS": ["//designs/sky130hd/NVDLA:sram_lefs_c"],
         "ADDITIONAL_LIBS": ["//designs/sky130hd/NVDLA:sram_libs_c"],
+        # Fixed grid (all 64 fakeram_64x256 + 1 small forced R0, channel
+        # below every row) — defeats the RTLMP pin-edge-blind clustering
+        # that plateaued GP at overflow ~0.31 for 18 h. Same fix as
+        # cnn-sky130hd. Regenerate: python3 tools/gen_macro_grid.py \
+        #   designs/src/NVDLA/dev/generated/partition_c_sky130hd_macros.txt \
+        #   designs/sky130hd/NVDLA/partition_c/macro_placement.tcl \
+        #   --gap-x 250 --chan 450
+        "MACRO_PLACEMENT_TCL": [":macro_placement.tcl"],
     },
     stage_data = {"synth": ["//designs/src/NVDLA:include"]},
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
         "VERILOG_INCLUDE_DIRS": "designs/src/NVDLA/vmod/include designs/src/NVDLA/vmod/vlibs",
         "CORE_UTILIZATION": "25",
-        "PLACE_DENSITY_LB_ADDON": "0.30",
-        "MACRO_PLACE_HALO": "30 30",
+        # 25%-utilized core: drop the LB_ADDON (it forced the placer
+        # target up and packed std cells onto macro pin clusters) and set
+        # an explicit low PLACE_DENSITY so cells spread across the die +
+        # grid channels. Wider macro keep-out keeps std cells/routing off
+        # the met2 pin edges. Same playbook as cnn-sky130hd (proportioned
+        # to the smaller 11.3 mm core).
+        "PLACE_DENSITY": "0.20",
+        "MACRO_PLACE_HALO": "150 150",
         "TNS_END_PERCENT": "100",
     },
 )

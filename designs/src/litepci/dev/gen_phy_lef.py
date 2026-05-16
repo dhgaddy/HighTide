@@ -177,19 +177,7 @@ def emit_lef(module, ports, params) -> str:
 
 
 def emit_lib(module, ports) -> str:
-    """Stub liberty: inputs declare capacitance, outputs are *not* constant-
-    propagated.  An earlier draft set every output to `function : "0"`, which
-    made STA fold `pcie_us/user_clk` (the clock that drives the entire `pcie`
-    clock domain inside litepcie_core) to a constant — every downstream flop
-    became "no clock" and the design lost all register-to-register paths.
-    We now leave outputs functionless and tag the clock-source outputs with
-    `clock : true` so the design's SDC can hang a `create_clock` off them.
-    """
-    # pcie_us outputs that drive a real clock net inside litepcie_core.
-    # `user_clk` is the dominant one — it clocks the AXI-Stream / DMA
-    # datapath flops.  Tagged so the SDC can attach a `create_clock`.
-    CLOCK_OUTPUTS = {"user_clk", "int_qpll1outclk_out", "int_qpll1outrefclk_out"}
-
+    """Stub liberty: every input is direction=input, every output drives 0."""
     lines = []
     lines.append(f"library({module}_lib) {{")
     lines.append("  technology(cmos);")
@@ -207,25 +195,27 @@ def emit_lib(module, ports) -> str:
     lines.append("    dont_use : true;")
     lines.append("    dont_touch : true;")
     lines.append("    is_macro_cell : true;")
-
-    def emit_pin(indent, name, direction):
-        lines.append(f"{indent}pin({name}) {{")
-        lines.append(f"{indent}  direction : {direction};")
-        if direction == "input":
-            lines.append(f"{indent}  capacitance : 0.001;")
-        elif name in CLOCK_OUTPUTS:
-            lines.append(f"{indent}  clock : true;")
-        lines.append(f"{indent}}}")
-
     for d, name, w in ports:
         if w == 1:
-            emit_pin("    ", name, d)
+            lines.append(f"    pin({name}) {{")
+            lines.append(f"      direction : {d};")
+            if d == "input":
+                lines.append("      capacitance : 0.001;")
+            else:
+                lines.append("      function : \"0\";")
+            lines.append("    }")
         else:
             lines.append(f"    bus({name}) {{")
             lines.append("      bus_type : bus_type_default;")
             lines.append(f"      direction : {d};")
             for i in range(w):
-                emit_pin("      ", f"{name}[{i}]", d)
+                lines.append(f"      pin({name}[{i}]) {{")
+                lines.append(f"        direction : {d};")
+                if d == "input":
+                    lines.append("        capacitance : 0.001;")
+                else:
+                    lines.append("        function : \"0\";")
+                lines.append("      }")
             lines.append("    }")
     lines.append("  }")
     lines.append("}")

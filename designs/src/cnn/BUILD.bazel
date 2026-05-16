@@ -50,15 +50,8 @@ alias(
     visibility = ["//visibility:public"],
 )
 
-# FakeRAM LEF/LIB files used by the cnn design (referenced from design BUILD files)
-filegroup(
-    name = "sram_lefs",
-    srcs = glob(["fakeram_*.lef"]),
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "sram_libs",
-    srcs = glob(["fakeram_*.lib"]),
-    visibility = ["//visibility:public"],
-)
+# Note: FakeRAM LEF/LIB files now live in
+# designs/<platform>/cnn/sram/{lef,lib}/ (bsg_fakeram outputs, per
+# designs/src/cnn/dev/generated/fakeram_<platform>.cfg). The behavioural
+# fakeram_w*_l*.v files above are kept in the RTL filegroup so simulation
+# and yosys elaboration still resolve.

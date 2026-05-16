@@ -18,14 +18,52 @@ hightide_design(
         "SDC_FILE": [":constraint.sdc"],
         "ADDITIONAL_LEFS": [":sram_lefs"],
         "ADDITIONAL_LIBS": [":sram_libs"],
+        # Fixed grid (all macros R0, channel below every row) so each
+        # fakeram's met2 pin edge faces routable space — defeats the
+        # RTLMP pin-edge-blind clustering that caused the met2 capacity:0
+        # overflow. Regenerate: python3
+        # designs/src/cnn/dev/gen_macro_grid_sky130hd.py
         "MACRO_PLACEMENT_TCL": [":macro_placement.tcl"],
     },
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
-        "DIE_AREA": "0 0 7168 7000",
-        "CORE_AREA": "5 5 7163 6995",
-        "PLACE_DENSITY_LB_ADDON": "0.10",
-        "MACRO_PLACE_HALO": "60 60",
+        # bsg_fakeram (sky130hd analytical, 1.86 um^2 bitcell from
+        # OpenRAM) gives a 4.93 x 4.01 mm macro for the 524 Kb 2rw
+        # fakeram_w16_l32768. cnn instantiates four of those plus 58 x
+        # fakeram_w16_l512 + 2 x fakeram_w16_l8192 + 1 x fakeram_w64_l256
+        # = ~108 mm^2 of macro area. The old die (7168 x 7000, 50 mm^2)
+        # was sized against the unrealistically dense python-script
+        # macros — enlarge to 12 x 12 mm and let RTLMP place.
+        "DIE_AREA": "0 0 20000 20000",
+        "CORE_AREA": "5 5 19995 19995",
+        # Design is only 28.6% utilized on the 400 mm^2 core, but the
+        # LB_ADDON was forcing the placer target to 0.318 -> std cells
+        # packed tight near macro pins (the real source of the met2
+        # local overflow). Drop the addon and set an explicit low
+        # PLACE_DENSITY so the global placer spreads std cells across the
+        # near-empty die + the macro-grid channels instead of clumping.
+        "PLACE_DENSITY": "0.20",
+        # Wider macro keep-out so std cells (and their local routing)
+        # stay off the macro pin edges; combined with the fixed grid this
+        # guarantees every met2 pin edge faces clear routing channel.
+        "MACRO_PLACE_HALO": "300 300",
         "MACRO_BLOCKAGE_HALO": "0.5",
+        # FINISHES (2026-05-16): full RTL-to-GDS, 0 GRT overflow on every
+        # layer (met2 1.46%), detail route 100% with 0 violations. Three
+        # combined fixes resolved what looked like a hard limitation:
+        #  1. wd_in LEF fix (bsg_fakeram c83ecb4 / HighTide 044c02b9) —
+        #     killed the old "net1337 1964-fanout" short (a LEF bug, not
+        #     real fanout). GRT then solved but with 1743 met2-vertical
+        #     capacity:0 overflow at only 2% usage.
+        #  2. Fixed-grid MACRO_PLACEMENT_TCL (all macros R0, channel
+        #     below every row) — every fakeram puts all signal pins on
+        #     its bottom met2 edge; RTLMP was pin-edge-blind and clustered
+        #     them so escape lanes collided. The grid faces every pin edge
+        #     onto clear channel.
+        #  3. PLACE_DENSITY 0.20 + MACRO_PLACE_HALO 300 (above) — spreads
+        #     the 28.6%-utilized std cells across the near-empty die
+        #     instead of packing them onto the macro pin clusters.
+        # cnn-asap7 and cnn-nangate45 pass with RTLMP; only sky130's
+        # coarse pitch needed the hand grid + spread.
     },
 )

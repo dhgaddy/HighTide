@@ -12,6 +12,20 @@ filegroup(
     srcs = glob(["sram/lib/*.lib"]),
 )
 
+# Placeholder LEF/LIB for the pcie_us Xilinx PCIe hard-IP blackbox.
+# Committed (not regenerated at flow time) so synth_odb has a master for
+# the blackbox; produced by designs/src/litepci/dev/gen_phy_lef.py via
+# dev/gen.sh. See designs/src/litepci/BUILD.bazel.
+filegroup(
+    name = "phy_lefs",
+    srcs = glob(["phy/lef/*.lef"]),
+)
+
+filegroup(
+    name = "phy_libs",
+    srcs = glob(["phy/lib/*.lib"]),
+)
+
 # LitePCIe core (kcu105 / USPCIEPHY config) on sky130hd.
 # See designs/asap7/litepci/BUILD.bazel for the design-side rationale.
 hightide_design(
@@ -21,24 +35,22 @@ hightide_design(
     verilog_files = ["//designs/src/litepci:rtl"],
     sources = {
         "SDC_FILE": [":constraint.sdc"],
-        "ADDITIONAL_LEFS": [":sram_lefs"],
-        "ADDITIONAL_LIBS": [":sram_libs"],
+        "ADDITIONAL_LEFS": [":sram_lefs", ":phy_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs", ":phy_libs"],
     },
     arguments = {
         "VERILOG_DEFINES": "-D USE_SKY130HD_CELLS",
-        # Real-fakeram build is much harder to route than the mocked one
-        # because (a) ~1 Mb of registered SRAM macros lands on the floorplan,
-        # (b) the SDC's single sys_clk now needs a CTS tree across the whole
-        # die.  util 20 / halo 30 still failed GRT (capacity-0 overflow cells
-        # scattered across the design, around the fakeram pin clusters).
-        # Pushing halo way up to force RTLMP to spread the 20 fakerams.
-        "CORE_UTILIZATION": "15",
-        "PLACE_DENSITY": "0.25",
-        "MACRO_PLACE_HALO": "80 80",
+        # Round-2 PPA tune: 45%→55% util (GRT peak at 45% was 19% on met2 —
+        # plenty of room).  pcie_us LEF settled at 1000×1000 µm (885 µm pin
+        # column + margin).
+        "CORE_UTILIZATION": "55",
+        "PLACE_DENSITY": "0.65",
+        "MACRO_PLACE_HALO": "20 20",
         "GDS_ALLOW_EMPTY": "fakeram.*|pcie_us",
-        # See asap7 BUILD.bazel — drop split_load + skip post-GRT repair_timing
-        # to dodge ODB-1200.
-        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
+        # See asap7 BUILD.bazel — flow does not yet patch litepcie's
+        # inferred memories to explicit fakeram instances.
+        "SYNTH_MOCK_LARGE_MEMORIES": "1",
+        "SYNTH_MEMORY_MAX_BITS": "4096",
         "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

@@ -37,11 +37,20 @@ python3 "$LITEPCI_DIR/dev/gen_phy_stub.py" \
     --module pcie_us \
     --out "$LITEPCI_DIR/pcie_us_stub.v"
 
-# Replace the large inferred-memory reg arrays with explicit fakeram
-# instances so STA sees real launch / capture points on the DMA + TLP
-# datapath.  Mirrors the role of liteeth/patch/*.patch, but driven from
-# the LiteX block template instead of hand-written per-variant diffs.
-python3 "$LITEPCI_DIR/dev/inline_fakeram.py" "$LITEPCI_DIR/litepcie_core.v"
+# OpenROAD's synth_odb needs a LEF master for the pcie_us blackbox on every
+# platform.  Regenerate the per-platform placeholder LEF/LIB pair into the
+# committed phy/ trees so the build does not depend on dev tooling at flow
+# time (mirrors how sram/ LEFs are committed).
+REPO_ROOT="$(cd "$LITEPCI_DIR/../../.." && pwd)"
+for PLAT in asap7 nangate45 sky130hd; do
+    PHY_DIR="$REPO_ROOT/designs/$PLAT/litepci/phy"
+    mkdir -p "$PHY_DIR/lef" "$PHY_DIR/lib"
+    python3 "$LITEPCI_DIR/dev/gen_phy_lef.py" \
+        "$LITEPCI_DIR/pcie_us_stub.v" \
+        --module pcie_us --platform "$PLAT" \
+        --out-lef "$PHY_DIR/lef/pcie_us.lef" \
+        --out-lib "$PHY_DIR/lib/pcie_us.lib"
+done
 
 # Archive the full build tree (csr.json, xdc, mem.init, …) for traceability.
 ARCHIVE_DIR="$LITEPCI_DIR/dev/build_archive/litepcie_core_${TIMESTAMP}"

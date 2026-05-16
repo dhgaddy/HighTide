@@ -115,45 +115,6 @@ module VX_dp_ram #(
             .r0_addr_in(raddr),
             .r0_rd_out (rdata)
         );
-    end else if (DATAW == 193 && SIZE == 16) begin : g_fakeram
-        fakeram_193x16_1r1w fakeram_193x16 (
-            .w0_clk    (clk),
-            .r0_clk    (clk),
-            .w0_ce_in  (write),
-            .r0_ce_in  (read),
-            .w0_we_in  (write),
-            .w0_addr_in(waddr),
-            .w0_wd_in  (wdata),
-            .w0_wmask_in(wren),
-            .r0_addr_in(raddr),
-            .r0_rd_out (rdata)
-        );
-    end else if (DATAW == 654 && SIZE == 4) begin : g_fakeram
-        fakeram_654x4_1r1w fakeram_654x4 (
-            .w0_clk    (clk),
-            .r0_clk    (clk),
-            .w0_ce_in  (write),
-            .r0_ce_in  (read),
-            .w0_we_in  (write),
-            .w0_addr_in(waddr),
-            .w0_wd_in  (wdata),
-            .w0_wmask_in(wren),
-            .r0_addr_in(raddr),
-            .r0_rd_out (rdata)
-        );
-    end else if (DATAW == 560 && SIZE == 4) begin : g_fakeram
-        fakeram_560x4_1r1w fakeram_560x4 (
-            .w0_clk    (clk),
-            .r0_clk    (clk),
-            .w0_ce_in  (write),
-            .r0_ce_in  (read),
-            .w0_we_in  (write),
-            .w0_addr_in(waddr),
-            .w0_wd_in  (wdata),
-            .w0_wmask_in(wren),
-            .r0_addr_in(raddr),
-            .r0_rd_out (rdata)
-        );
     end else if (DATAW == 21 && SIZE == 256) begin : g_fakeram
         fakeram_21x256_1r1w fakeram_21x256 (
             .w0_clk    (clk),
@@ -167,47 +128,8 @@ module VX_dp_ram #(
             .r0_addr_in(raddr),
             .r0_rd_out (rdata)
         );
-    end else if (DATAW == 192 && SIZE == 16) begin : g_fakeram
-        fakeram_192x16_1r1w fakeram_192x16 (
-            .w0_clk    (clk),
-            .r0_clk    (clk),
-            .w0_ce_in  (write),
-            .r0_ce_in  (read),
-            .w0_we_in  (write),
-            .w0_addr_in(waddr),
-            .w0_wd_in  (wdata),
-            .w0_wmask_in(wren),
-            .r0_addr_in(raddr),
-            .r0_rd_out (rdata)
-        );
-    end else if (DATAW == 85 && SIZE == 16) begin : g_fakeram
-        fakeram_85x16_1r1w fakeram_85x16 (
-            .w0_clk    (clk),
-            .r0_clk    (clk),
-            .w0_ce_in  (write),
-            .r0_ce_in  (read),
-            .w0_we_in  (write),
-            .w0_addr_in(waddr),
-            .w0_wd_in  (wdata),
-            .w0_wmask_in(wren),
-            .r0_addr_in(raddr),
-            .r0_rd_out (rdata)
-        );
     end else if (DATAW == 21 && SIZE == 64) begin : g_fakeram
         fakeram_21x64_1r1w fakeram_21x64 (
-            .w0_clk    (clk),
-            .r0_clk    (clk),
-            .w0_ce_in  (write),
-            .r0_ce_in  (read),
-            .w0_we_in  (write),
-            .w0_addr_in(waddr),
-            .w0_wd_in  (wdata),
-            .w0_wmask_in(wren),
-            .r0_addr_in(raddr),
-            .r0_rd_out (rdata)
-        );
-    end else if (DATAW == 87 && SIZE == 16) begin : g_fakeram
-        fakeram_87x16_1r1w fakeram_87x16 (
             .w0_clk    (clk),
             .r0_clk    (clk),
             .w0_ce_in  (write),

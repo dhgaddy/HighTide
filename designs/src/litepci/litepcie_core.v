@@ -13632,255 +13632,243 @@ assign uspciephy_msi_cdc_cdc_rdport_dat_r = storage_4_dat1;
 
 
 //------------------------------------------------------------------------------
-// Patched: 256×92 → fakeram_1rw1r_92w256d_sram (u_storage_5_fakeram_1rw1r_92w256d_sram)
-wire [91:0] storage_5_dat0;
-wire [91:0] storage_5_dat1;
-(* keep *) fakeram_1rw1r_92w256d_sram u_storage_5_fakeram_1rw1r_92w256d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (litepciedma0_writer_table_self_wrport_we),
-    .rw0_addr_in(litepciedma0_writer_table_self_wrport_adr),
-    .rw0_wd_in  (litepciedma0_writer_table_self_wrport_dat_w),
-    .rw0_rd_out (storage_5_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (1'b1),
-    .r0_addr_in (litepciedma0_writer_table_self_rdport_adr),
-    .r0_rd_out  (storage_5_dat1)
-);
+// Memory storage_5: 256-words x 92-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Async | Write: ---- | 
+reg [91:0] storage_5[0:255];
+reg [91:0] storage_5_dat0;
+always @(posedge sys_clk) begin
+	if (litepciedma0_writer_table_self_wrport_we)
+		storage_5[litepciedma0_writer_table_self_wrport_adr] <= litepciedma0_writer_table_self_wrport_dat_w;
+	storage_5_dat0 <= storage_5[litepciedma0_writer_table_self_wrport_adr];
+end
+always @(posedge sys_clk) begin
+end
 assign litepciedma0_writer_table_self_wrport_dat_r = storage_5_dat0;
-assign litepciedma0_writer_table_self_rdport_dat_r = storage_5_dat1;
-
+assign litepciedma0_writer_table_self_rdport_dat_r = storage_5[litepciedma0_writer_table_self_rdport_adr];
 
 
 //------------------------------------------------------------------------------
-// Patched: 128×130 → fakeram_1rw1r_130w128d_sram (u_storage_6_fakeram_1rw1r_130w128d_sram)
-wire [129:0] storage_6_dat0;
-wire [129:0] storage_6_dat1;
-(* keep *) fakeram_1rw1r_130w128d_sram u_storage_6_fakeram_1rw1r_130w128d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (litepciedma0_writer_data_fifo_wrport_we),
-    .rw0_addr_in(litepciedma0_writer_data_fifo_wrport_adr),
-    .rw0_wd_in  (litepciedma0_writer_data_fifo_wrport_dat_w),
-    .rw0_rd_out (storage_6_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (litepciedma0_writer_data_fifo_rdport_re),
-    .r0_addr_in (litepciedma0_writer_data_fifo_rdport_adr),
-    .r0_rd_out  (storage_6_dat1)
-);
+// Memory storage_6: 128-words x 130-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [129:0] storage_6[0:127];
+reg [129:0] storage_6_dat0;
+reg [129:0] storage_6_dat1;
+always @(posedge sys_clk) begin
+	if (litepciedma0_writer_data_fifo_wrport_we)
+		storage_6[litepciedma0_writer_data_fifo_wrport_adr] <= litepciedma0_writer_data_fifo_wrport_dat_w;
+	storage_6_dat0 <= storage_6[litepciedma0_writer_data_fifo_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (litepciedma0_writer_data_fifo_rdport_re)
+		storage_6_dat1 <= storage_6[litepciedma0_writer_data_fifo_rdport_adr];
+end
 assign litepciedma0_writer_data_fifo_wrport_dat_r = storage_6_dat0;
 assign litepciedma0_writer_data_fifo_rdport_dat_r = storage_6_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 256×92 → fakeram_1rw1r_92w256d_sram (u_storage_7_fakeram_1rw1r_92w256d_sram)
-wire [91:0] storage_7_dat0;
-wire [91:0] storage_7_dat1;
-(* keep *) fakeram_1rw1r_92w256d_sram u_storage_7_fakeram_1rw1r_92w256d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (litepciedma0_reader_table_self_wrport_we),
-    .rw0_addr_in(litepciedma0_reader_table_self_wrport_adr),
-    .rw0_wd_in  (litepciedma0_reader_table_self_wrport_dat_w),
-    .rw0_rd_out (storage_7_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (1'b1),
-    .r0_addr_in (litepciedma0_reader_table_self_rdport_adr),
-    .r0_rd_out  (storage_7_dat1)
-);
+// Memory storage_7: 256-words x 92-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Async | Write: ---- | 
+reg [91:0] storage_7[0:255];
+reg [91:0] storage_7_dat0;
+always @(posedge sys_clk) begin
+	if (litepciedma0_reader_table_self_wrport_we)
+		storage_7[litepciedma0_reader_table_self_wrport_adr] <= litepciedma0_reader_table_self_wrport_dat_w;
+	storage_7_dat0 <= storage_7[litepciedma0_reader_table_self_wrport_adr];
+end
+always @(posedge sys_clk) begin
+end
 assign litepciedma0_reader_table_self_wrport_dat_r = storage_7_dat0;
-assign litepciedma0_reader_table_self_rdport_dat_r = storage_7_dat1;
-
+assign litepciedma0_reader_table_self_rdport_dat_r = storage_7[litepciedma0_reader_table_self_rdport_adr];
 
 
 //------------------------------------------------------------------------------
-// Patched: 1024×130 → fakeram_1rw1r_130w1024d_sram (u_storage_8_fakeram_1rw1r_130w1024d_sram)
-wire [129:0] storage_8_dat0;
-wire [129:0] storage_8_dat1;
-(* keep *) fakeram_1rw1r_130w1024d_sram u_storage_8_fakeram_1rw1r_130w1024d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (litepciedma0_reader_data_fifo_wrport_we),
-    .rw0_addr_in(litepciedma0_reader_data_fifo_wrport_adr),
-    .rw0_wd_in  (litepciedma0_reader_data_fifo_wrport_dat_w),
-    .rw0_rd_out (storage_8_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (litepciedma0_reader_data_fifo_rdport_re),
-    .r0_addr_in (litepciedma0_reader_data_fifo_rdport_adr),
-    .r0_rd_out  (storage_8_dat1)
-);
+// Memory storage_8: 1024-words x 130-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [129:0] storage_8[0:1023];
+reg [129:0] storage_8_dat0;
+reg [129:0] storage_8_dat1;
+always @(posedge sys_clk) begin
+	if (litepciedma0_reader_data_fifo_wrport_we)
+		storage_8[litepciedma0_reader_data_fifo_wrport_adr] <= litepciedma0_reader_data_fifo_wrport_dat_w;
+	storage_8_dat0 <= storage_8[litepciedma0_reader_data_fifo_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (litepciedma0_reader_data_fifo_rdport_re)
+		storage_8_dat1 <= storage_8[litepciedma0_reader_data_fifo_rdport_adr];
+end
 assign litepciedma0_reader_data_fifo_wrport_dat_r = storage_8_dat0;
 assign litepciedma0_reader_data_fifo_rdport_dat_r = storage_8_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 512×130 → fakeram_1rw1r_130w512d_sram (u_storage_9_fakeram_1rw1r_130w512d_sram)
-wire [129:0] storage_9_dat0;
-wire [129:0] storage_9_dat1;
-(* keep *) fakeram_1rw1r_130w512d_sram u_storage_9_fakeram_1rw1r_130w512d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (litepciedma0_buffering_syncfifo0_wrport_we),
-    .rw0_addr_in(litepciedma0_buffering_syncfifo0_wrport_adr),
-    .rw0_wd_in  (litepciedma0_buffering_syncfifo0_wrport_dat_w),
-    .rw0_rd_out (storage_9_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (litepciedma0_buffering_syncfifo0_rdport_re),
-    .r0_addr_in (litepciedma0_buffering_syncfifo0_rdport_adr),
-    .r0_rd_out  (storage_9_dat1)
-);
+// Memory storage_9: 512-words x 130-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [129:0] storage_9[0:511];
+reg [129:0] storage_9_dat0;
+reg [129:0] storage_9_dat1;
+always @(posedge sys_clk) begin
+	if (litepciedma0_buffering_syncfifo0_wrport_we)
+		storage_9[litepciedma0_buffering_syncfifo0_wrport_adr] <= litepciedma0_buffering_syncfifo0_wrport_dat_w;
+	storage_9_dat0 <= storage_9[litepciedma0_buffering_syncfifo0_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (litepciedma0_buffering_syncfifo0_rdport_re)
+		storage_9_dat1 <= storage_9[litepciedma0_buffering_syncfifo0_rdport_adr];
+end
 assign litepciedma0_buffering_syncfifo0_wrport_dat_r = storage_9_dat0;
 assign litepciedma0_buffering_syncfifo0_rdport_dat_r = storage_9_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 512×130 → fakeram_1rw1r_130w512d_sram (u_storage_10_fakeram_1rw1r_130w512d_sram)
-wire [129:0] storage_10_dat0;
-wire [129:0] storage_10_dat1;
-(* keep *) fakeram_1rw1r_130w512d_sram u_storage_10_fakeram_1rw1r_130w512d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (litepciedma0_buffering_syncfifo1_wrport_we),
-    .rw0_addr_in(litepciedma0_buffering_syncfifo1_wrport_adr),
-    .rw0_wd_in  (litepciedma0_buffering_syncfifo1_wrport_dat_w),
-    .rw0_rd_out (storage_10_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (litepciedma0_buffering_syncfifo1_rdport_re),
-    .r0_addr_in (litepciedma0_buffering_syncfifo1_rdport_adr),
-    .r0_rd_out  (storage_10_dat1)
-);
+// Memory storage_10: 512-words x 130-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [129:0] storage_10[0:511];
+reg [129:0] storage_10_dat0;
+reg [129:0] storage_10_dat1;
+always @(posedge sys_clk) begin
+	if (litepciedma0_buffering_syncfifo1_wrport_we)
+		storage_10[litepciedma0_buffering_syncfifo1_wrport_adr] <= litepciedma0_buffering_syncfifo1_wrport_dat_w;
+	storage_10_dat0 <= storage_10[litepciedma0_buffering_syncfifo1_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (litepciedma0_buffering_syncfifo1_rdport_re)
+		storage_10_dat1 <= storage_10[litepciedma0_buffering_syncfifo1_rdport_adr];
+end
 assign litepciedma0_buffering_syncfifo1_wrport_dat_r = storage_10_dat0;
 assign litepciedma0_buffering_syncfifo1_rdport_dat_r = storage_10_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 256×92 → fakeram_1rw1r_92w256d_sram (u_storage_11_fakeram_1rw1r_92w256d_sram)
-wire [91:0] storage_11_dat0;
-wire [91:0] storage_11_dat1;
-(* keep *) fakeram_1rw1r_92w256d_sram u_storage_11_fakeram_1rw1r_92w256d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (litepciedma1_writer_table_self_wrport_we),
-    .rw0_addr_in(litepciedma1_writer_table_self_wrport_adr),
-    .rw0_wd_in  (litepciedma1_writer_table_self_wrport_dat_w),
-    .rw0_rd_out (storage_11_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (1'b1),
-    .r0_addr_in (litepciedma1_writer_table_self_rdport_adr),
-    .r0_rd_out  (storage_11_dat1)
-);
+// Memory storage_11: 256-words x 92-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Async | Write: ---- | 
+reg [91:0] storage_11[0:255];
+reg [91:0] storage_11_dat0;
+always @(posedge sys_clk) begin
+	if (litepciedma1_writer_table_self_wrport_we)
+		storage_11[litepciedma1_writer_table_self_wrport_adr] <= litepciedma1_writer_table_self_wrport_dat_w;
+	storage_11_dat0 <= storage_11[litepciedma1_writer_table_self_wrport_adr];
+end
+always @(posedge sys_clk) begin
+end
 assign litepciedma1_writer_table_self_wrport_dat_r = storage_11_dat0;
-assign litepciedma1_writer_table_self_rdport_dat_r = storage_11_dat1;
-
+assign litepciedma1_writer_table_self_rdport_dat_r = storage_11[litepciedma1_writer_table_self_rdport_adr];
 
 
 //------------------------------------------------------------------------------
-// Patched: 128×130 → fakeram_1rw1r_130w128d_sram (u_storage_12_fakeram_1rw1r_130w128d_sram)
-wire [129:0] storage_12_dat0;
-wire [129:0] storage_12_dat1;
-(* keep *) fakeram_1rw1r_130w128d_sram u_storage_12_fakeram_1rw1r_130w128d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (litepciedma1_writer_data_fifo_wrport_we),
-    .rw0_addr_in(litepciedma1_writer_data_fifo_wrport_adr),
-    .rw0_wd_in  (litepciedma1_writer_data_fifo_wrport_dat_w),
-    .rw0_rd_out (storage_12_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (litepciedma1_writer_data_fifo_rdport_re),
-    .r0_addr_in (litepciedma1_writer_data_fifo_rdport_adr),
-    .r0_rd_out  (storage_12_dat1)
-);
+// Memory storage_12: 128-words x 130-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [129:0] storage_12[0:127];
+reg [129:0] storage_12_dat0;
+reg [129:0] storage_12_dat1;
+always @(posedge sys_clk) begin
+	if (litepciedma1_writer_data_fifo_wrport_we)
+		storage_12[litepciedma1_writer_data_fifo_wrport_adr] <= litepciedma1_writer_data_fifo_wrport_dat_w;
+	storage_12_dat0 <= storage_12[litepciedma1_writer_data_fifo_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (litepciedma1_writer_data_fifo_rdport_re)
+		storage_12_dat1 <= storage_12[litepciedma1_writer_data_fifo_rdport_adr];
+end
 assign litepciedma1_writer_data_fifo_wrport_dat_r = storage_12_dat0;
 assign litepciedma1_writer_data_fifo_rdport_dat_r = storage_12_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 256×92 → fakeram_1rw1r_92w256d_sram (u_storage_13_fakeram_1rw1r_92w256d_sram)
-wire [91:0] storage_13_dat0;
-wire [91:0] storage_13_dat1;
-(* keep *) fakeram_1rw1r_92w256d_sram u_storage_13_fakeram_1rw1r_92w256d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (litepciedma1_reader_table_self_wrport_we),
-    .rw0_addr_in(litepciedma1_reader_table_self_wrport_adr),
-    .rw0_wd_in  (litepciedma1_reader_table_self_wrport_dat_w),
-    .rw0_rd_out (storage_13_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (1'b1),
-    .r0_addr_in (litepciedma1_reader_table_self_rdport_adr),
-    .r0_rd_out  (storage_13_dat1)
-);
+// Memory storage_13: 256-words x 92-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Async | Write: ---- | 
+reg [91:0] storage_13[0:255];
+reg [91:0] storage_13_dat0;
+always @(posedge sys_clk) begin
+	if (litepciedma1_reader_table_self_wrport_we)
+		storage_13[litepciedma1_reader_table_self_wrport_adr] <= litepciedma1_reader_table_self_wrport_dat_w;
+	storage_13_dat0 <= storage_13[litepciedma1_reader_table_self_wrport_adr];
+end
+always @(posedge sys_clk) begin
+end
 assign litepciedma1_reader_table_self_wrport_dat_r = storage_13_dat0;
-assign litepciedma1_reader_table_self_rdport_dat_r = storage_13_dat1;
-
+assign litepciedma1_reader_table_self_rdport_dat_r = storage_13[litepciedma1_reader_table_self_rdport_adr];
 
 
 //------------------------------------------------------------------------------
-// Patched: 1024×130 → fakeram_1rw1r_130w1024d_sram (u_storage_14_fakeram_1rw1r_130w1024d_sram)
-wire [129:0] storage_14_dat0;
-wire [129:0] storage_14_dat1;
-(* keep *) fakeram_1rw1r_130w1024d_sram u_storage_14_fakeram_1rw1r_130w1024d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (litepciedma1_reader_data_fifo_wrport_we),
-    .rw0_addr_in(litepciedma1_reader_data_fifo_wrport_adr),
-    .rw0_wd_in  (litepciedma1_reader_data_fifo_wrport_dat_w),
-    .rw0_rd_out (storage_14_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (litepciedma1_reader_data_fifo_rdport_re),
-    .r0_addr_in (litepciedma1_reader_data_fifo_rdport_adr),
-    .r0_rd_out  (storage_14_dat1)
-);
+// Memory storage_14: 1024-words x 130-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [129:0] storage_14[0:1023];
+reg [129:0] storage_14_dat0;
+reg [129:0] storage_14_dat1;
+always @(posedge sys_clk) begin
+	if (litepciedma1_reader_data_fifo_wrport_we)
+		storage_14[litepciedma1_reader_data_fifo_wrport_adr] <= litepciedma1_reader_data_fifo_wrport_dat_w;
+	storage_14_dat0 <= storage_14[litepciedma1_reader_data_fifo_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (litepciedma1_reader_data_fifo_rdport_re)
+		storage_14_dat1 <= storage_14[litepciedma1_reader_data_fifo_rdport_adr];
+end
 assign litepciedma1_reader_data_fifo_wrport_dat_r = storage_14_dat0;
 assign litepciedma1_reader_data_fifo_rdport_dat_r = storage_14_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 512×130 → fakeram_1rw1r_130w512d_sram (u_storage_15_fakeram_1rw1r_130w512d_sram)
-wire [129:0] storage_15_dat0;
-wire [129:0] storage_15_dat1;
-(* keep *) fakeram_1rw1r_130w512d_sram u_storage_15_fakeram_1rw1r_130w512d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (litepciedma1_buffering_syncfifo2_wrport_we),
-    .rw0_addr_in(litepciedma1_buffering_syncfifo2_wrport_adr),
-    .rw0_wd_in  (litepciedma1_buffering_syncfifo2_wrport_dat_w),
-    .rw0_rd_out (storage_15_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (litepciedma1_buffering_syncfifo2_rdport_re),
-    .r0_addr_in (litepciedma1_buffering_syncfifo2_rdport_adr),
-    .r0_rd_out  (storage_15_dat1)
-);
+// Memory storage_15: 512-words x 130-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [129:0] storage_15[0:511];
+reg [129:0] storage_15_dat0;
+reg [129:0] storage_15_dat1;
+always @(posedge sys_clk) begin
+	if (litepciedma1_buffering_syncfifo2_wrport_we)
+		storage_15[litepciedma1_buffering_syncfifo2_wrport_adr] <= litepciedma1_buffering_syncfifo2_wrport_dat_w;
+	storage_15_dat0 <= storage_15[litepciedma1_buffering_syncfifo2_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (litepciedma1_buffering_syncfifo2_rdport_re)
+		storage_15_dat1 <= storage_15[litepciedma1_buffering_syncfifo2_rdport_adr];
+end
 assign litepciedma1_buffering_syncfifo2_wrport_dat_r = storage_15_dat0;
 assign litepciedma1_buffering_syncfifo2_rdport_dat_r = storage_15_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 512×130 → fakeram_1rw1r_130w512d_sram (u_storage_16_fakeram_1rw1r_130w512d_sram)
-wire [129:0] storage_16_dat0;
-wire [129:0] storage_16_dat1;
-(* keep *) fakeram_1rw1r_130w512d_sram u_storage_16_fakeram_1rw1r_130w512d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (litepciedma1_buffering_syncfifo3_wrport_we),
-    .rw0_addr_in(litepciedma1_buffering_syncfifo3_wrport_adr),
-    .rw0_wd_in  (litepciedma1_buffering_syncfifo3_wrport_dat_w),
-    .rw0_rd_out (storage_16_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (litepciedma1_buffering_syncfifo3_rdport_re),
-    .r0_addr_in (litepciedma1_buffering_syncfifo3_rdport_adr),
-    .r0_rd_out  (storage_16_dat1)
-);
+// Memory storage_16: 512-words x 130-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [129:0] storage_16[0:511];
+reg [129:0] storage_16_dat0;
+reg [129:0] storage_16_dat1;
+always @(posedge sys_clk) begin
+	if (litepciedma1_buffering_syncfifo3_wrport_we)
+		storage_16[litepciedma1_buffering_syncfifo3_wrport_adr] <= litepciedma1_buffering_syncfifo3_wrport_dat_w;
+	storage_16_dat0 <= storage_16[litepciedma1_buffering_syncfifo3_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (litepciedma1_buffering_syncfifo3_rdport_re)
+		storage_16_dat1 <= storage_16[litepciedma1_buffering_syncfifo3_rdport_adr];
+end
 assign litepciedma1_buffering_syncfifo3_wrport_dat_r = storage_16_dat0;
 assign litepciedma1_buffering_syncfifo3_rdport_dat_r = storage_16_dat1;
-
 
 
 //------------------------------------------------------------------------------
@@ -14066,171 +14054,171 @@ assign subfragments_syncfifo1_rdport_dat_r = storage_18_dat1;
 
 
 //------------------------------------------------------------------------------
-// Patched: 128×230 → fakeram_1rw1r_230w128d_sram (u_storage_19_fakeram_1rw1r_230w128d_sram)
-wire [229:0] storage_19_dat0;
-wire [229:0] storage_19_dat1;
-(* keep *) fakeram_1rw1r_230w128d_sram u_storage_19_fakeram_1rw1r_230w128d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (subfragments_syncfifo2_wrport_we),
-    .rw0_addr_in(subfragments_syncfifo2_wrport_adr),
-    .rw0_wd_in  (subfragments_syncfifo2_wrport_dat_w),
-    .rw0_rd_out (storage_19_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (subfragments_syncfifo2_rdport_re),
-    .r0_addr_in (subfragments_syncfifo2_rdport_adr),
-    .r0_rd_out  (storage_19_dat1)
-);
+// Memory storage_19: 128-words x 230-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [229:0] storage_19[0:127];
+reg [229:0] storage_19_dat0;
+reg [229:0] storage_19_dat1;
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo2_wrport_we)
+		storage_19[subfragments_syncfifo2_wrport_adr] <= subfragments_syncfifo2_wrport_dat_w;
+	storage_19_dat0 <= storage_19[subfragments_syncfifo2_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo2_rdport_re)
+		storage_19_dat1 <= storage_19[subfragments_syncfifo2_rdport_adr];
+end
 assign subfragments_syncfifo2_wrport_dat_r = storage_19_dat0;
 assign subfragments_syncfifo2_rdport_dat_r = storage_19_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 128×230 → fakeram_1rw1r_230w128d_sram (u_storage_20_fakeram_1rw1r_230w128d_sram)
-wire [229:0] storage_20_dat0;
-wire [229:0] storage_20_dat1;
-(* keep *) fakeram_1rw1r_230w128d_sram u_storage_20_fakeram_1rw1r_230w128d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (subfragments_syncfifo3_wrport_we),
-    .rw0_addr_in(subfragments_syncfifo3_wrport_adr),
-    .rw0_wd_in  (subfragments_syncfifo3_wrport_dat_w),
-    .rw0_rd_out (storage_20_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (subfragments_syncfifo3_rdport_re),
-    .r0_addr_in (subfragments_syncfifo3_rdport_adr),
-    .r0_rd_out  (storage_20_dat1)
-);
+// Memory storage_20: 128-words x 230-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [229:0] storage_20[0:127];
+reg [229:0] storage_20_dat0;
+reg [229:0] storage_20_dat1;
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo3_wrport_we)
+		storage_20[subfragments_syncfifo3_wrport_adr] <= subfragments_syncfifo3_wrport_dat_w;
+	storage_20_dat0 <= storage_20[subfragments_syncfifo3_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo3_rdport_re)
+		storage_20_dat1 <= storage_20[subfragments_syncfifo3_rdport_adr];
+end
 assign subfragments_syncfifo3_wrport_dat_r = storage_20_dat0;
 assign subfragments_syncfifo3_rdport_dat_r = storage_20_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 128×230 → fakeram_1rw1r_230w128d_sram (u_storage_21_fakeram_1rw1r_230w128d_sram)
-wire [229:0] storage_21_dat0;
-wire [229:0] storage_21_dat1;
-(* keep *) fakeram_1rw1r_230w128d_sram u_storage_21_fakeram_1rw1r_230w128d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (subfragments_syncfifo4_wrport_we),
-    .rw0_addr_in(subfragments_syncfifo4_wrport_adr),
-    .rw0_wd_in  (subfragments_syncfifo4_wrport_dat_w),
-    .rw0_rd_out (storage_21_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (subfragments_syncfifo4_rdport_re),
-    .r0_addr_in (subfragments_syncfifo4_rdport_adr),
-    .r0_rd_out  (storage_21_dat1)
-);
+// Memory storage_21: 128-words x 230-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [229:0] storage_21[0:127];
+reg [229:0] storage_21_dat0;
+reg [229:0] storage_21_dat1;
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo4_wrport_we)
+		storage_21[subfragments_syncfifo4_wrport_adr] <= subfragments_syncfifo4_wrport_dat_w;
+	storage_21_dat0 <= storage_21[subfragments_syncfifo4_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo4_rdport_re)
+		storage_21_dat1 <= storage_21[subfragments_syncfifo4_rdport_adr];
+end
 assign subfragments_syncfifo4_wrport_dat_r = storage_21_dat0;
 assign subfragments_syncfifo4_rdport_dat_r = storage_21_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 128×230 → fakeram_1rw1r_230w128d_sram (u_storage_22_fakeram_1rw1r_230w128d_sram)
-wire [229:0] storage_22_dat0;
-wire [229:0] storage_22_dat1;
-(* keep *) fakeram_1rw1r_230w128d_sram u_storage_22_fakeram_1rw1r_230w128d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (subfragments_syncfifo5_wrport_we),
-    .rw0_addr_in(subfragments_syncfifo5_wrport_adr),
-    .rw0_wd_in  (subfragments_syncfifo5_wrport_dat_w),
-    .rw0_rd_out (storage_22_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (subfragments_syncfifo5_rdport_re),
-    .r0_addr_in (subfragments_syncfifo5_rdport_adr),
-    .r0_rd_out  (storage_22_dat1)
-);
+// Memory storage_22: 128-words x 230-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [229:0] storage_22[0:127];
+reg [229:0] storage_22_dat0;
+reg [229:0] storage_22_dat1;
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo5_wrport_we)
+		storage_22[subfragments_syncfifo5_wrport_adr] <= subfragments_syncfifo5_wrport_dat_w;
+	storage_22_dat0 <= storage_22[subfragments_syncfifo5_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo5_rdport_re)
+		storage_22_dat1 <= storage_22[subfragments_syncfifo5_rdport_adr];
+end
 assign subfragments_syncfifo5_wrport_dat_r = storage_22_dat0;
 assign subfragments_syncfifo5_rdport_dat_r = storage_22_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 128×230 → fakeram_1rw1r_230w128d_sram (u_storage_23_fakeram_1rw1r_230w128d_sram)
-wire [229:0] storage_23_dat0;
-wire [229:0] storage_23_dat1;
-(* keep *) fakeram_1rw1r_230w128d_sram u_storage_23_fakeram_1rw1r_230w128d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (subfragments_syncfifo6_wrport_we),
-    .rw0_addr_in(subfragments_syncfifo6_wrport_adr),
-    .rw0_wd_in  (subfragments_syncfifo6_wrport_dat_w),
-    .rw0_rd_out (storage_23_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (subfragments_syncfifo6_rdport_re),
-    .r0_addr_in (subfragments_syncfifo6_rdport_adr),
-    .r0_rd_out  (storage_23_dat1)
-);
+// Memory storage_23: 128-words x 230-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [229:0] storage_23[0:127];
+reg [229:0] storage_23_dat0;
+reg [229:0] storage_23_dat1;
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo6_wrport_we)
+		storage_23[subfragments_syncfifo6_wrport_adr] <= subfragments_syncfifo6_wrport_dat_w;
+	storage_23_dat0 <= storage_23[subfragments_syncfifo6_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo6_rdport_re)
+		storage_23_dat1 <= storage_23[subfragments_syncfifo6_rdport_adr];
+end
 assign subfragments_syncfifo6_wrport_dat_r = storage_23_dat0;
 assign subfragments_syncfifo6_rdport_dat_r = storage_23_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 128×230 → fakeram_1rw1r_230w128d_sram (u_storage_24_fakeram_1rw1r_230w128d_sram)
-wire [229:0] storage_24_dat0;
-wire [229:0] storage_24_dat1;
-(* keep *) fakeram_1rw1r_230w128d_sram u_storage_24_fakeram_1rw1r_230w128d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (subfragments_syncfifo7_wrport_we),
-    .rw0_addr_in(subfragments_syncfifo7_wrport_adr),
-    .rw0_wd_in  (subfragments_syncfifo7_wrport_dat_w),
-    .rw0_rd_out (storage_24_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (subfragments_syncfifo7_rdport_re),
-    .r0_addr_in (subfragments_syncfifo7_rdport_adr),
-    .r0_rd_out  (storage_24_dat1)
-);
+// Memory storage_24: 128-words x 230-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [229:0] storage_24[0:127];
+reg [229:0] storage_24_dat0;
+reg [229:0] storage_24_dat1;
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo7_wrport_we)
+		storage_24[subfragments_syncfifo7_wrport_adr] <= subfragments_syncfifo7_wrport_dat_w;
+	storage_24_dat0 <= storage_24[subfragments_syncfifo7_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo7_rdport_re)
+		storage_24_dat1 <= storage_24[subfragments_syncfifo7_rdport_adr];
+end
 assign subfragments_syncfifo7_wrport_dat_r = storage_24_dat0;
 assign subfragments_syncfifo7_rdport_dat_r = storage_24_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 128×230 → fakeram_1rw1r_230w128d_sram (u_storage_25_fakeram_1rw1r_230w128d_sram)
-wire [229:0] storage_25_dat0;
-wire [229:0] storage_25_dat1;
-(* keep *) fakeram_1rw1r_230w128d_sram u_storage_25_fakeram_1rw1r_230w128d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (subfragments_syncfifo8_wrport_we),
-    .rw0_addr_in(subfragments_syncfifo8_wrport_adr),
-    .rw0_wd_in  (subfragments_syncfifo8_wrport_dat_w),
-    .rw0_rd_out (storage_25_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (subfragments_syncfifo8_rdport_re),
-    .r0_addr_in (subfragments_syncfifo8_rdport_adr),
-    .r0_rd_out  (storage_25_dat1)
-);
+// Memory storage_25: 128-words x 230-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [229:0] storage_25[0:127];
+reg [229:0] storage_25_dat0;
+reg [229:0] storage_25_dat1;
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo8_wrport_we)
+		storage_25[subfragments_syncfifo8_wrport_adr] <= subfragments_syncfifo8_wrport_dat_w;
+	storage_25_dat0 <= storage_25[subfragments_syncfifo8_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo8_rdport_re)
+		storage_25_dat1 <= storage_25[subfragments_syncfifo8_rdport_adr];
+end
 assign subfragments_syncfifo8_wrport_dat_r = storage_25_dat0;
 assign subfragments_syncfifo8_rdport_dat_r = storage_25_dat1;
 
 
-
 //------------------------------------------------------------------------------
-// Patched: 128×230 → fakeram_1rw1r_230w128d_sram (u_storage_26_fakeram_1rw1r_230w128d_sram)
-wire [229:0] storage_26_dat0;
-wire [229:0] storage_26_dat1;
-(* keep *) fakeram_1rw1r_230w128d_sram u_storage_26_fakeram_1rw1r_230w128d_sram (
-    .rw0_clk    (sys_clk),
-    .rw0_ce_in  (1'b1),
-    .rw0_we_in  (subfragments_syncfifo9_wrport_we),
-    .rw0_addr_in(subfragments_syncfifo9_wrport_adr),
-    .rw0_wd_in  (subfragments_syncfifo9_wrport_dat_w),
-    .rw0_rd_out (storage_26_dat0),
-    .r0_clk     (sys_clk),
-    .r0_ce_in   (subfragments_syncfifo9_rdport_re),
-    .r0_addr_in (subfragments_syncfifo9_rdport_adr),
-    .r0_rd_out  (storage_26_dat1)
-);
+// Memory storage_26: 128-words x 230-bit
+//------------------------------------------------------------------------------
+// Port 0 | Read: Sync  | Write: Sync | Mode: Read-First 
+// Port 1 | Read: Sync  | Write: ---- | 
+reg [229:0] storage_26[0:127];
+reg [229:0] storage_26_dat0;
+reg [229:0] storage_26_dat1;
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo9_wrport_we)
+		storage_26[subfragments_syncfifo9_wrport_adr] <= subfragments_syncfifo9_wrport_dat_w;
+	storage_26_dat0 <= storage_26[subfragments_syncfifo9_wrport_adr];
+end
+always @(posedge sys_clk) begin
+	if (subfragments_syncfifo9_rdport_re)
+		storage_26_dat1 <= storage_26[subfragments_syncfifo9_rdport_adr];
+end
 assign subfragments_syncfifo9_wrport_dat_r = storage_26_dat0;
 assign subfragments_syncfifo9_rdport_dat_r = storage_26_dat1;
-
 
 
 (* ars_ff1 = "true", async_reg = "true" *)

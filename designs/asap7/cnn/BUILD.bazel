@@ -1,14 +1,23 @@
 load("//:defs.bzl", "hightide_design")
 
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
 hightide_design(
     name = "cnn",
     platform = "asap7",
     verilog_files = ["//designs/src/cnn:rtl"],
     sources = {
         "SDC_FILE": [":constraint.sdc"],
-        "ADDITIONAL_LEFS": ["//designs/src/cnn:sram_lefs"],
-        "ADDITIONAL_LIBS": ["//designs/src/cnn:sram_libs"],
-        "MACRO_PLACEMENT_TCL": [":macro_placement.tcl"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
     },
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
@@ -17,5 +26,15 @@ hightide_design(
         "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
         "MACRO_PLACE_HALO": "6 6",
         "MACRO_BLOCKAGE_HALO": "0.5",
+        # ODB-1200 in CTS-time repair_timing (HighTide#75). Trips on
+        # __muladd_madd_321.madd/_1129_/SN -- the new bsg_fakeram macros
+        # apparently push the resizer into the same SplitLoadMove path
+        # that already affects liteeth / bp_quad / gemmini on asap7.
+        "SKIP_CTS_REPAIR_TIMING": "1",
+        # Post-GRT repair_timing also stalls (silent for >2h on a k8s
+        # run, no progress on either WNS or fanout). Same non-convergence
+        # pattern as liteeth/asap7 (commit 88b7ef46). Skip it; route's
+        # own hold-repair still runs.
+        "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

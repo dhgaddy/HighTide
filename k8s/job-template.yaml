@@ -27,12 +27,7 @@ spec:
           mountPath: /repo
       containers:
       - name: build
-        # Pin ubuntu:24.04 by digest so apt repo content can't drift between
-        # pods. Drift in transitive C/C++ dep versions changes OpenROAD's
-        # build-from-source binary hash, which invalidates every cached ORFS
-        # action from 2_floorplan onwards. Bump this manually after auditing
-        # if you need newer apt packages.
-        image: ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b
+        image: ubuntu:24.04
         command:
         - /bin/bash
         - -c
@@ -48,12 +43,9 @@ spec:
           #   libx11-xcb1 + libxcb-* + libxkbcommon-x11-0 — runtime deps for
           #     OpenROAD built with --@openroad//:platform=gui (bazel-orfs .bazelrc);
           #     binary DT_NEEDEDs libX11-xcb.so.1 even when run headlessly
-          #   xvfb — virtual X server for `xvfb-run`; required by the gallery
-          #     target which runs OpenROAD with -gui to render a routed image
           apt-get update -qq && apt-get install -y -qq \
             curl git build-essential time libxml2 \
             python3 python3-yaml python3-numpy \
-            xvfb \
             libx11-xcb1 libxcb-cursor0 libxcb-icccm4 libxcb-image0 \
             libxcb-keysyms1 libxcb-randr0 libxcb-render0 libxcb-render-util0 \
             libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-xfixes0 \
@@ -62,12 +54,9 @@ spec:
             libfontconfig1 libglib2.0-0 \
             >/dev/null 2>&1
 
-          # Install bazelisk as bazel — pinned to a specific release tag so
-          # bazelisk-itself doesn't drift between pods. Bazelisk just routes
-          # to the version in .bazelversion (8.5.0), but a different
-          # bazelisk binary can still leak into action keys via env/PATH.
+          # Install bazelisk as bazel
           curl -fsSL -o /usr/local/bin/bazel \
-            https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64
+            https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
           chmod +x /usr/local/bin/bazel
 
           cd /repo

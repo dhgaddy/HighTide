@@ -12,6 +12,20 @@ filegroup(
     srcs = glob(["sram/lib/*.lib"]),
 )
 
+# Placeholder LEF/LIB for the pcie_us Xilinx PCIe hard-IP blackbox.
+# Committed (not regenerated at flow time) so synth_odb has a master for
+# the blackbox; produced by designs/src/litepci/dev/gen_phy_lef.py via
+# dev/gen.sh. See designs/src/litepci/BUILD.bazel.
+filegroup(
+    name = "phy_lefs",
+    srcs = glob(["phy/lef/*.lef"]),
+)
+
+filegroup(
+    name = "phy_libs",
+    srcs = glob(["phy/lib/*.lib"]),
+)
+
 # LitePCIe core (kcu105 / USPCIEPHY config) on nangate45.
 # See designs/asap7/litepci/BUILD.bazel for the design-side rationale.
 hightide_design(
@@ -21,22 +35,24 @@ hightide_design(
     verilog_files = ["//designs/src/litepci:rtl"],
     sources = {
         "SDC_FILE": [":constraint.sdc"],
-        "ADDITIONAL_LEFS": [":sram_lefs"],
-        "ADDITIONAL_LIBS": [":sram_libs"],
+        "ADDITIONAL_LEFS": [":sram_lefs", ":phy_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs", ":phy_libs"],
     },
     arguments = {
         "VERILOG_DEFINES": "-D USE_NANGATE45_CELLS",
-        # Tuned across three rounds with mocked memories; will retune now
-        # that dev/inline_fakeram.py wires the 20 DMA / TLP memories to real
-        # FakeRAM instances and STA sees register-to-register paths again.
-        "CORE_UTILIZATION": "40",
-        "PLACE_DENSITY": "0.50",
+        # Round-2 PPA tune: 50%→60% util (GRT peak was 36% on metal2 at 50%,
+        # leaving ~15 percentage points of headroom before the 50% wall).
+        "CORE_UTILIZATION": "60",
+        "PLACE_DENSITY": "0.70",
         "MACRO_PLACE_HALO": "15 15",
         "GDS_ALLOW_EMPTY": "fakeram.*|pcie_us",
-        # See asap7 BUILD.bazel — drop split_load + skip post-GRT repair_timing
-        # to dodge ODB-1200.  Applied preemptively to all three platforms since
-        # the bug is RTL-pattern-triggered, not platform-specific.
-        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
+        # See asap7 BUILD.bazel — flow does not yet patch litepcie's
+        # inferred memories to explicit fakeram instances.  Mock until
+        # we add a generic LiteX → fakeram patcher.  SKIP_INCREMENTAL_REPAIR
+        # avoids the post-GRT repair_timing non-convergence loop the mocked
+        # memories trigger.
+        "SYNTH_MOCK_LARGE_MEMORIES": "1",
+        "SYNTH_MEMORY_MAX_BITS": "4096",
         "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

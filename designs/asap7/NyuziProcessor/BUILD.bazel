@@ -26,5 +26,11 @@ hightide_design(
         "PLACE_DENSITY_LB_ADDON": "0.22",
         "MACRO_PLACE_HALO": "6 6",
         "TNS_END_PERCENT": "100",
+        # ODB-1200: with the wd_in-fixed fakeram macros the resizer's
+        # CTS-time SplitLoadMove now trips InsertBufferBeforeLoads on a
+        # stale load list ("cts.tcl, 82 ODB-1200"). Drop only `split_load`
+        # from the move sequence (gemmini-style targeted fix) so the rest
+        # of CTS repair_timing keeps working — don't skip the whole pass.
+        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
     },
 )

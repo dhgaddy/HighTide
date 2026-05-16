@@ -15,6 +15,20 @@ filegroup(
     srcs = glob(["sram/lib/*.lib"]),
 )
 
+# Placeholder LEF/LIB for the pcie_us Xilinx PCIe hard-IP blackbox.
+# Committed (not regenerated at flow time) so synth_odb has a master for
+# the blackbox; produced by designs/src/litepci/dev/gen_phy_lef.py via
+# dev/gen.sh. See designs/src/litepci/BUILD.bazel.
+filegroup(
+    name = "phy_lefs",
+    srcs = glob(["phy/lef/*.lef"]),
+)
+
+filegroup(
+    name = "phy_libs",
+    srcs = glob(["phy/lib/*.lib"]),
+)
+
 # LitePCIe core (kcu105 / USPCIEPHY config) on asap7.
 #
 # The Xilinx PCIe hard IP (`pcie_us`) and the GT diff-clock buffer
@@ -28,26 +42,34 @@ hightide_design(
     verilog_files = ["//designs/src/litepci:rtl"],
     sources = {
         "SDC_FILE": [":constraint.sdc"],
-        "ADDITIONAL_LEFS": [":sram_lefs"],
-        "ADDITIONAL_LIBS": [":sram_libs"],
+        "ADDITIONAL_LEFS": [":sram_lefs", ":phy_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs", ":phy_libs"],
     },
     arguments = {
         "VERILOG_DEFINES": "-D USE_ASAP7_CELLS",
-        # Tuned across three rounds with mocked memories; will retune now
-        # that dev/inline_fakeram.py wires the 20 DMA / TLP memories to real
-        # FakeRAM instances and STA sees register-to-register paths again.
-        "CORE_UTILIZATION": "60",
-        "PLACE_DENSITY": "0.65",
+        # Round-2 PPA tune: pcie_us shrunk further to 80×80 µm (62 µm pin
+        # column + 18 µm margin); util pushed to 75% — GRT congestion at 60%
+        # was only 22% on M2 so plenty of headroom remains.
+        "CORE_UTILIZATION": "75",
+        "PLACE_DENSITY": "0.80",
         "MACRO_PLACE_HALO": "5 5",
         # Allow no GDS for fakeram macros and the pcie_us blackbox.
         "GDS_ALLOW_EMPTY": "fakeram.*|pcie_us",
-        # ODB-1200 bug — InsertBufferBeforeLoads iterates a stale load list and
-        # aborts when SplitLoadMove fires in repair_timing.  SETUP_MOVE_SEQUENCE
-        # without split_load fixes the setup pass (same as gemmini-asap7 in
-        # CLAUDE.md) but the *hold* pass inside the post-GRT repair_timing_helper
-        # also calls split_load and crashes too.  Skip the whole post-GRT repair
-        # block (matches snitch_cluster / liteeth_udp_sgmii in the table).
-        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
+        # litepcie infers 26 memories spanning 5 distinct geometries
+        # (92x256, 130x{128,512,1024}, 230x128).  Properly mapping each
+        # to an explicit fakeram instance would require a per-design
+        # patcher in gen.sh (the way liteeth does it via patch/*.patch).
+        # For now we mock large memories down to a single row so the
+        # rest of the flow can be exercised end-to-end; the resulting
+        # area/timing numbers underestimate what real SRAMs would
+        # contribute.  TODO: write a generic LiteX→fakeram patcher and
+        # drop these two flags.
+        "SYNTH_MOCK_LARGE_MEMORIES": "1",
+        "SYNTH_MEMORY_MAX_BITS": "4096",
+        # Mocked memories leave many RTL-bounded endpoints with dangling
+        # single-pin nets; the resizer's post-GRT repair_timing loop walks
+        # those forever (~1 endpoint / iter) and never converges.  Same
+        # workaround pattern as snitch_cluster (CLAUDE.md row 6).
         "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

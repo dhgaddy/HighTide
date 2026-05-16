@@ -3,6 +3,13 @@ package(default_visibility = ["//designs/asap7/NVDLA:__subpackages__"])
 # All FakeRAM LEFs/LIBs shared across the 5 NVDLA partitions.
 # Per-partition config.mk references only a subset of these; for the
 # Bazel flow each partition pulls its own subset by name.
+#
+# Six (W,D) sizes synthesize to FF arrays instead of macros — the
+# behavioural Verilog lives at //designs/src/NVDLA:dev/generated/sram_ff/
+# and is pulled in via the :rtl filegroup, so no LEF/LIB listing here:
+#
+#   sub-1KB        : (6,128), (9,80), (66,8)
+#   D=16 (CACTI)   : (64,16), (256,16), (272,16)
 
 filegroup(
     name = "sram_lefs_all",
@@ -16,31 +23,11 @@ filegroup(
 
 # ---- Per-partition SRAM subsets (mirroring partition_*/config.mk) ----
 
-# partition_a: 256x16, 272x16
-filegroup(
-    name = "sram_lefs_a",
-    srcs = [
-        "sram/lef/fakeram_256x16_1r1w.lef",
-        "sram/lef/fakeram_272x16_1r1w.lef",
-    ],
-)
-
-filegroup(
-    name = "sram_libs_a",
-    srcs = [
-        "sram/lib/fakeram_256x16_1r1w.lib",
-        "sram/lib/fakeram_272x16_1r1w.lib",
-    ],
-)
-
-# partition_c: 64x256, 64x16, 6x128, 66x8, 11x128
+# partition_c: 64x256, 11x128 (64x16, 6x128, 66x8 became FFs).
 filegroup(
     name = "sram_lefs_c",
     srcs = [
         "sram/lef/fakeram_64x256_1r1w.lef",
-        "sram/lef/fakeram_64x16_1r1w.lef",
-        "sram/lef/fakeram_6x128_1r1w.lef",
-        "sram/lef/fakeram_66x8_1r1w.lef",
         "sram/lef/fakeram_11x128_1r1w.lef",
     ],
 )
@@ -49,14 +36,11 @@ filegroup(
     name = "sram_libs_c",
     srcs = [
         "sram/lib/fakeram_64x256_1r1w.lib",
-        "sram/lib/fakeram_64x16_1r1w.lib",
-        "sram/lib/fakeram_6x128_1r1w.lib",
-        "sram/lib/fakeram_66x8_1r1w.lib",
         "sram/lib/fakeram_11x128_1r1w.lib",
     ],
 )
 
-# partition_o: 18x128, 8x256, 4x256, 7x256, 66x64, 15x80, 22x60, 32x128, 9x80
+# partition_o: 18x128, 8x256, 4x256, 7x256, 66x64, 15x80, 22x60, 32x128 (9x80 became FF).
 filegroup(
     name = "sram_lefs_o",
     srcs = [
@@ -68,7 +52,6 @@ filegroup(
         "sram/lef/fakeram_15x80_1r1w.lef",
         "sram/lef/fakeram_22x60_1r1w.lef",
         "sram/lef/fakeram_32x128_1r1w.lef",
-        "sram/lef/fakeram_9x80_1r1w.lef",
     ],
 )
 
@@ -83,11 +66,10 @@ filegroup(
         "sram/lib/fakeram_15x80_1r1w.lib",
         "sram/lib/fakeram_22x60_1r1w.lib",
         "sram/lib/fakeram_32x128_1r1w.lib",
-        "sram/lib/fakeram_9x80_1r1w.lib",
     ],
 )
 
-# partition_p: 16x160, 65x160, 14x80, 66x80
+# partition_p: 16x160, 65x160, 14x80, 66x80 (all stay as macros).
 filegroup(
     name = "sram_lefs_p",
     srcs = [

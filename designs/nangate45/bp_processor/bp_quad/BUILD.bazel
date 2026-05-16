@@ -5,9 +5,14 @@ _ARGS = dict(BP_COMMON_ARGS)
 
 _ARGS.update({
     "VERILOG_TOP_PARAMS": "bp_params_p 11",
-    "CORE_UTILIZATION": "35",
+    # bp_quad has 560 macros. First attempt at 8000x8000 + halo=6 hit
+    # PDN-0179 — same lesson as bp_uno-nangate45: halo=6 too tight for
+    # nangate45 power stripes between macros. Keep 8000x8000 die but
+    # bump halo to 25 (bp_uno-n45's working value).
+    "DIE_AREA": "0 0 8000 8000",
+    "CORE_AREA": "10 10 7990 7990",
     "PLACE_DENSITY_LB_ADDON": "0.10",
-    "MACRO_PLACE_HALO": "40 40",
+    "MACRO_PLACE_HALO": "25 25",
 })
 
 hightide_design(

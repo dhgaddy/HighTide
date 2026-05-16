@@ -1,21 +1,21 @@
 current_design litepcie_core
 
-# See designs/asap7/litepci/constraint.sdc for the SDC story.  Single user
-# clock on pcie_us/user_clk; `clk` is an output port (a fanout, not the source).
-
+# sky130hd — far slower; pick a clock period in the 10s of ns.
 set clk_name      sys_clk
-# 10 ns / 100 MHz — period_min ~8.0 ns from the first real-timing build.
-# 10 ns leaves ~25% headroom for clean closure.
-set clk_period    10000
+set clk_port_name clk
+set clk_period    20000
 set clk_io_pct    0.2
 
-create_clock -name $clk_name -period $clk_period [get_pins pcie_us/user_clk]
+set clk_port [get_ports $clk_port_name]
+create_clock -name $clk_name -period $clk_period $clk_port
+
 create_clock -name pcie_refclk -period 10000 [get_ports pcie_clk_p]
 set_clock_groups -asynchronous \
     -group [get_clocks $clk_name] \
     -group [get_clocks pcie_refclk]
 
-set non_clock_inputs [lsearch -inline -all -not \
-    [lsearch -inline -all -not [all_inputs] pcie_clk_p] pcie_clk_n]
+set non_clock_inputs [lsearch -inline -all -not [lsearch -inline -all -not \
+    [lsearch -inline -all -not [all_inputs] $clk_port] pcie_clk_p] pcie_clk_n]
+
 set_input_delay  [expr $clk_period * $clk_io_pct] -clock $clk_name $non_clock_inputs
 set_output_delay [expr $clk_period * $clk_io_pct] -clock $clk_name [all_outputs]

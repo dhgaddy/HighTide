@@ -18,5 +18,16 @@ hightide_design(
         "PLACE_DENSITY_LB_ADDON": "0.30",
         "MACRO_PLACE_HALO": "5 5",
         "TNS_END_PERCENT": "100",
+        # ODB-1200 in CTS-time repair_timing (HighTide#75). Trips on
+        # u_NV_NVDLA_cdma.u_dc/_23465_/SN under the new bsg_fakeram macros
+        # — same SplitLoadMove path that already affects cnn/asap7,
+        # liteeth, bp_quad, gemmini-asap7. Skip the CTS repair_timing
+        # pass; route's own hold-repair still runs.
+        "SKIP_CTS_REPAIR_TIMING": "1",
+        # Post-GRT repair_timing also hangs silently for >85 min on k8s
+        # under the new bsg_fakeram macros — same non-convergence
+        # pattern as liteeth/asap7 (88b7ef46) and cnn/asap7 (9d9c5309).
+        # Skip it; route's own hold-repair still runs.
+        "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

@@ -5,7 +5,12 @@ _ARGS = dict(BP_COMMON_ARGS)
 
 _ARGS.update({
     "VERILOG_TOP_PARAMS": "bp_params_p 11",
-    "CORE_UTILIZATION": "35",
+    # bp_quad has 560 macros (4 cores worth of bsg_fakeram). The first
+    # attempt at 2800x2800 still hit MPL-0040 (util adjusted to 58.5%
+    # before annealing failed). Need a much bigger die — bump to
+    # 4000x4000 (16 mm^2) to give RTLMP more headroom.
+    "DIE_AREA": "0 0 4000 4000",
+    "CORE_AREA": "10 10 3990 3990",
     "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
     "MACRO_PLACE_HALO": "6 6",
     "MACRO_BLOCKAGE_HALO": "0.5",

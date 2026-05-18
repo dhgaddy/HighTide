@@ -43,8 +43,12 @@ spec:
           #   libx11-xcb1 + libxcb-* + libxkbcommon-x11-0 — runtime deps for
           #     OpenROAD built with --@openroad//:platform=gui (bazel-orfs .bazelrc);
           #     binary DT_NEEDEDs libX11-xcb.so.1 even when run headlessly
+          #   xvfb — provides xvfb-run + a virtual X server so the
+          #     <design>_gallery render (xvfb-run + OpenROAD -gui) works
+          #     headlessly on k8s; without it the gallery action fails
+          #     with "xvfb-run: command not found" (Error 127)
           apt-get update -qq && apt-get install -y -qq \
-            curl git build-essential time libxml2 \
+            curl git build-essential time libxml2 xvfb \
             python3 python3-yaml python3-numpy \
             libx11-xcb1 libxcb-cursor0 libxcb-icccm4 libxcb-image0 \
             libxcb-keysyms1 libxcb-randr0 libxcb-render0 libxcb-render-util0 \

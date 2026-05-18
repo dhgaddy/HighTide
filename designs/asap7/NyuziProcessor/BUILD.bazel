@@ -26,11 +26,15 @@ hightide_design(
         "PLACE_DENSITY_LB_ADDON": "0.22",
         "MACRO_PLACE_HALO": "6 6",
         "TNS_END_PERCENT": "100",
-        # ODB-1200: with the wd_in-fixed fakeram macros the resizer's
-        # CTS-time SplitLoadMove now trips InsertBufferBeforeLoads on a
-        # stale load list ("cts.tcl, 82 ODB-1200"). Drop only `split_load`
-        # from the move sequence (gemmini-style targeted fix) so the rest
-        # of CTS repair_timing keeps working — don't skip the whole pass.
-        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
+        # ODB-1200 at CTS ("cts.tcl, 82 ODB-1200", InsertBufferBeforeLoads
+        # on a stale load list). Tried the gemmini-style targeted fix
+        # (drop `split_load` from SETUP_MOVE_SEQUENCE) but ODB-1200 still
+        # recurred for this design with `-sequence unbuffer,sizeup,swap,
+        # buffer,clone` — InsertBufferBeforeLoads is reached via another
+        # move here. Per the documented escalation (split_load-drop first,
+        # full skip only if that doesn't clear it), fall back to skipping
+        # the CTS repair pass entirely; route still does its own
+        # hold-repair so this is safe.
+        "SKIP_CTS_REPAIR_TIMING": "1",
     },
 )

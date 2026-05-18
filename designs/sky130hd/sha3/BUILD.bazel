@@ -8,7 +8,8 @@ hightide_design(
         "SDC_FILE": [":constraint.sdc"],
     },
     arguments = {
-        "CORE_UTILIZATION": "25",
-        "PLACE_DENSITY_LB_ADDON": "0.20",
+        "CORE_UTILIZATION": "35",
+        "PLACE_DENSITY": "0.42",
+        "TNS_END_PERCENT": "100",
     },
 )

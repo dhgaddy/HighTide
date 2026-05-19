@@ -1,7 +1,7 @@
 
-localparam int D = 1024;
-localparam int TmatmulParallelism = 64;
-localparam int VectorParallelism = 1;
+localparam int D = 2560;
+localparam int TmatmulParallelism = 256;
+localparam int VectorParallelism = 8;
 localparam int LutParallelism = 1;
 
 localparam int FixedPointPrecision = 16;

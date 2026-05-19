@@ -12,9 +12,17 @@
 #   ./k8s/runner.sh --branch main                       # all designs, 8 in flight (default)
 #   ./k8s/runner.sh -n 2 --branch main asap7            # asap7 designs, 2 in flight
 #   ./k8s/runner.sh --design lfsr                       # lfsr across all platforms
+#   ./k8s/runner.sh --list queue.txt --branch fakeram   # exactly the designs in queue.txt
+#
+# --list FILE: an explicit queue, one "<platform> <design>" per line (the
+# same positional pair run.sh accepts; '#' comments and blank lines ignored).
+# Lets you batch an arbitrary set that no single platform/design filter can
+# express (e.g. a cache-repopulation subset).  Mutually exclusive with the
+# positional / --design filters.
 #
 # Options:
 #   -n, --max N         Max concurrent jobs (default: 8)
+#   --list FILE         Explicit "<platform> <design>" queue file
 #   --poll-secs SEC     Polling interval in seconds (default: 120)
 #   --branch BRANCH     Forwarded to run.sh (git branch to build)
 #   --cpu NUM           Forwarded to run.sh (CPU request per job)
@@ -35,10 +43,12 @@ POLL_SECS=120
 RUN_ARGS=()
 FILTER_PLATFORM=""
 FILTER_DESIGN=""
+LIST_FILE=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -n|--max)           MAX_CONCURRENT="$2"; shift 2 ;;
+        --list)             LIST_FILE="$2"; shift 2 ;;
         --poll-secs)        POLL_SECS="$2"; shift 2 ;;
         --branch|--cpu|--mem) RUN_ARGS+=("$1" "$2"); shift 2 ;;
         --upload-artifacts) RUN_ARGS+=("$1"); shift ;;
@@ -83,25 +93,54 @@ discover_designs() {
     done
 }
 
-# Build filtered queue
+# Build the queue.  Either an explicit --list file (arbitrary set, list
+# order preserved) or the discover+filter path (platform / --design).
 QUEUE=()
-while IFS='|' read -r platform name relpath; do
-    if [[ -n "$FILTER_PLATFORM" && "$platform" != "$FILTER_PLATFORM" ]]; then
-        continue
+if [[ -n "$LIST_FILE" ]]; then
+    if [[ -n "$FILTER_PLATFORM" || -n "$FILTER_DESIGN" ]]; then
+        echo "ERROR: --list is mutually exclusive with platform/--design filters" >&2
+        exit 1
     fi
-    if [[ -n "$FILTER_DESIGN" ]]; then
-        design_dir="${relpath#*/}"
-        if [[ "$name" != "$FILTER_DESIGN" && "$design_dir" != *"$FILTER_DESIGN"* ]]; then
+    [[ -f "$LIST_FILE" ]] || { echo "ERROR: --list file not found: $LIST_FILE" >&2; exit 1; }
+
+    # Index discovered designs by "<platform>/<leaf>" and "<platform>/<name>".
+    declare -A DISC
+    while IFS='|' read -r platform name relpath; do
+        DISC["$platform/${relpath##*/}"]="$platform|$name|$relpath"
+        DISC["$platform/$name"]="$platform|$name|$relpath"
+    done < <(discover_designs)
+
+    miss=0
+    while read -r lp ld _; do
+        [[ -z "$lp" || "$lp" == \#* ]] && continue
+        entry="${DISC["$lp/$ld"]:-}"
+        if [[ -z "$entry" ]]; then
+            echo "ERROR: --list entry not found among designs: $lp $ld" >&2
+            miss=$((miss + 1)); continue
+        fi
+        QUEUE+=("$entry")
+    done < "$LIST_FILE"
+    [[ $miss -gt 0 ]] && { echo "ERROR: $miss unresolved --list entries; aborting" >&2; exit 1; }
+else
+    while IFS='|' read -r platform name relpath; do
+        if [[ -n "$FILTER_PLATFORM" && "$platform" != "$FILTER_PLATFORM" ]]; then
             continue
         fi
-    fi
-    QUEUE+=("$platform|$name|$relpath")
-done < <(discover_designs | sort)
+        if [[ -n "$FILTER_DESIGN" ]]; then
+            design_dir="${relpath#*/}"
+            if [[ "$name" != "$FILTER_DESIGN" && "$design_dir" != *"$FILTER_DESIGN"* ]]; then
+                continue
+            fi
+        fi
+        QUEUE+=("$platform|$name|$relpath")
+    done < <(discover_designs | sort)
+fi
 
 if [[ ${#QUEUE[@]} -eq 0 ]]; then
     echo "No designs matched the given filters."
     echo "  Platform: ${FILTER_PLATFORM:-<all>}"
     echo "  Design:   ${FILTER_DESIGN:-<all>}"
+    echo "  List:     ${LIST_FILE:-<none>}"
     exit 1
 fi
 
@@ -184,9 +223,13 @@ submit_next() {
     TRACKED+=("$job_name")
     JOB_DESIGN[$job_name]="$platform/$name"
 
-    echo "[$(date +%H:%M:%S)] submit $platform/$name (job: $job_name)"
-    if ! "$SCRIPT_DIR/run.sh" "${RUN_ARGS[@]}" "$platform" "$name" >/dev/null 2>&1; then
-        echo "  WARN: run.sh exited non-zero for $platform/$name"
+    # Pass the relpath leaf, not $name, to run.sh: designs that share a
+    # hightide_design name across dirs (bp_processor → bp_uno & bp_quad)
+    # are only disambiguated by the leaf via run.sh's design_dir match.
+    local leaf="${relpath##*/}"
+    echo "[$(date +%H:%M:%S)] submit $platform/$leaf (job: $job_name)"
+    if ! "$SCRIPT_DIR/run.sh" "${RUN_ARGS[@]}" "$platform" "$leaf" >/dev/null 2>&1; then
+        echo "  WARN: run.sh exited non-zero for $platform/$leaf"
     fi
 }
 

@@ -43,48 +43,59 @@ sandbox that doesn't have the `.init` file alongside the `.v`, so the read
 fails at synthesis time. `dev/inline_readmemh.py` rewrites the call into
 explicit `mem[i] = 8'hXX;` initial assignments — no runtime file IO needed.
 
-## Memories — mocked, not mapped (TODO)
+## Memories — FakeRAM-mapped via the generic LiteX patcher
 
-Each `litepcie_core.v` build infers 28 memory blocks with five distinct
-geometries:
+`gen.sh` runs `dev/inline_fakeram.py` over the freshly-generated
+`litepcie_core.v`, which finds each LiteX-emitted memory block
+(`// Memory <name>: <D>-words x <W>-bit` … through the closing
+`assign <sig>_rdport_dat_r = …;`) and — if `W × D ≥ 4096` — replaces
+the `reg` array + two `always` blocks with a `(* keep *)`
+`fakeram_1rw1r_<W>w<D>d_sram` instantiation.  Liteeth does the same
+job with hand-written per-variant `.patch` files; litepci has 20 such
+memories across 5 geometries, so a regex over the always-the-same
+block template is more maintainable than 20 hunks of unified diff.
 
-| Width × depth | Bits | Instances | Purpose (approx) |
-|--------------:|-----:|----------:|------------------|
-| 92  × 256     | 23 552  | 4 | DMA writer/reader table SRAMs |
-| 130 × 128     | 16 640  | 2 | DMA buffering FIFOs (small) |
-| 130 × 512     | 66 560  | 4 | DMA data FIFOs (medium) |
-| 130 × 1024    | 133 120 | 2 | DMA data FIFOs (largest) |
-| 230 × 128     | 29 440  | 8 | TLP packetizer/depacketizer buffers |
+| Width × depth | Bits | Instances | Subsystem |
+|--------------:|-----:|----------:|-----------|
+| 92  × 256     | 23 552  | 4 | DMA channel 0/1 writer + reader **descriptor tables** |
+| 130 × 128     | 16 640  | 2 | DMA channel 0/1 writer **data FIFO** |
+| 130 × 512     | 66 560  | 4 | DMA channel 0/1 buffering **syncfifo** 0–3 |
+| 130 × 1024    | 133 120 | 2 | DMA channel 0/1 reader **data FIFO** |
+| 230 × 128     | 29 440  | 8 | TLP packetizer/depacketizer **fragment FIFOs** |
 
-bsg_fakeram-generated LEF/LIB pairs for all five sizes are committed under
-each `designs/<platform>/litepci/sram/`, but the **inferred reg-array
-memories are not yet patched to explicit fakeram instances** the way
-liteeth does via `designs/src/liteeth/patch/*.patch`. To unblock the
-first build, every platform sets:
+Each platform's `designs/<platform>/litepci/sram/` carries the matching
+bsg_fakeram LEF/LIB pair (configs at `dev/generated/fakeram_<platform>.cfg`).
+The 8 smaller-than-4 Kb memories — the four 16×146 AXI-Stream CDC FIFOs,
+the 4×10 MSI CDC FIFO, and three TLP sub-fragment FIFOs — stay as inferred
+`reg` arrays and synthesize to flop arrays naturally.
 
-```
-"SYNTH_MOCK_LARGE_MEMORIES": "1",
-"SYNTH_MEMORY_MAX_BITS":     "4096",
-```
+**SRAM macro naming is not uniform across platforms** (post-#143 state).
+The `inline_fakeram.py` patcher emits the original unified
+`fakeram_1rw1r_<W>w<D>d_sram` name.  asap7's committed SRAM macros still
+use that name, so the patcher matches them directly.  The repo-wide
+bsg_fakeram wd_in LEF-pin-direction fix (`94296798` / `657bb977`) also
+**renamed** nangate45's macros to `fakeram45_1rw1r_<W>w<D>d` and
+sky130hd's to `fakeram130_1rw1r_<W>w<D>d`, and relocated the `pcie_us`
+placeholder out of `sram/` into a dedicated `phy/{lef,lib}/` tree
+(globbed by `phy_lefs`/`phy_libs` filegroups).  Consequence: **only
+asap7 is currently consistent**.  nangate45 / sky130hd still need their
+patcher cell names (or their renamed macros) reconciled before they will
+synthesize against real FakeRAM — see the per-platform status below.
 
-…so yosys collapses each oversized memory to a single row. The resulting
-flow exercises end-to-end synthesis → P&R → final reporting, but the
-area/timing numbers under-estimate what the real ~1 Mb of on-chip memory
-would contribute. **TODO: write a generic LiteX-style `reg [W:0] storage[0:D];`
-→ `fakeram_…` patcher in `dev/gen.sh`** (analogous to liteeth's per-variant
-hand-written patches but generated from the inferred memory map).
+### Async-read → sync-read latency caveat
 
-## `SKIP_INCREMENTAL_REPAIR = 1`
-
-Set on all three platforms. The mocked-memory collapse leaves thousands of
-dangling single-pin nets (`[WARNING RSZ-0104]`). The post-GRT
-`repair_timing` loop walks those one endpoint per iteration and never
-converges — same pattern as the snitch_cluster row in the repo's
-CLAUDE.md bug table. Skipping the post-GRT repair pass dodges the
-non-convergence; the in-route hold-repair still runs.
-
-When the LiteX → fakeram patcher mentioned above lands and the mocked
-memories go away, revisit whether this flag is still needed.
+LiteX declares `Port 1 | Read: Async` for the four DMA descriptor
+tables (`storage_5`, `storage_7`, `storage_11`, `storage_13` — the
+writer/reader self tables for channels 0/1).  The committed FakeRAM
+only exposes a sync read port, so the patcher routes
+`<sig>_rdport_dat_r` through the FakeRAM's registered `r0_rd_out`,
+adding one cycle of latency.  For the *benchmarking* flow we
+target — synthesis, P&R, STA — that's harmless: yosys-slang and
+OpenROAD see a clean memory cell, and STA now finds the
+register-to-register paths through the DMA datapath that mocked
+memories used to hide.  Functional simulation of the patched netlist
+against the original RTL **would** show a 1-cycle skew on the
+descriptor read path; we don't run that.
 
 ## pcie_us LEF sizing (PPA tune)
 
@@ -104,28 +115,138 @@ sky130hd it hit `[ERROR DRT-0073] No access point for pcie_us/...`
 because pin pitch matched the track pitch and the access-point algorithm
 couldn't drop a via.
 
-## Per-platform PPA-tuned settings
+## pcie_us LIB: clock-output modeling (floorplan SIG11)
 
-### asap7
+`gen_phy_lef.py`'s stub liberty must tag the pcie_us clock-source
+outputs `clock : true`, **never** `function : "0"`.  The set
+`{user_clk, int_qpll1outclk_out, int_qpll1outrefclk_out}` drives real
+clock nets inside litepcie_core.  An earlier generator gave every output
+`function : "0"`, which constant-folds `pcie_us/user_clk` to 0: STA then
+finds no register-to-register paths, and — once the SDC hangs a
+`create_clock` on that constant-tied pin — the floorplan-time metrics STA
+**segfaults (signal 11)**.  The generator special-cases those three
+scalar outputs with `clock : true`; the committed
+`designs/<plat>/litepci/phy/lib/pcie_us.lib` are regenerated from it.
 
-- `CORE_UTILIZATION = 75`, `PLACE_DENSITY = 0.80`, `MACRO_PLACE_HALO = 5 5`.
-- Final die area 23,728 µm² (down from 128,774 baseline; −82%).
-- GRT congestion peak 32% on M2 — headroom remains.
+## SDC topology — one clock + the forwarded-clock feedthrough
 
-### nangate45
+litepcie_core exposes `clk` as an *output* port — it's a fanout of
+`pcie_us/user_clk`, not the clock source.  Earlier drafts wrote
+`create_clock -name sys_clk [get_ports clk]`, which STA silently accepted
+but never propagated, producing `No launch/capture paths found` under
+sys_clk.  The SDC creates the single user clock on `pcie_us/user_clk`
+(the actual driver of the `sys_clk = pcie_clk = clk` chain inside
+litepcie_core), so STA times all DMA / TLP register-to-register paths
+through the FakeRAMs.
 
-- `CORE_UTILIZATION = 60`, `PLACE_DENSITY = 0.70`, `MACRO_PLACE_HALO = 15 15`.
-- Final die area 369,780 µm² (down from 1,124,270 baseline; −67%).
-- GRT congestion peak 38% on metal2 — approaching the wall.
+`clk` is the user clock *forwarded off-chip* — a buffered fanout of
+pcie_us/user_clk, not a data output.  With `set_output_delay` on
+`[all_outputs]` it gets timed as a ~4.9 ns *data* path that walks the
+entire CTS clock-distribution buffer tree, producing a spurious ~−2 ns
+WNS that dominates the report and that `repair_timing` cannot fix (the
+buffers are existing clock buffers).  Fix: model `clk` as a generated
+clock —
 
-### sky130hd
+```tcl
+create_generated_clock -name clk_fwd -source [get_pins pcie_us/user_clk] \
+    -divide_by 1 [get_ports clk]
+```
 
-- `CORE_UTILIZATION = 55`, `PLACE_DENSITY = 0.65`, `MACRO_PLACE_HALO = 20 20`.
-- Final die area 3,031,790 µm² (down from 7,022,770 baseline; −57%).
-- GRT congestion peak 22% on met2 — most headroom of the three.
-- sky130hd's GRT antenna-repair loop reaches the iteration limit with a
-  handful of unfixable violations remaining; OpenROAD gives up after the
-  retry budget and the flow reaches `6_final` cleanly.
+so the feedthrough is a clock network with launch/capture edges aligned.
+Same workaround as `designs/asap7/litedram/constraint.sdc` (LiteX
+`user_clk` output port) — a recurring LiteX-family pattern.
+
+## Per-platform PPA + the structural hold-skew limit
+
+### Important: earlier numbers were fictitious
+
+A prior revision of this file tabulated asap7 closing at 3.6 ns with
+−0.44 ns TNS.  Those numbers were measured with (a) the **pre-wd_in-fix**
+FakeRAM LEFs — per the bsg_fakeram wd_in bug, upper-half `wd_in` pins
+were mislabeled OUTPUT, so **half the register→FakeRAM write-data paths
+were never timed** — and/or (b) a broken SDC that reported *no paths at
+all*.  With the corrected wd_in-fixed LEFs and the working single-clock +
+generated-clock SDC, the real timing is substantially harder.  The
+numbers below are the honest, measured ones.
+
+Commit `24bbf831` ("Design & flow fixes enabled by the macro recovery")
+silently reverted PR #143's entire litepci real-FakeRAM + SDC work back
+to mocked memories.  The current state restores #143's logic while
+keeping the post-#143 wd_in-fixed SRAM macros and the `phy/` relocation.
+
+### asap7 — measured (real FakeRAM, wd_in-fixed, util 75)
+
+| Metric | Value |
+|--------|------:|
+| Target clk | 3.6 ns |
+| Reg-to-reg **setup** | **MET, +0.758 ns** (closes) |
+| Setup TNS / violations | −2.39 ns / 3 endpoints |
+| Worst setup endpoint | FakeRAM → `mmap_slave_axi_lite_arready` (output-delay-bound I/O port, not a reg path) |
+| **Hold** WNS / violations | **−2.22 ns / ~11 300** |
+| Clock skew | ~2.2 ns |
+| Die area | 0.653 mm² |
+| Inst util | 75.3 % |
+| Power | 55.4 mW |
+
+**Setup closes; hold is structurally skew-bound.** The fixed LiteX RTL
+clocks 20 large DMA/TLP FakeRAMs from a single small clock source —
+the `pcie_us/user_clk` blackbox-macro pin.  Those 20 sink macros are
+59 % (util 60) – 74 % (util 75) of the core area, so CTS must snake a
+deep buffer chain (observed: 3-buffer / 0.21 ns to one macro vs.
+25-buffer / 2.94 ns to another) → ~2.2–2.7 ns launch/capture skew →
+~11 k hold violations.  This was shown unfixable by every in-scope
+lever:
+
+- **Utilization** (60 → 75): die −20 %, setup TNS −75 %, but skew only
+  2.7 → 2.2 ns and hold-violation count flat — skew is ~die-size-
+  independent.
+- **Macro placement** — one tight block (overflows die height),
+  balanced perimeter ring (overflows usable edge length), and two-band
+  + central clock stripe (bands consume the full die, no stripe) all
+  fail the same area/perimeter wall: the macros are too dense to
+  co-locate compactly with the single clock-source pin *and* leave room
+  for a balanced central clock spine at any util that meets the area
+  goal.
+- **SDC** — single-clock + generated-clock-feedthrough fixes removed the
+  spurious −2 ns WNS but do not touch the physical skew.
+
+So asap7's deliverable is: the design **closes setup** at 3.6 ns and is
+**characterized as hold-skew-bound** — a legitimate benchmark result for
+this fixed RTL.  Closing hold would require modifying the RTL (a clock
+buffer/tree the SoC integrator would normally add), which the benchmark
+charter forbids.
+
+### nangate45 / sky130hd — NOT rebuilt; needs reconciliation
+
+These were **not** re-verified in the real-FakeRAM restore.  Their
+`constraint.sdc` and `BUILD.bazel` are still the regressed (`24bbf831`)
+mocked-memory versions, and their SRAM macros were renamed
+(`fakeram45_*` / `fakeram130_*`) by the wd_in-fix reorg so the patcher's
+`fakeram_1rw1r_<W>w<D>d_sram` cell names will not resolve until
+reconciled (rename the macros back, or teach `inline_fakeram.py` /
+`fakeram_<plat>.cfg` the platform-prefixed names).  Until then only
+asap7 carries the real-FakeRAM build.
+
+### Knob summary (asap7)
+
+| Platform  | CORE_UTILIZATION | PLACE_DENSITY | MACRO_PLACE_HALO |
+|-----------|------------------|---------------|------------------|
+| asap7     | 75               | 0.80          | 5 5              |
+
+util 75 is the measured best PPA point; the hold limit is structural and
+util-independent, so there is no benefit to trading area for a lower util.
+
+## Bug workarounds in the real-FakeRAM build
+
+| Knob | Reason |
+|------|--------|
+| `SETUP_MOVE_SEQUENCE = "unbuffer,sizeup,swap,buffer,clone"` (no `split_load`) | Resizer's setup-pass SplitLoadMove triggers ODB-1200 (same as gemmini-asap7 row in CLAUDE.md) |
+| `SKIP_INCREMENTAL_REPAIR = 1` | ODB-1200 still fires from the *hold*-pass inside post-GRT `repair_timing_helper`, which doesn't go through SETUP_MOVE_SEQUENCE; skipping the whole block keeps the rest of the flow alive |
+
+Note `SKIP_INCREMENTAL_REPAIR = 1` also disables post-GRT hold repair.
+That is *not* the cause of the asap7 hold story above — a ~2.2 ns
+structural CTS skew is far beyond what data-side hold buffering could
+absorb anyway — but it does mean the ~11 k count is fully unrepaired.
 
 ## `GDS_ALLOW_EMPTY`
 

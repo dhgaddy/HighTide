@@ -47,29 +47,31 @@ hightide_design(
     },
     arguments = {
         "VERILOG_DEFINES": "-D USE_ASAP7_CELLS",
-        # Round-2 PPA tune: pcie_us shrunk further to 80×80 µm (62 µm pin
-        # column + 18 µm margin); util pushed to 75% — GRT congestion at 60%
-        # was only 22% on M2 so plenty of headroom remains.
+        # Real-FakeRAM build: dev/inline_fakeram.py wires the 20 large DMA /
+        # TLP memories to explicit fakeram instances so STA sees real
+        # register-to-register paths (single-clock SDC on pcie_us/user_clk).
+        # util 75: best measured PPA point.  vs util 60: die -20%
+        # (816k->653k um^2), setup TNS -75% (-9672->-2392 ps), 3 setup
+        # violations.  Reg-to-reg setup MET (+758 ps at 3.6 ns).  Hold is
+        # structurally skew-bound and util-independent (see DECISIONS.md):
+        # the fixed LiteX RTL clocks 20 DMA/TLP FakeRAMs (~59-74% of any
+        # util-reasonable die) from one small clock-source pin
+        # (pcie_us/user_clk), so CTS cannot build a low-skew tree.  Tried
+        # one-block / perimeter-ring / two-band macro placements: all
+        # exceed the die's area or perimeter before leaving room for a
+        # balanced central clock spine.
         "CORE_UTILIZATION": "75",
         "PLACE_DENSITY": "0.80",
         "MACRO_PLACE_HALO": "5 5",
         # Allow no GDS for fakeram macros and the pcie_us blackbox.
         "GDS_ALLOW_EMPTY": "fakeram.*|pcie_us",
-        # litepcie infers 26 memories spanning 5 distinct geometries
-        # (92x256, 130x{128,512,1024}, 230x128).  Properly mapping each
-        # to an explicit fakeram instance would require a per-design
-        # patcher in gen.sh (the way liteeth does it via patch/*.patch).
-        # For now we mock large memories down to a single row so the
-        # rest of the flow can be exercised end-to-end; the resulting
-        # area/timing numbers underestimate what real SRAMs would
-        # contribute.  TODO: write a generic LiteX→fakeram patcher and
-        # drop these two flags.
-        "SYNTH_MOCK_LARGE_MEMORIES": "1",
-        "SYNTH_MEMORY_MAX_BITS": "4096",
-        # Mocked memories leave many RTL-bounded endpoints with dangling
-        # single-pin nets; the resizer's post-GRT repair_timing loop walks
-        # those forever (~1 endpoint / iter) and never converges.  Same
-        # workaround pattern as snitch_cluster (CLAUDE.md row 6).
+        # ODB-1200 bug — InsertBufferBeforeLoads iterates a stale load list and
+        # aborts when SplitLoadMove fires in repair_timing.  SETUP_MOVE_SEQUENCE
+        # without split_load fixes the setup pass (same as gemmini-asap7 in
+        # CLAUDE.md) but the *hold* pass inside the post-GRT repair_timing_helper
+        # also calls split_load and crashes too.  Skip the whole post-GRT repair
+        # block (matches snitch_cluster / liteeth_udp_sgmii in the table).
+        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
         "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

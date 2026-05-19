@@ -42,8 +42,8 @@ hightide_design(
         "VERILOG_DEFINES": "-D USE_NANGATE45_CELLS",
         # Round-2 PPA tune: 50%→60% util (GRT peak was 36% on metal2 at 50%,
         # leaving ~15 percentage points of headroom before the 50% wall).
-        "CORE_UTILIZATION": "60",
-        "PLACE_DENSITY": "0.70",
+        "CORE_UTILIZATION": "70",
+        "PLACE_DENSITY": "0.75",
         "MACRO_PLACE_HALO": "15 15",
         "GDS_ALLOW_EMPTY": "fakeram.*|pcie_us",
         # See asap7 BUILD.bazel — flow does not yet patch litepcie's

@@ -7,8 +7,8 @@ hightide_design(
     verilog_files = ["//designs/src/lfsr:rtl"],
     sources = {"SDC_FILE": [":constraint.sdc"]},
     arguments = {
-        "PLACE_DENSITY": "0.75",
-        "CORE_UTILIZATION": "70",
+        "PLACE_DENSITY": "0.82",
+        "CORE_UTILIZATION": "78",
         "TNS_END_PERCENT": "100",
     },
 )

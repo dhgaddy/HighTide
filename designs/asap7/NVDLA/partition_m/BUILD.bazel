@@ -11,10 +11,10 @@ hightide_design(
     },
     stage_data = {"synth": ["//designs/src/NVDLA:include"]},
     arguments = {
-        "PLACE_DENSITY": "0.77",
+        "PLACE_DENSITY": "0.85",
         "SYNTH_HIERARCHICAL": "1",
         "VERILOG_INCLUDE_DIRS": "designs/src/NVDLA/vmod/include designs/src/NVDLA/vmod/vlibs",
-        "CORE_UTILIZATION": "72",
+        "CORE_UTILIZATION": "80",
         "PLACE_DENSITY_LB_ADDON": "0.2",
         "MACRO_PLACE_HALO": "5 5",
         "TNS_END_PERCENT": "100",

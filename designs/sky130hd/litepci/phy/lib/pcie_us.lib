@@ -3568,11 +3568,11 @@ library(pcie_us_lib) {
     }
     pin(int_qpll1outclk_out) {
       direction : output;
-      function : "0";
+      clock : true;
     }
     pin(int_qpll1outrefclk_out) {
       direction : output;
-      function : "0";
+      clock : true;
     }
     bus(m_axis_cq_tdata) {
       bus_type : bus_type_default;
@@ -5444,7 +5444,7 @@ library(pcie_us_lib) {
     }
     pin(user_clk) {
       direction : output;
-      function : "0";
+      clock : true;
     }
     pin(user_lnk_up) {
       direction : output;

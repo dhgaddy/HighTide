@@ -21,8 +21,8 @@ hightide_design(
         # All 9 internal memories are 16-deep — well below the SRAM
         # inference threshold, so they synthesize as flop arrays. No
         # FakeRAM needed for litedram on asap7.
-        "CORE_UTILIZATION": "45",
-        "PLACE_DENSITY": "0.55",
+        "CORE_UTILIZATION": "58",
+        "PLACE_DENSITY": "0.63",
         "TNS_END_PERCENT": "100",
         # Post-GRT hold-fix trips ODB-1200 in InsertBufferBeforeLoads on
         # this design regardless of HOLD_SLACK_MARGIN / SETUP_MOVE_SEQUENCE

@@ -194,11 +194,14 @@ discover_designs() {
 
     local relpath="${dir#$REPO_DIR/designs/}"
     local platform="${relpath%%/*}"
-    # Build through the gallery, not just _final: <name>_gallery has
-    # src=:<name>_final, so this runs the whole RTL-to-GDS flow AND
-    # renders+caches the gallery PNG. That makes update-results a pure
-    # fast cache fetch instead of re-rendering every design locally.
-    local target="//designs/$relpath:${name}_gallery"
+    # PPA campaign branch: build _final, not _gallery. We only need
+    # 6_report.json (harvested via --upload-artifacts PVC), not the
+    # layout PNG, and _gallery pulls harfbuzz->freetype from
+    # download.savannah.gnu.org which intermittently times out from
+    # NRP nodes and aborts analysis for every design. _final has no
+    # font/render deps. (update-results task #43 re-renders galleries
+    # separately once savannah is reachable.)
+    local target="//designs/$relpath:${name}_final"
 
     echo "$platform|$name|$relpath|$target"
   done

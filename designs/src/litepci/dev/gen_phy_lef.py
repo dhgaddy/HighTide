@@ -177,7 +177,21 @@ def emit_lef(module, ports, params) -> str:
 
 
 def emit_lib(module, ports) -> str:
-    """Stub liberty: every input is direction=input, every output drives 0."""
+    """Stub liberty: inputs are direction=input; outputs are functionless,
+    except clock-source outputs which are tagged `clock : true`.
+
+    An earlier draft set every output to `function : "0"`, which made STA
+    fold `pcie_us/user_clk` (the clock that drives the entire `pcie` clock
+    domain inside litepcie_core) to a constant — every downstream flop
+    became "no clock" and the design lost all register-to-register paths
+    (and the floorplan-time metrics STA segfaults on the constant-tied
+    clock pin).  Tag the clock-source outputs so the SDC can hang a
+    `create_clock` off them.
+    """
+    # pcie_us outputs that drive a real clock net inside litepcie_core.
+    # `user_clk` is the dominant one — it clocks the AXI-Stream / DMA
+    # datapath flops.  Tagged so the SDC can attach a `create_clock`.
+    CLOCK_OUTPUTS = {"user_clk", "int_qpll1outclk_out", "int_qpll1outrefclk_out"}
     lines = []
     lines.append(f"library({module}_lib) {{")
     lines.append("  technology(cmos);")
@@ -201,6 +215,8 @@ def emit_lib(module, ports) -> str:
             lines.append(f"      direction : {d};")
             if d == "input":
                 lines.append("      capacitance : 0.001;")
+            elif name in CLOCK_OUTPUTS:
+                lines.append("      clock : true;")
             else:
                 lines.append("      function : \"0\";")
             lines.append("    }")

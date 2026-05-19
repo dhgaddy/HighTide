@@ -19,6 +19,11 @@ build --remote_cache_compression
 # Local disk cache as fallback
 build --disk_cache=~/.cache/bazel-disk-cache
 
+# Mirror download.savannah.gnu.org (freetype BCR source; chronically
+# flaky) to a byte-identical mirror. Applies to all commands so module
+# resolution during analysis uses it too.
+common --downloader_config=tools/downloader.cfg
+
 # bazel-orfs pip dependencies require Python 3.13
 build --@rules_python//python/config_settings:python_version=3.13
 

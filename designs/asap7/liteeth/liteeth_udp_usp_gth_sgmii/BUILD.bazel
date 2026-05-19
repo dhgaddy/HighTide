@@ -16,7 +16,7 @@ hightide_design(
         # UTIL 35->50 / DENSITY 0.30->0.55 sweep was tuned against the old
         # macros and now causes RSZ-0074 routing failures on udp0_sink_last
         # at grt. Step back to the pre-sweep settings until a fresh sweep.
-        "CORE_UTILIZATION": "35",
+        "CORE_UTILIZATION": "43",
         "PLACE_DENSITY": "0.30",
         # Same OpenROAD ODB-1200 hold-repair crash as liteeth_udp_stream_sgmii;
         # widened to this variant after the OpenROAD pin moved from 5f1bd87f

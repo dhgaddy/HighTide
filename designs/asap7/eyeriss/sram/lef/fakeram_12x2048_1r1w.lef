@@ -3,7 +3,7 @@ BUSBITCHARS "[]" ;
 MACRO fakeram_12x2048_1r1w
   FOREIGN fakeram_12x2048_1r1w 0 0 ;
   SYMMETRY X Y R90 ;
-  SIZE 9.643 BY 86.714 ;
+  SIZE 9.643 BY 43.859 ;
   CLASS BLOCK ;
   PIN w0_wd_in[0]
     DIRECTION INPUT ;
@@ -20,7 +20,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 0.000 7.428 0.072 7.452 ;
+      RECT 0.000 4.164 0.072 4.188 ;
     END
   END w0_wd_in[1]
   PIN w0_wd_in[2]
@@ -29,7 +29,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 0.000 14.580 0.072 14.604 ;
+      RECT 0.000 8.052 0.072 8.076 ;
     END
   END w0_wd_in[2]
   PIN w0_wd_in[3]
@@ -47,7 +47,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 9.571 7.428 9.643 7.452 ;
+      RECT 9.571 4.164 9.643 4.188 ;
     END
   END w0_wd_in[4]
   PIN w0_wd_in[5]
@@ -56,7 +56,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 9.571 14.580 9.643 14.604 ;
+      RECT 9.571 8.052 9.643 8.076 ;
     END
   END w0_wd_in[5]
   PIN w0_wd_in[6]
@@ -173,7 +173,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M3 ;
-      RECT 0.207 86.660 0.225 86.714 ;
+      RECT 0.207 43.805 0.225 43.859 ;
     END
   END r0_rd_out[6]
   PIN r0_rd_out[7]
@@ -182,7 +182,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M3 ;
-      RECT 1.035 86.660 1.053 86.714 ;
+      RECT 1.035 43.805 1.053 43.859 ;
     END
   END r0_rd_out[7]
   PIN r0_rd_out[8]
@@ -191,7 +191,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M3 ;
-      RECT 1.863 86.660 1.881 86.714 ;
+      RECT 1.863 43.805 1.881 43.859 ;
     END
   END r0_rd_out[8]
   PIN r0_rd_out[9]
@@ -200,7 +200,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M3 ;
-      RECT 2.691 86.660 2.709 86.714 ;
+      RECT 2.691 43.805 2.709 43.859 ;
     END
   END r0_rd_out[9]
   PIN r0_rd_out[10]
@@ -209,7 +209,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M3 ;
-      RECT 3.519 86.660 3.537 86.714 ;
+      RECT 3.519 43.805 3.537 43.859 ;
     END
   END r0_rd_out[10]
   PIN r0_rd_out[11]
@@ -218,7 +218,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M3 ;
-      RECT 4.347 86.660 4.365 86.714 ;
+      RECT 4.347 43.805 4.365 43.859 ;
     END
   END r0_rd_out[11]
   PIN w0_addr_in[0]
@@ -227,7 +227,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 0.000 21.732 0.072 21.756 ;
+      RECT 0.000 11.940 0.072 11.964 ;
     END
   END w0_addr_in[0]
   PIN w0_addr_in[1]
@@ -236,7 +236,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 0.000 28.884 0.072 28.908 ;
+      RECT 0.000 15.828 0.072 15.852 ;
     END
   END w0_addr_in[1]
   PIN w0_addr_in[2]
@@ -245,7 +245,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 0.000 36.036 0.072 36.060 ;
+      RECT 0.000 19.716 0.072 19.740 ;
     END
   END w0_addr_in[2]
   PIN w0_addr_in[3]
@@ -254,7 +254,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 0.000 43.188 0.072 43.212 ;
+      RECT 0.000 23.604 0.072 23.628 ;
     END
   END w0_addr_in[3]
   PIN w0_addr_in[4]
@@ -263,7 +263,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 0.000 50.340 0.072 50.364 ;
+      RECT 9.571 11.940 9.643 11.964 ;
     END
   END w0_addr_in[4]
   PIN w0_addr_in[5]
@@ -272,7 +272,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 9.571 21.732 9.643 21.756 ;
+      RECT 9.571 15.828 9.643 15.852 ;
     END
   END w0_addr_in[5]
   PIN w0_addr_in[6]
@@ -281,7 +281,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 9.571 28.884 9.643 28.908 ;
+      RECT 9.571 19.716 9.643 19.740 ;
     END
   END w0_addr_in[6]
   PIN w0_addr_in[7]
@@ -290,25 +290,16 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 9.571 36.036 9.643 36.060 ;
+      RECT 9.571 23.604 9.643 23.628 ;
     END
   END w0_addr_in[7]
-  PIN w0_addr_in[8]
-    DIRECTION INPUT ;
-    USE SIGNAL ;
-    SHAPE ABUTMENT ;
-    PORT
-      LAYER M4 ;
-      RECT 9.571 43.188 9.643 43.212 ;
-    END
-  END w0_addr_in[8]
   PIN r0_addr_in[0]
     DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 0.000 57.492 0.072 57.516 ;
+      RECT 0.000 27.492 0.072 27.516 ;
     END
   END r0_addr_in[0]
   PIN r0_addr_in[1]
@@ -317,7 +308,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 0.000 64.644 0.072 64.668 ;
+      RECT 0.000 31.380 0.072 31.404 ;
     END
   END r0_addr_in[1]
   PIN r0_addr_in[2]
@@ -326,7 +317,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 0.000 71.796 0.072 71.820 ;
+      RECT 0.000 35.268 0.072 35.292 ;
     END
   END r0_addr_in[2]
   PIN r0_addr_in[3]
@@ -335,7 +326,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 0.000 78.948 0.072 78.972 ;
+      RECT 0.000 39.156 0.072 39.180 ;
     END
   END r0_addr_in[3]
   PIN r0_addr_in[4]
@@ -344,7 +335,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 0.000 86.100 0.072 86.124 ;
+      RECT 9.571 27.492 9.643 27.516 ;
     END
   END r0_addr_in[4]
   PIN r0_addr_in[5]
@@ -353,7 +344,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 9.571 50.340 9.643 50.364 ;
+      RECT 9.571 31.380 9.643 31.404 ;
     END
   END r0_addr_in[5]
   PIN r0_addr_in[6]
@@ -362,7 +353,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 9.571 57.492 9.643 57.516 ;
+      RECT 9.571 35.268 9.643 35.292 ;
     END
   END r0_addr_in[6]
   PIN r0_addr_in[7]
@@ -371,25 +362,16 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M4 ;
-      RECT 9.571 64.644 9.643 64.668 ;
+      RECT 9.571 39.156 9.643 39.180 ;
     END
   END r0_addr_in[7]
-  PIN r0_addr_in[8]
-    DIRECTION INPUT ;
-    USE SIGNAL ;
-    SHAPE ABUTMENT ;
-    PORT
-      LAYER M4 ;
-      RECT 9.571 71.796 9.643 71.820 ;
-    END
-  END r0_addr_in[8]
   PIN w0_we_in
     DIRECTION INPUT ;
     USE SIGNAL ;
     SHAPE ABUTMENT ;
     PORT
       LAYER M3 ;
-      RECT 5.175 86.660 5.193 86.714 ;
+      RECT 5.175 43.805 5.193 43.859 ;
     END
   END w0_we_in
   PIN w0_ce_in
@@ -398,7 +380,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M3 ;
-      RECT 6.003 86.660 6.021 86.714 ;
+      RECT 6.003 43.805 6.021 43.859 ;
     END
   END w0_ce_in
   PIN w0_clk
@@ -407,7 +389,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M3 ;
-      RECT 6.831 86.660 6.849 86.714 ;
+      RECT 6.831 43.805 6.849 43.859 ;
     END
   END w0_clk
   PIN r0_ce_in
@@ -416,7 +398,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M3 ;
-      RECT 7.659 86.660 7.677 86.714 ;
+      RECT 7.659 43.805 7.677 43.859 ;
     END
   END r0_ce_in
   PIN r0_clk
@@ -425,7 +407,7 @@ MACRO fakeram_12x2048_1r1w
     SHAPE ABUTMENT ;
     PORT
       LAYER M3 ;
-      RECT 8.487 86.660 8.505 86.714 ;
+      RECT 8.487 43.805 8.505 43.859 ;
     END
   END r0_clk
   PIN VSS
@@ -490,62 +472,6 @@ MACRO fakeram_12x2048_1r1w
       RECT 0.216 41.712 9.427 41.808 ;
       RECT 0.216 42.480 9.427 42.576 ;
       RECT 0.216 43.248 9.427 43.344 ;
-      RECT 0.216 44.016 9.427 44.112 ;
-      RECT 0.216 44.784 9.427 44.880 ;
-      RECT 0.216 45.552 9.427 45.648 ;
-      RECT 0.216 46.320 9.427 46.416 ;
-      RECT 0.216 47.088 9.427 47.184 ;
-      RECT 0.216 47.856 9.427 47.952 ;
-      RECT 0.216 48.624 9.427 48.720 ;
-      RECT 0.216 49.392 9.427 49.488 ;
-      RECT 0.216 50.160 9.427 50.256 ;
-      RECT 0.216 50.928 9.427 51.024 ;
-      RECT 0.216 51.696 9.427 51.792 ;
-      RECT 0.216 52.464 9.427 52.560 ;
-      RECT 0.216 53.232 9.427 53.328 ;
-      RECT 0.216 54.000 9.427 54.096 ;
-      RECT 0.216 54.768 9.427 54.864 ;
-      RECT 0.216 55.536 9.427 55.632 ;
-      RECT 0.216 56.304 9.427 56.400 ;
-      RECT 0.216 57.072 9.427 57.168 ;
-      RECT 0.216 57.840 9.427 57.936 ;
-      RECT 0.216 58.608 9.427 58.704 ;
-      RECT 0.216 59.376 9.427 59.472 ;
-      RECT 0.216 60.144 9.427 60.240 ;
-      RECT 0.216 60.912 9.427 61.008 ;
-      RECT 0.216 61.680 9.427 61.776 ;
-      RECT 0.216 62.448 9.427 62.544 ;
-      RECT 0.216 63.216 9.427 63.312 ;
-      RECT 0.216 63.984 9.427 64.080 ;
-      RECT 0.216 64.752 9.427 64.848 ;
-      RECT 0.216 65.520 9.427 65.616 ;
-      RECT 0.216 66.288 9.427 66.384 ;
-      RECT 0.216 67.056 9.427 67.152 ;
-      RECT 0.216 67.824 9.427 67.920 ;
-      RECT 0.216 68.592 9.427 68.688 ;
-      RECT 0.216 69.360 9.427 69.456 ;
-      RECT 0.216 70.128 9.427 70.224 ;
-      RECT 0.216 70.896 9.427 70.992 ;
-      RECT 0.216 71.664 9.427 71.760 ;
-      RECT 0.216 72.432 9.427 72.528 ;
-      RECT 0.216 73.200 9.427 73.296 ;
-      RECT 0.216 73.968 9.427 74.064 ;
-      RECT 0.216 74.736 9.427 74.832 ;
-      RECT 0.216 75.504 9.427 75.600 ;
-      RECT 0.216 76.272 9.427 76.368 ;
-      RECT 0.216 77.040 9.427 77.136 ;
-      RECT 0.216 77.808 9.427 77.904 ;
-      RECT 0.216 78.576 9.427 78.672 ;
-      RECT 0.216 79.344 9.427 79.440 ;
-      RECT 0.216 80.112 9.427 80.208 ;
-      RECT 0.216 80.880 9.427 80.976 ;
-      RECT 0.216 81.648 9.427 81.744 ;
-      RECT 0.216 82.416 9.427 82.512 ;
-      RECT 0.216 83.184 9.427 83.280 ;
-      RECT 0.216 83.952 9.427 84.048 ;
-      RECT 0.216 84.720 9.427 84.816 ;
-      RECT 0.216 85.488 9.427 85.584 ;
-      RECT 0.216 86.256 9.427 86.352 ;
     END
   END VSS
   PIN VDD
@@ -610,73 +536,17 @@ MACRO fakeram_12x2048_1r1w
       RECT 0.216 41.712 9.427 41.808 ;
       RECT 0.216 42.480 9.427 42.576 ;
       RECT 0.216 43.248 9.427 43.344 ;
-      RECT 0.216 44.016 9.427 44.112 ;
-      RECT 0.216 44.784 9.427 44.880 ;
-      RECT 0.216 45.552 9.427 45.648 ;
-      RECT 0.216 46.320 9.427 46.416 ;
-      RECT 0.216 47.088 9.427 47.184 ;
-      RECT 0.216 47.856 9.427 47.952 ;
-      RECT 0.216 48.624 9.427 48.720 ;
-      RECT 0.216 49.392 9.427 49.488 ;
-      RECT 0.216 50.160 9.427 50.256 ;
-      RECT 0.216 50.928 9.427 51.024 ;
-      RECT 0.216 51.696 9.427 51.792 ;
-      RECT 0.216 52.464 9.427 52.560 ;
-      RECT 0.216 53.232 9.427 53.328 ;
-      RECT 0.216 54.000 9.427 54.096 ;
-      RECT 0.216 54.768 9.427 54.864 ;
-      RECT 0.216 55.536 9.427 55.632 ;
-      RECT 0.216 56.304 9.427 56.400 ;
-      RECT 0.216 57.072 9.427 57.168 ;
-      RECT 0.216 57.840 9.427 57.936 ;
-      RECT 0.216 58.608 9.427 58.704 ;
-      RECT 0.216 59.376 9.427 59.472 ;
-      RECT 0.216 60.144 9.427 60.240 ;
-      RECT 0.216 60.912 9.427 61.008 ;
-      RECT 0.216 61.680 9.427 61.776 ;
-      RECT 0.216 62.448 9.427 62.544 ;
-      RECT 0.216 63.216 9.427 63.312 ;
-      RECT 0.216 63.984 9.427 64.080 ;
-      RECT 0.216 64.752 9.427 64.848 ;
-      RECT 0.216 65.520 9.427 65.616 ;
-      RECT 0.216 66.288 9.427 66.384 ;
-      RECT 0.216 67.056 9.427 67.152 ;
-      RECT 0.216 67.824 9.427 67.920 ;
-      RECT 0.216 68.592 9.427 68.688 ;
-      RECT 0.216 69.360 9.427 69.456 ;
-      RECT 0.216 70.128 9.427 70.224 ;
-      RECT 0.216 70.896 9.427 70.992 ;
-      RECT 0.216 71.664 9.427 71.760 ;
-      RECT 0.216 72.432 9.427 72.528 ;
-      RECT 0.216 73.200 9.427 73.296 ;
-      RECT 0.216 73.968 9.427 74.064 ;
-      RECT 0.216 74.736 9.427 74.832 ;
-      RECT 0.216 75.504 9.427 75.600 ;
-      RECT 0.216 76.272 9.427 76.368 ;
-      RECT 0.216 77.040 9.427 77.136 ;
-      RECT 0.216 77.808 9.427 77.904 ;
-      RECT 0.216 78.576 9.427 78.672 ;
-      RECT 0.216 79.344 9.427 79.440 ;
-      RECT 0.216 80.112 9.427 80.208 ;
-      RECT 0.216 80.880 9.427 80.976 ;
-      RECT 0.216 81.648 9.427 81.744 ;
-      RECT 0.216 82.416 9.427 82.512 ;
-      RECT 0.216 83.184 9.427 83.280 ;
-      RECT 0.216 83.952 9.427 84.048 ;
-      RECT 0.216 84.720 9.427 84.816 ;
-      RECT 0.216 85.488 9.427 85.584 ;
-      RECT 0.216 86.256 9.427 86.352 ;
     END
   END VDD
   OBS
     LAYER M1 ;
-    RECT 0 0 9.643 86.714 ;
+    RECT 0 0 9.643 43.859 ;
     LAYER M2 ;
-    RECT 0 0 9.643 86.714 ;
+    RECT 0 0 9.643 43.859 ;
     LAYER M3 ;
-    RECT 0 0 9.643 86.714 ;
+    RECT 0 0 9.643 43.859 ;
     LAYER M4 ;
-    RECT 0 0 9.643 86.714 ;
+    RECT 0 0 9.643 43.859 ;
   END
 END fakeram_12x2048_1r1w
 

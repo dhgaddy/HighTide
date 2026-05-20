@@ -24,7 +24,7 @@ hightide_design(
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
         "ABC_AREA": "1",
-        "CORE_UTILIZATION": "49",
+        "CORE_UTILIZATION": "57",
         "PLACE_DENSITY_LB_ADDON": "0.1",
         "MACRO_PLACE_HALO": "40 40",
         "TNS_END_PERCENT": "100",

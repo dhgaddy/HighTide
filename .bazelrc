@@ -19,6 +19,11 @@ build --remote_cache_compression
 # Local disk cache as fallback
 build --disk_cache=~/.cache/bazel-disk-cache
 
+# Mirror flaky GNU hosts (download.savannah.gnu.org, ftp.gnu.org) to a byte-
+# identical netcologne mirror. Applies to all commands so module resolution
+# during analysis uses it too. See tools/downloader.cfg for context.
+common --downloader_config=tools/downloader.cfg
+
 # bazel-orfs pip dependencies require Python 3.13
 build --@rules_python//python/config_settings:python_version=3.13
 

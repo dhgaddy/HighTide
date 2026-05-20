@@ -56,6 +56,44 @@ PLATFORM_PARAMS = {
         "nom_voltage": 0.7,
         "op_cond_name": "tt_1.0_25.0",
     },
+    "nangate45": {
+        # Pin grid matches designs/src/cnn/dev/gen_fakeram_nangate45.py: metal3
+        # track pitch 0.14 µm, one pin per stdcell row (snap_h = 1.4 µm).  No
+        # VDD/VSS pins emitted — like cnn, rely on PDN-over-macro on metal4+.
+        "pin_w": 0.140,
+        "pin_protrusion": 0.140,
+        "lr_pitch": 0.140,
+        "pin_track_count": 10,    # 10 × 0.14 = 1.40 µm pin spacing (= snap_h)
+        "pin_start_tracks": 10,   # first pin at y = 1.40 µm
+        "snap_w": 0.190,
+        "snap_h": 1.400,
+        "area_per_bit": 3.8,
+        "min_area": 800,
+        "pin_layer": "metal3",
+        "obs_layers": ["metal1", "metal2", "metal3", "metal4"],
+        "emit_supply_pins": False,
+        "nom_voltage": 1.1,
+        "op_cond_name": "tt_1.0_25.0",
+    },
+    "sky130hd": {
+        # Pin grid matches designs/src/cnn/dev/gen_fakeram_sky130hd.py: met3
+        # track pitch 0.68 µm, one pin per stdcell row (snap_h = 2.72 µm).
+        # unithd site: 0.46 × 2.72.
+        "pin_w": 0.300,
+        "pin_protrusion": 0.300,
+        "lr_pitch": 0.680,
+        "pin_track_count": 4,     # 4 × 0.68 = 2.72 µm pin spacing (= snap_h)
+        "pin_start_tracks": 4,    # first pin at y = 2.72 µm
+        "snap_w": 0.460,
+        "snap_h": 2.720,
+        "area_per_bit": 4.0,
+        "min_area": 800,
+        "pin_layer": "met3",
+        "obs_layers": ["li1", "met1", "met2", "met3", "met4"],
+        "emit_supply_pins": False,
+        "nom_voltage": 1.8,
+        "op_cond_name": "tt_1.0_25.0",
+    },
 }
 
 
@@ -139,53 +177,55 @@ def gen_lef(name, width, depth, outdir, platform):
     for i in range(width):
         add_pin(f"rw0_rd_out[{i}]", "OUTPUT")
 
-    # VDD / VSS supply rails
-    track_off = p["supply_track_offset"]
-    track_pitch = p["supply_track_pitch"]
-    rail_w = p.get("supply_rail_w", p["pin_w"])
-    direction = p.get("supply_direction", "horizontal")
-    span_axis = h if direction == "horizontal" else w
-    track_centers = []
-    n = 0
-    while True:
-        c = track_off + n * track_pitch
-        if c + rail_w / 2 > span_axis:
-            break
-        if c - rail_w / 2 >= 0:
-            track_centers.append(c)
-        n += 1
-    vdd_centers = track_centers[0::2]
-    vss_centers = track_centers[1::2]
+    # VDD / VSS supply rails.  Skipped on platforms (cnn-style) that route
+    # PDN over the macro on an upper metal not touched by the signal pins.
+    if p.get("emit_supply_pins", True):
+        track_off = p["supply_track_offset"]
+        track_pitch = p["supply_track_pitch"]
+        rail_w = p.get("supply_rail_w", p["pin_w"])
+        direction = p.get("supply_direction", "horizontal")
+        span_axis = h if direction == "horizontal" else w
+        track_centers = []
+        n = 0
+        while True:
+            c = track_off + n * track_pitch
+            if c + rail_w / 2 > span_axis:
+                break
+            if c - rail_w / 2 >= 0:
+                track_centers.append(c)
+            n += 1
+        vdd_centers = track_centers[0::2]
+        vss_centers = track_centers[1::2]
 
-    # Supply rails must keep clear of the signal-pin protrusions at the macro
-    # edges — they're on the same layer, so any overlap is a short.  Use a
-    # one-track gap after the pin tip (matches liteeth: pin protrusion 0.048,
-    # rail margin 0.096 → 0.048 µm gap).
-    supply_margin_xy = p["pin_protrusion"] + p["lr_pitch"]
+        # Supply rails must keep clear of the signal-pin protrusions at the
+        # macro edges — they're on the same layer, so any overlap is a short.
+        # Use a one-track gap after the pin tip (matches liteeth: pin
+        # protrusion 0.048, rail margin 0.096 → 0.048 µm gap).
+        supply_margin_xy = p["pin_protrusion"] + p["lr_pitch"]
 
-    def add_supply(net, use, centers):
-        lines.extend([
-            f"  PIN {net}",
-            "    DIRECTION INOUT ;",
-            f"    USE {use} ;",
-            "    PORT",
-            f"      LAYER {p['supply_layer']} ;",
-        ])
-        for c in sorted(centers):
-            if direction == "horizontal":
-                x0, x1 = supply_margin_xy, w - supply_margin_xy
-                y0, y1 = c - rail_w / 2, c + rail_w / 2
-            else:
-                x0, x1 = c - rail_w / 2, c + rail_w / 2
-                y0, y1 = supply_margin_xy, h - supply_margin_xy
-            lines.append(f"      RECT {x0:.3f} {y0:.3f} {x1:.3f} {y1:.3f} ;")
-        lines.extend([
-            "    END",
-            f"  END {net}",
-        ])
+        def add_supply(net, use, centers):
+            lines.extend([
+                f"  PIN {net}",
+                "    DIRECTION INOUT ;",
+                f"    USE {use} ;",
+                "    PORT",
+                f"      LAYER {p['supply_layer']} ;",
+            ])
+            for c in sorted(centers):
+                if direction == "horizontal":
+                    x0, x1 = supply_margin_xy, w - supply_margin_xy
+                    y0, y1 = c - rail_w / 2, c + rail_w / 2
+                else:
+                    x0, x1 = c - rail_w / 2, c + rail_w / 2
+                    y0, y1 = supply_margin_xy, h - supply_margin_xy
+                lines.append(f"      RECT {x0:.3f} {y0:.3f} {x1:.3f} {y1:.3f} ;")
+            lines.extend([
+                "    END",
+                f"  END {net}",
+            ])
 
-    add_supply("VDD", "POWER", vdd_centers)
-    add_supply("VSS", "GROUND", vss_centers)
+        add_supply("VDD", "POWER", vdd_centers)
+        add_supply("VSS", "GROUND", vss_centers)
 
     lines.append("  OBS")
     for layer in p["obs_layers"]:

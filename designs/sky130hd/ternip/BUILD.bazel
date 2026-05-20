@@ -1,0 +1,46 @@
+load("//:defs.bzl", "hightide_design")
+
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
+# Ternip on sky130hd — same RTL as asap7 / nangate45, but the
+# ternip_pipelined_mem wrapper instantiates fakeram130_512x16 macros
+# (regenerated via designs/src/ternip/dev/gen_fakeram.py --platform
+# sky130hd).  Each 512×16 macro is 256.220 × 130.560 µm (~8× asap7
+# area), so the floorplan needs to be ~10× larger than asap7 ternip.
+hightide_design(
+    name = "ternip",
+    platform = "sky130hd",
+    top = "ternip_core",
+    verilog_files = [
+        "//designs/src/ternip:rtl",
+        ":ternip_pipelined_mem_fakeram130.v",
+    ],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HDL_FRONTEND": "slang",
+        "SYNTH_HIERARCHICAL": "0",
+        "VERILOG_INCLUDE_DIRS": "designs/src/ternip designs/src/ternip/dev/repo/rtl designs/src/ternip/dev/basejump_stl/bsg_misc designs/src/ternip/dev/basejump_stl/bsg_dataflow designs/src/ternip/dev/basejump_stl/bsg_mem",
+        "VERILOG_DEFINES": "-DCONFIG_FILENAME=\\\"config/hightide.svh\\\" -DSYNTHESIS",
+        "CORE_UTILIZATION": "25",
+        "PLACE_DENSITY_LB_ADDON": "0.15",
+        "MACRO_PLACE_HALO": "30 30",
+        "TNS_END_PERCENT": "100",
+        # importvector (16 × 1024 = 16384 bits) is implemented as flip-flops in
+        # the wrapper; ram_style="registers" prevents instantiation but yosys
+        # still emits a $mem cell that trips this threshold without the bump.
+        "SYNTH_MEMORY_MAX_BITS": "16384",
+    },
+    stage_data = {"synth": ["//designs/src/ternip:rtl_data"]},
+)

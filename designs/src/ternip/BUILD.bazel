@@ -12,7 +12,8 @@ _TERNIP_FILES = [
     "common/ternip_gearbox_fifo.sv",
     "common/ternip_multioperand_accumulator.sv",
     "common/ternip_pipelined_interconnect.sv",
-    # common/ternip_pipelined_mem.sv replaced by ternip_pipelined_mem_fakeram7.v (FakeRAM, asap7)
+    # common/ternip_pipelined_mem.sv replaced per-platform by a FakeRAM
+    # wrapper at designs/<platform>/ternip/ternip_pipelined_mem_fakeram*.v.
     "math/ternip_add.sv",
     "math/ternip_sub.sv",
     "math/ternip_mul.sv",

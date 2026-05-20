@@ -18,35 +18,24 @@ hightide_design(
         "SDC_FILE": [":constraint.sdc"],
         "ADDITIONAL_LEFS": [":sram_lefs"],
         "ADDITIONAL_LIBS": [":sram_libs"],
-        # Fixed grid (all macros R0, channel below every row) so each
-        # fakeram's met2 pin edge faces routable space — defeats the
-        # RTLMP pin-edge-blind clustering that caused the met2 capacity:0
-        # overflow. Regenerate: python3
-        # designs/src/cnn/dev/gen_macro_grid_sky130hd.py
-        "MACRO_PLACEMENT_TCL": [":macro_placement.tcl"],
+        # R4 banks experiment (2026-05-20): macros sub-banked via cfg
+        # (w16_l32768 banks=16, w16_l8192 banks=4) -> 4.93x4.01mm macros
+        # shrank to 1.23x1.00mm (-94% area). The hand-placed macro_placement.tcl
+        # coordinates were derived around the old enormous macros and are
+        # now invalid — clear it so RTLMP re-derives placement against the
+        # new tiny macros.
     },
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
-        # bsg_fakeram (sky130hd analytical, 1.86 um^2 bitcell from
-        # OpenRAM) gives a 4.93 x 4.01 mm macro for the 524 Kb 2rw
-        # fakeram_w16_l32768. cnn instantiates four of those plus 58 x
-        # fakeram_w16_l512 + 2 x fakeram_w16_l8192 + 1 x fakeram_w64_l256
-        # = ~108 mm^2 of macro area. The old die (7168 x 7000, 50 mm^2)
-        # was sized against the unrealistically dense python-script
-        # macros — enlarge to 12 x 12 mm and let RTLMP place.
-        "DIE_AREA": "0 0 20000 20000",
-        "CORE_AREA": "5 5 19995 19995",
-        # Design is only 28.6% utilized on the 400 mm^2 core, but the
-        # LB_ADDON was forcing the placer target to 0.318 -> std cells
-        # packed tight near macro pins (the real source of the met2
-        # local overflow). Drop the addon and set an explicit low
-        # PLACE_DENSITY so the global placer spreads std cells across the
-        # near-empty die + the macro-grid channels instead of clumping.
-        "PLACE_DENSITY": "0.20",
-        # Wider macro keep-out so std cells (and their local routing)
-        # stay off the macro pin edges; combined with the fixed grid this
-        # guarantees every met2 pin edge faces clear routing channel.
-        "MACRO_PLACE_HALO": "300 300",
+        # R4: macro area dropped from ~108 mm^2 to ~26 mm^2 via banks.
+        # Old die 20x20 mm = 400 mm^2 was 86% empty. Shrink to 7x7 mm
+        # (49 mm^2) — gives ~23 mm^2 std-cell area at ~35% util, comfortable.
+        "DIE_AREA": "0 0 7000 7000",
+        "CORE_AREA": "5 5 6995 6995",
+        # R4: with tiny macros, std cells can pack at typical density.
+        "PLACE_DENSITY": "0.40",
+        # R4: small macros don't need 300um keep-out anymore.
+        "MACRO_PLACE_HALO": "50 50",
         "MACRO_BLOCKAGE_HALO": "0.5",
         # FINISHES (2026-05-16): full RTL-to-GDS, 0 GRT overflow on every
         # layer (met2 1.46%), detail route 100% with 0 violations. Three

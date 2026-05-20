@@ -2,7 +2,7 @@ library(fakeram_w16_l8192) {
     technology (cmos);
     delay_model : table_lookup;
     revision : 1.0;
-    date : "2026-05-15 13:21:43Z";
+    date : "2026-05-20 13:26:29Z";
     comment : "SRAM";
     time_unit : "1ns";
     voltage_unit : "1V";
@@ -74,8 +74,8 @@ library(fakeram_w16_l8192) {
     type (fakeram_w16_l8192_DATA) {
         base_type : array ;
         data_type : bit ;
-        bit_width : 16;
-        bit_from : 15;
+        bit_width : 4;
+        bit_from : 3;
         bit_to : 0 ;
         downto : true ;
     }
@@ -88,12 +88,12 @@ library(fakeram_w16_l8192) {
         downto : true ;
     }
 cell(fakeram_w16_l8192) {
-    area : 4942640.384;
+    area : 1237336.704;
     interface_timing : true;
     memory() {
         type : ram;
         address_width : 13;
-        word_width : 16;
+        word_width : 4;
     }
     pin(rw0_clk)   {
         direction : input;

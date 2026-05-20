@@ -24,7 +24,7 @@ hightide_design(
         "DIE_AREA": "0 0 4502 4277",
         "CORE_AREA": "2 2 4500 4275",
         "PLACE_DENSITY": "0.65",
-        "MACRO_PLACE_HALO": "20 20",
+        "MACRO_PLACE_HALO": "10 10",
         "MACRO_BLOCKAGE_HALO": "0.5",
         # Force all 367 IO pins onto the bottom edge (12 um spacing)
         # to avoid clustering and shorten routes to the stdcell band

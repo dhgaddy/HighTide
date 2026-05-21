@@ -212,20 +212,25 @@ Concretely: emit all asap7 thumbs (sorted by variant), then all nangate45 thumbs
 
 For cards with one thumb per platform (CoralNPU, Vortex, Gemmini, etc.), the variant secondary sort is a no-op — just preserve asap7 → nangate45 → sky130hd order.
 
-### Per-platform placeholders for cards with missing builds
+### Per-(platform, variant) placeholders for missing thumbs
 
-A design card lists one platform badge per technology it *targets*; not every target has a cached `_final` yet.  When a badged platform has no thumb at all (no cached build, no fallback variant), emit a placeholder in that platform's slot instead of leaving the row visually shorter than the badge count suggests:
+A design card lists one platform badge per technology it *targets*, and family designs (LiteEth, NVDLA partitions, etc.) have a fixed set of variants per platform.  Every (platform, variant) slot the card *should* contain — based on the design family's targets — gets either a real thumb or a placeholder, so the card's grid layout matches the badge count and the variant set the user expects to see.
 
 ```html
 <div class="thumb-placeholder"><div class="ph-box">pending</div><span class="thumb-label asap7">asap7</span></div>
 ```
 
-Rules:
-- One placeholder per badged platform that has zero thumbs in the card.  If even a single family member (e.g. one LiteEth variant, one NVDLA partition) has a thumb for that platform, do not emit a placeholder.
-- Place each placeholder in the (platform, variant) sort position it would occupy if a real thumb existed — i.e. inside the asap7 group, nangate45 group, etc.
-- Don't emit per-variant placeholders for missing variants within a platform that already has at least one thumb — those would clutter family cards (LiteEth, NVDLA) where the variant set is the user's choice, not a build-status signal.
+For family cards (LiteEth, NVDLA), include a `<span class="thumb-variant">` line inside the placeholder so missing variants are labeled the same way real variant thumbs are:
 
-The legacy single `<div class="placeholder">Die image pending</div>` block is deprecated; replace it with the per-platform placeholder pattern above on first run.
+```html
+<div class="thumb-placeholder"><div class="ph-box">pending</div><span class="thumb-label asap7">asap7</span><span class="thumb-variant">partition_c</span></div>
+```
+
+Rules:
+- Emit a placeholder for every (platform, variant) slot the card should contain that doesn't have a thumb — including missing variants within a platform that already has other variant thumbs.  The card's variant set is intentional documentation of what the design targets, not a build-status signal; visually showing every slot — real or pending — keeps the grid honest.
+- Place each placeholder in the (platform, variant) sort position it would occupy if a real thumb existed — i.e. inside the asap7 group, nangate45 group, etc., in alphabetical variant order.
+
+The legacy single `<div class="placeholder">Die image pending</div>` block is deprecated; replace it with the per-(platform, variant) placeholder pattern above on first run.
 
 ## Step 8: Update the Design Portfolio platform badges in index.html
 

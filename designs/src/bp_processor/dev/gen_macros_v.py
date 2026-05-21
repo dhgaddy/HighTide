@@ -49,6 +49,7 @@ LARGE_CONFIGS = [
 OUTPUT_DIRS = [
     "designs/asap7/bp_processor",
     "designs/nangate45/bp_processor",
+    "designs/sky130hd/bp_processor",
 ]
 
 

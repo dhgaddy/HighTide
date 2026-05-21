@@ -1,0 +1,34 @@
+load("//:defs.bzl", "hightide_design")
+load("//designs/src/bp_processor:defs.bzl", "BP_COMMON_ARGS")
+
+_ARGS = dict(BP_COMMON_ARGS)
+
+_ARGS.update({
+    # First-pass sky130hd port: 560 macros + ~414k cells.
+    # nangate45 needs a fixed 3500x3500 die at halo=25 to avoid MPL-0040.
+    # sky130hd sites are ~4.7x larger area than nangate45, so let RTLMP
+    # spread macros into a CORE_UTILIZATION-sized die; NVDLA partitions on
+    # sky130hd take this same approach. Halo follows other 130nm
+    # macro-heavy designs (NVDLA partitions use 40-60).
+    "CORE_UTILIZATION": "30",
+    "PLACE_PINS_ARGS": "-min_distance 20 -min_distance_in_tracks",
+    "MACRO_PLACE_HALO": "60 60",
+    "MACRO_BLOCKAGE_HALO": "0.5",
+    "PLACE_DENSITY_LB_ADDON": "0.10",
+})
+
+hightide_design(
+    name = "bp_processor",
+    platform = "sky130hd",
+    verilog_files = [
+        "//designs/src/bp_processor:rtl",
+        "//designs/sky130hd/bp_processor:macros",
+    ],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": ["//designs/sky130hd/bp_processor:sram_lefs"],
+        "ADDITIONAL_LIBS": ["//designs/sky130hd/bp_processor:sram_libs"],
+    },
+    arguments = _ARGS,
+    stage_data = {"synth": ["//designs/src/bp_processor:rtl_data"]},
+)

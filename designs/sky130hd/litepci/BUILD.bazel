@@ -43,9 +43,9 @@ hightide_design(
         # Round-2 PPA tune: 45%→55% util (GRT peak at 45% was 19% on met2 —
         # plenty of room).  pcie_us LEF settled at 1000×1000 µm (885 µm pin
         # column + margin).
-        "CORE_UTILIZATION": "40",
-        "PLACE_DENSITY": "0.55",
-        "MACRO_PLACE_HALO": "60 60",
+        "CORE_UTILIZATION": "30",
+        "PLACE_DENSITY": "0.40",
+        "MACRO_PLACE_HALO": "100 100",
         "GDS_ALLOW_EMPTY": "fakeram.*|pcie_us",
         # See asap7 BUILD.bazel — flow does not yet patch litepcie's
         # inferred memories to explicit fakeram instances.

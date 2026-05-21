@@ -91,7 +91,9 @@ Also check the placement density — if `PLACE_DENSITY` is much lower than the t
 Raise `CORE_UTILIZATION` in steps (e.g., +5% at a time). For each step:
 
 1. Update `CORE_UTILIZATION` in BUILD.bazel `arguments`
-2. Adjust `PLACE_DENSITY` to match — it should be slightly above the utilization fraction (e.g., if utilization is 60%, density ~0.65-0.70)
+2. Adjust `PLACE_DENSITY`. It has **two distinct uses** that pull in opposite directions; pick the one that matches the bottleneck (see 2c′ for the spreading use):
+   - **Packing (default):** when you're raising `CORE_UTILIZATION` to shrink the die, keep `PLACE_DENSITY` slightly above the utilization fraction (e.g., util 60 → density 0.65–0.70). This lets the global placer pack std cells tightly into the smaller core.
+   - **Spreading (see 2c′):** when achieved-util is already comfortable but heatmaps show *local* clumping (cells crowded near macro pins, empty die elsewhere), drop `PLACE_DENSITY` *below* the achieved utilization fraction to force the global placer to disperse cells across empty area. Sky130hd/cnn uses `0.20` against a 28.6% achieved-util for exactly this reason.
 3. Run `bazel build //designs/<platform>/<design>:<design>_final`
 4. Check for:
    - Placement overflow (placement cannot converge)
@@ -102,6 +104,41 @@ Raise `CORE_UTILIZATION` in steps (e.g., +5% at a time). For each step:
 ### 2c. Handle congestion at high utilization
 
 As utilization increases, congestion will become the bottleneck. See `.claude/skills/shared/congestion-analysis.md` for the fix priority and diagnostic approach.
+
+### 2c′. Low `PLACE_DENSITY` as a spreading lever (when clumping is the bottleneck, not packing)
+
+This is a separate use of `PLACE_DENSITY` from 2b — reach for it when the design **closes timing fine at the current target util** but heatmaps or visual layout show **cells clumped in spots with large empty regions elsewhere**.
+
+**Mechanism.** `global_placement` is pin-edge-blind: when it sees a macro with std-cell loads, it pulls those cells toward the macro's pin edge. With many macros this creates dense clumps next to each macro and near-empty space everywhere else. Local congestion spikes on lower metals (met1/met2 on sky130hd, M1/M2 on asap7) at usage % well below the "global congestion wall" — the average is fine but the local density isn't. Lowering `PLACE_DENSITY` below the achieved utilization fraction tells the placer to **disperse** instead of clump.
+
+**When to reach for this:**
+- Achieved utilization is comfortable (no overflow, no DRCs) but layout heatmap shows clumps near macro pin edges and empty die elsewhere.
+- Local met1/met2 max H/V is much higher than the average usage % (a sign of *local* not *global* congestion).
+- The design has macro pins on a single edge (sky130hd fakeram met2 pin clusters; NVDLA partition memories) — the "pin attractor" effect is strongest.
+- You've tried `MACRO_PLACE_HALO` and it's solving routability around macros but std cells are still clumped.
+
+**Trade-offs (be honest about them):**
+
+| Effect | Direction with low `PLACE_DENSITY` |
+|---|---|
+| Local clump congestion | **better** (cells spread) |
+| Wirelength | worse (cells farther apart) |
+| Setup timing | typically slightly worse from wire delay — often offset by less buffer insertion in repair_timing |
+| Power | worse (more wire cap; bigger fanouts on net segments) |
+| Die area, when `DIE_AREA`/`CORE_AREA` is explicit | unchanged (just fills the die more evenly) |
+| Die area, when utilization-driven sizing | **worse** (low density forces a larger core to fit) |
+
+So spreading is **not** a power-area win — it's a *routability* win that trades a bit of P+W for cleaner congestion. Use it when the issue you're solving is congestion clumps, not when the issue is "too much area".
+
+**What it does NOT fix.** Cells already *touching* the macro pins (the close ring directly attracted to pin edges). For that you need `MACRO_PLACE_HALO` (cell-keepout zone around each macro) or `MACRO_BLOCKAGE_HALO` (routing-blockage zone). The combination — low `PLACE_DENSITY` for the bulk plus `MACRO_PLACE_HALO` for the ring — is what sky130hd/cnn ended up with (`0.20` + `300 300`).
+
+**Recipe.**
+1. Measure achieved utilization from a known-closing build.
+2. Set `PLACE_DENSITY` ~10–30 percentage points below it (e.g., achieved 30% → try `0.20` first, then `0.30` if the spread is too aggressive).
+3. Re-check the layout/heatmap and per-layer GRT max H/V to confirm clumps smoothed.
+4. If wire-delay penalty pushed setup slack down too much, bump `MACRO_PLACE_HALO` by ~half a macro pitch and re-run — that lets you keep some of the spread while reclaiming the cells nearest pin edges.
+
+**Existing examples in the repo:** `designs/sky130hd/cnn/BUILD.bazel` documents the rationale in-line; copy the comment style when applying this elsewhere so the *why* survives in DECISIONS.md.
 
 ### 2d. Check GRT congestion metrics
 

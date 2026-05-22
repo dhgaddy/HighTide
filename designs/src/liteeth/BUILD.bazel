@@ -10,7 +10,7 @@ filegroup(
 # Dev generation requires: git submodule update --init designs/src/liteeth/dev/repo
 #                          litex Python library on PATH
 filegroup(
-    name = "liteeth_udp_usp_gth_sgmii_rtl",
+    name = "liteeth_rtl",
     srcs = [":xilinx_libs", "liteeth_udp_usp_gth_sgmii.v", "macros.v"],
     visibility = ["//visibility:public"],
 )

@@ -1,8 +1,10 @@
-package(default_visibility = ["//designs/sky130hd/liteeth:__subpackages__"])
+load("//:defs.bzl", "hightide_design")
 
-# SRAM files for udp_usp_gth_sgmii
+package(default_visibility = ["//designs/sky130hd/liteeth:__pkg__"])
+
+# SRAM macros instantiated by the liteeth UDP-USP-GTH-SGMII config.
 filegroup(
-    name = "sram_lefs_udp_sgmii",
+    name = "sram_lefs",
     srcs = [
         "sram/lef/fakeram_1rw1r_64w64d_sram.lef",
         "sram/lef/fakeram_1rw1r_64w1024d_sram.lef",
@@ -10,9 +12,37 @@ filegroup(
 )
 
 filegroup(
-    name = "sram_libs_udp_sgmii",
+    name = "sram_libs",
     srcs = [
         "sram/lib/fakeram_1rw1r_64w64d_sram.lib",
         "sram/lib/fakeram_1rw1r_64w1024d_sram.lib",
     ],
+)
+
+# LiteEth UDP endpoint over the Xilinx UltraScale+ GTH SGMII PHY.
+# Verilog top module stays `liteeth_udp_usp_gth_sgmii` (LiteX-generated);
+# `name` is the short Bazel target / display name.
+hightide_design(
+    name = "liteeth",
+    top = "liteeth_udp_usp_gth_sgmii",
+    platform = "sky130hd",
+    verilog_files = ["//designs/src/liteeth:liteeth_rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "VERILOG_DEFINES": "-D USE_SKY130HD_CELLS",
+        "CORE_UTILIZATION": "52",
+        "PLACE_DENSITY": "0.57",
+        "MACRO_PLACE_HALO": "30 30",
+        "ROUTING_LAYER_ADJUSTMENT": "0.2",
+        # RSZ-0074 on udp0_sink_last fires AFTER repair_timing (at the
+        # incremental global_route step in global_route.tcl:88), so
+        # dropping split_load via SETUP_MOVE_SEQUENCE doesn't fix it.
+        # The whole post-GRT incremental-repair block has to be skipped.
+        # Same scope as the asap7 liteeth fix (commit 88b7ef46).
+        "SKIP_INCREMENTAL_REPAIR": "1",
+    },
 )

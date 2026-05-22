@@ -242,9 +242,8 @@ The portfolio table itself is the source of truth — no skill-side hardcoded li
 
 1. **`data-leaves` attribute** on the `<tr>`, if present.  Whitespace-separated list of leaf names and/or globs.  Examples already in the file:
    ```html
-   <tr data-leaves="bp_uno bp_quad">         <!-- BlackParrot: two members, not name-derivable -->
-   <tr data-leaves="liteeth_udp_usp_gth_sgmii">  <!-- LiteEth: leaf name diverges from display name -->
-   <tr data-leaves="partition_*">            <!-- NVDLA: family glob -->
+   <tr data-leaves="bp_uno bp_quad">    <!-- BlackParrot: two members, not name-derivable -->
+   <tr data-leaves="partition_*">       <!-- NVDLA: family glob -->
    ```
    Tokens containing `*` are globs matched against the design list from Step 3; bare tokens are literal leaf names.
 

@@ -261,7 +261,7 @@ for entry in "${DESIGNS[@]}"; do
   # session was repeatedly deleting+recreating mrg-hightide-{n45,sky}-ternip
   # on a ~7-min cadence. Bypass via unique name; restore stock naming before
   # merging this branch.
-  job_name="${USER}-hightide-${platform}-${leaf_name}-r3"
+  job_name="${USER}-hightide-${platform}-${leaf_name}-r4"
   job_name=$(echo "$job_name" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | cut -c1-63)
 
   # Resolve resources: CLI flag > design entry > defaults entry > fallback.

@@ -37,17 +37,28 @@ hightide_design(
         "SDC_FILE": [":constraint.sdc"],
         "ADDITIONAL_LEFS": [":sram_lefs", ":phy_lefs"],
         "ADDITIONAL_LIBS": [":sram_libs", ":phy_libs"],
+        # Fixed-grid macro placement (every macro R0, channel below every
+        # row).  RTLMP's pin-edge-blind, mixed-orientation clustering on
+        # this sky130hd build collided adjacent macros' met2 escape lanes
+        # -> 18 vertical met2 + 8 vertical met4 overflows clustered in a
+        # ~200x150 um region around storage_23 et al, with GRT-0116 and
+        # the standard "Try reduce the layer adjustment 20%->11%" hint
+        # that knob-tuning alone can't satisfy here (overall track usage
+        # was 5.85%, so it's structural not bulk congestion).  Same
+        # idiom as cnn-sky130hd, NVDLA-sky130hd-partition_c (CLAUDE.md
+        # MPL-0040 row).  Generated via:
+        #   tools/gen_macro_grid.py <dump> macros.tcl --chan 200 --gap-x 100
+        # (chan/gap tightened vs the cnn defaults to fit a 10.3 mm core
+        # given litepci's 21 macros incl. 2 tall 1024d FakeRAMs.)
+        "MACRO_PLACEMENT_TCL": [":macros.tcl"],
     },
     arguments = {
         "VERILOG_DEFINES": "-D USE_SKY130HD_CELLS",
-        # Real-FakeRAM build: dev/inline_fakeram.py wires the 20 large
-        # DMA / TLP memories to explicit fakeram instances so STA sees
-        # real reg-to-reg paths.  Util / density / halo carried over
-        # from the mocked-build route-fix iteration (util 30, halo 100)
-        # as a conservative starting point — sky130hd's coarse pitch +
-        # 1000×1000 pcie_us + 20 large FakeRAMs is the hardest of the
-        # three platforms to route.  Will retune after first real-timing
-        # measurement.
+        # Real-FakeRAM build with fixed-grid macro placement (see
+        # sources.MACRO_PLACEMENT_TCL above).  util 30 / density 0.40 /
+        # halo 100 retained as the starting point; halo less critical now
+        # that the grid pins every macro FIRM and the post-source
+        # rtl_macro_placer has no work to do.
         "CORE_UTILIZATION": "30",
         "PLACE_DENSITY": "0.40",
         "MACRO_PLACE_HALO": "100 100",

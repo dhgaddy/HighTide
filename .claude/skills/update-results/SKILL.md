@@ -206,21 +206,21 @@ Both references always use the versioned `<design>_<platform>_<sha>` name (no ca
 
 ### Thumbnail order within each design card
 
-For a card whose family has multiple thumbnails (NVDLA partitions a/c/m/o/p, LiteEth's 6 PHY/bus variants, etc.), order the `<a class="thumb-link">` entries by **(platform, variant)** — platform first, then variant alphabetically within each platform.  Platform sequence is always asap7 → nangate45 → sky130hd to match the badge ordering everywhere else.
+For a card whose family has multiple thumbnails (e.g. NVDLA partitions a/c/m/o/p), order the `<a class="thumb-link">` entries by **(platform, variant)** — platform first, then variant alphabetically within each platform.  Platform sequence is always asap7 → nangate45 → sky130hd to match the badge ordering everywhere else.
 
-Concretely: emit all asap7 thumbs (sorted by variant), then all nangate45 thumbs, then all sky130hd thumbs.  This produces a clean per-platform row in the auto-fill grid (~6 cells across) for cards like LiteEth, and matches the existing NVDLA ordering.
+Concretely: emit all asap7 thumbs (sorted by variant), then all nangate45 thumbs, then all sky130hd thumbs.  This matches the existing NVDLA ordering.
 
 For cards with one thumb per platform (CoralNPU, Vortex, Gemmini, etc.), the variant secondary sort is a no-op — just preserve asap7 → nangate45 → sky130hd order.
 
 ### Per-(platform, variant) placeholders for missing thumbs
 
-A design card lists one platform badge per technology it *targets*, and family designs (LiteEth, NVDLA partitions, etc.) have a fixed set of variants per platform.  Every (platform, variant) slot the card *should* contain — based on the design family's targets — gets either a real thumb or a placeholder, so the card's grid layout matches the badge count and the variant set the user expects to see.
+A design card lists one platform badge per technology it *targets*, and family designs (e.g. NVDLA partitions) have a fixed set of variants per platform.  Every (platform, variant) slot the card *should* contain — based on the design family's targets — gets either a real thumb or a placeholder, so the card's grid layout matches the badge count and the variant set the user expects to see.
 
 ```html
 <div class="thumb-placeholder"><div class="ph-box">pending</div><span class="thumb-label asap7">asap7</span></div>
 ```
 
-For family cards (LiteEth, NVDLA), include a `<span class="thumb-variant">` line inside the placeholder so missing variants are labeled the same way real variant thumbs are:
+For family cards (e.g. NVDLA), include a `<span class="thumb-variant">` line inside the placeholder so missing variants are labeled the same way real variant thumbs are:
 
 ```html
 <div class="thumb-placeholder"><div class="ph-box">pending</div><span class="thumb-label asap7">asap7</span><span class="thumb-variant">partition_c</span></div>
@@ -236,35 +236,33 @@ The legacy single `<div class="placeholder">Die image pending</div>` block is de
 
 `webpage/index.html` has a "Design Portfolio" table (`<section id="designs">`) where each row's last column is a list of `<span class="platform-badge badge-<platform>">…</span>` tags.  Those badges must reflect which platforms each design *actually* reaches `_final` on, derived from the same per-(platform, design) sweep used above.
 
-### Display-name → design-family mapping
+### Source of truth: walk every portfolio `<tr>`
 
-Index rows use display names; the sweep produces leaf names.  Map them like this (rows not in the sweep are left untouched):
+The portfolio table itself is the source of truth — no skill-side hardcoded list.  Iterate every `<tr>` inside `<section id="designs">` and resolve each row's leaf design name(s) by these rules, in order:
 
-| Display name      | Design family (any variant qualifies)                |
-|-------------------|------------------------------------------------------|
-| BlackParrot       | bp_uno, bp_quad                                      |
-| Gemmini           | gemmini                                              |
-| SHA3              | sha3                                                 |
-| CNN               | cnn                                                  |
-| NyuziProcessor    | NyuziProcessor                                       |
-| Minimax           | minimax                                              |
-| LiteEth           | liteeth_* (any of the 6 variants)                    |
-| CoralNPU          | coralnpu                                             |
-| NVDLA             | partition_a … partition_p (any of the 5 partitions)  |
-| FlooNoC           | floonoc                                              |
-| Snitch Cluster    | snitch_cluster                                       |
-| Vortex            | vortex                                               |
+1. **`data-leaves` attribute** on the `<tr>`, if present.  Whitespace-separated list of leaf names and/or globs.  Examples already in the file:
+   ```html
+   <tr data-leaves="bp_uno bp_quad">         <!-- BlackParrot: two members, not name-derivable -->
+   <tr data-leaves="liteeth_udp_usp_gth_sgmii">  <!-- LiteEth: leaf name diverges from display name -->
+   <tr data-leaves="partition_*">            <!-- NVDLA: family glob -->
+   ```
+   Tokens containing `*` are globs matched against the design list from Step 3; bare tokens are literal leaf names.
 
-For a family design, a platform badge appears if **any** family member has a cached `_final` for that platform.  This matches how the gallery card aggregates variants on a single design entry.
+2. **Derive from the display name** (`<td><strong>…</strong></td>`) when no `data-leaves` is set.  Lowercase the display name and replace spaces with `_`.  This covers the common case: `Gemmini → gemmini`, `LitePCI → litepci`, `Snitch Cluster → snitch_cluster`, `LiteDRAM → litedram`, `NyuziProcessor → nyuziprocessor` (case-folded — match the design list case-insensitively).
+
+For a family with multiple resolved leaves, a platform badge appears if **any** member has a cached `_final` on that platform.
+
+**Add a `data-leaves` attribute** only when both derivation rules above would miss — i.e. the display name doesn't case-fold to the leaf name(s), or the family has multiple non-name-derivable members.  Avoid adding it gratuitously; the whole point is to keep most rows derivation-only.
 
 ### Update procedure
 
-For each `<tr>` whose `<td><strong>…</strong></td>` matches a row in the table above:
+For each portfolio `<tr>`:
 
-1. Compute the active-platforms set for that family from the Step 5 results: `{platform : ∃ design ∈ family with cached _final on platform}`.
-2. Re-emit the badge `<td>` with one `<span class="platform-badge badge-<platform>">…</span>` per active platform, ordered asap7 → nangate45 → sky130hd, indented to match the surrounding HTML.
-3. If the active set is empty, leave the row's badges as-is and emit `<!-- skipped: no cached _final on YYYY-MM-DD -->` next to the badges so a future sweep can re-evaluate.
-4. Don't touch any other column (description, language) — those are hand-curated and have no machine-readable source of truth.
+1. Resolve the family's leaf names per the rules above.
+2. Compute the active-platforms set from Step 5 results: `{platform : ∃ leaf ∈ family with cached _final on platform}`.
+3. Re-emit the badge `<td>` with one `<span class="platform-badge badge-<platform>">…</span>` per active platform, ordered asap7 → nangate45 → sky130hd, indented to match the surrounding HTML.
+4. If the active set is empty, leave the row's badges as-is and emit `<!-- skipped: no cached _final on YYYY-MM-DD -->` next to the badges so a future sweep can re-evaluate.
+5. Don't touch any other column (description, language) — those are hand-curated and have no machine-readable source of truth.
 
 This step is idempotent: running the skill twice in a row produces no diff if the cache state hasn't changed.
 

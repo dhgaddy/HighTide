@@ -64,13 +64,13 @@ Floorplans rewritten: `macro_placement.tcl` dropped on all 3 platforms (sizes di
 | nangate45 | `//designs/nangate45/cnn:cnn_final` | 🟡 `mrg-hightide-nangate45-cnn` (submitted 13:12Z) | CACTI; macros ~10–45 % smaller than old python script. |
 | sky130hd | `//designs/sky130hd/cnn:cnn_final` | 🟡 `mrg-hightide-sky130hd-cnn` (place 4h+) | **Biggest change** — 32K macro 4.93 × 4.01 mm, die 14×14 mm. |
 
-### `liteeth` (`liteeth_udp_usp_gth_sgmii`) — 3 targets
+### `liteeth` — 3 targets
 
 `macros.v` pin names already match bsg_fakeram, so only LEF/LIB changed.
 
 | Platform | Build | Status | Notes |
 |---|---|---|---|
-| asap7 | `//designs/asap7/liteeth/liteeth_udp_usp_gth_sgmii:liteeth_udp_usp_gth_sgmii_final` | ✅ (`88b7ef46` UTIL rollback + SKIP_INC) | macros 5× larger (old OpenFakeRAM was unrealistically dense). Needed UTIL/DENSITY rollback. |
+| asap7 | `//designs/asap7/liteeth:liteeth_final` | ✅ (`88b7ef46` UTIL rollback + SKIP_INC) | macros 5× larger (old OpenFakeRAM was unrealistically dense). Needed UTIL/DENSITY rollback. |
 | nangate45 | (same target, n45) | 🟡 `mrg-hightide-nangate45-liteeth-udp-usp-gth-sgmii` (submitted 13:12Z) | within 1–2 % of CACTI's previous output. |
 | sky130hd | (same target, sk130) | 🟡 `mrg-hightide-sky130hd-liteeth-udp-usp-gth-sgmii` (submitted 13:12Z) | within 1–2 %. |
 
@@ -107,7 +107,7 @@ These designs had bsg_fakeram-generated LEFs in `git HEAD` before this session, 
 | `$(locations <empty filegroup>)` doesn't expand | NVDLA `partition_a` on all 3 platforms (both 256x16 + 272x16 became FFs → `sram_lefs_a` / `sram_libs_a` filegroups went empty) | Drop the `ADDITIONAL_LEFS/LIBS` entries from each `partition_a/BUILD.bazel` and remove the orphan filegroups. | ✅ commit `d3310ef4` |
 | Bazel can't fetch `bliss-0.73.zip` from `http://www.tcs.hut.fi/Software/bliss/` | liteeth k8s pod (and any other build that brings in SCIP → bliss as a transitive dep) | Pre-existing infrastructure issue — host unreachable. Resubmitted; cleared on retry. | ✅ transient |
 | `Synthesized memory size 4096 exceeds SYNTH_MEMORY_MAX_BITS` | NVDLA `partition_a` — yosys-slang now infers a 4352-bit memory from the `fakeram_272x16_1r1w.v` FF stub, above the ORFS default 4096 cap | Bump `SYNTH_MEMORY_MAX_BITS` to `8192` in each platform's `partition_a/BUILD.bazel` | ✅ commit `2ff871f3` |
-| GRT `RSZ-0074` failed-to-build-tree on `udp0_sink_last` | liteeth / asap7 — the 5×-larger bsg_fakeram macros crowd routing at the post-sweep `UTIL=50/DENSITY=0.55` | Revert `liteeth_udp_usp_gth_sgmii/BUILD.bazel` to pre-sweep `UTIL=35/DENSITY=0.30`. A fresh PPA sweep against the new macros will be needed. | ✅ commit `2ff871f3` |
+| GRT `RSZ-0074` failed-to-build-tree on `udp0_sink_last` | liteeth / asap7 — the 5×-larger bsg_fakeram macros crowd routing at the post-sweep `UTIL=50/DENSITY=0.55` | Revert `liteeth/BUILD.bazel` to pre-sweep `UTIL=35/DENSITY=0.30`. A fresh PPA sweep against the new macros will be needed. | ✅ commit `2ff871f3` |
 | `ODB-1200 InsertBufferBeforeLoads` at CTS-time `repair_timing` | cnn / asap7 — the new macros push the resizer into the same SplitLoadMove path already documented for liteeth / bp_quad / gemmini-asap7 | Apply the standard workaround: `SKIP_CTS_REPAIR_TIMING=1`. | ✅ commit `a88c4ea8` |
 | Routing congestion → `Global routing failed` at `detail_route` | cnn / sky130hd — 4 × 4.93 mm² macros + 58 smaller ones at the 12×12 mm die hit congestion; `net1337` has 1964-terminal fanout. | Bump die to 14×14 mm and `PLACE_DENSITY_LB_ADDON` 0.10→0.20. | 🟡 commit `88b7ef46`, watching |
 | `RSZ-0074` in post-GRT `repair_timing` on `udp0_sink_last` | liteeth / asap7 — surfaces even after UTIL/DENSITY rollback. The resizer's `SplitLoadMove` book-keeping mismatch (same family as ODB-1200). | Add `SKIP_INCREMENTAL_REPAIR=1` (route's own hold-repair still runs). | ✅ commit `88b7ef46` (liteeth landed) |

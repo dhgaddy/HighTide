@@ -29,7 +29,7 @@ The liteeth design has 6 configuration variants, each a different combination of
 
 | Variant | Protocol | PHY |
 |---------|----------|-----|
-| `liteeth_udp_usp_gth_sgmii` | UDP | USP GTH SGMII |
+| `liteeth` | UDP | USP GTH SGMII |
 | `liteeth_udp_raw_rgmii` | UDP raw | RGMII |
 | `liteeth_udp_stream_rgmii` | UDP stream | RGMII |
 | `liteeth_udp_stream_sgmii` | UDP stream | SGMII |

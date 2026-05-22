@@ -1,12 +1,15 @@
 # liteeth Design Decisions
 
-Per-platform notes for the `liteeth_udp_usp_gth_sgmii` design — the LiteEth Ethernet stack (LiteX/Python) configured with a UDP endpoint over the Xilinx UltraScale+ GTH-SerDes SGMII PHY.
+Per-platform notes for the `liteeth` design (Verilog top
+`liteeth_udp_usp_gth_sgmii`) — the LiteEth Ethernet stack (LiteX/Python)
+configured with a UDP endpoint over the Xilinx UltraScale+ GTH-SerDes
+SGMII PHY.
 
 This is the most complex liteeth variant: UDP streaming protocol + a high-speed serial PHY whose Xilinx UltraScale+ GTH transceiver brings in the most logic, and the one that exercises the most OpenROAD corner cases. It is the sole liteeth design kept in HighTide as of 2026-05-12 — the other five variants (`mac_axi_mii`, `mac_wb_mii`, `udp_raw_rgmii`, `udp_stream_rgmii`, `udp_stream_sgmii`) were removed when the suite was simplified.
 
-| Variant | Protocol | PHY |
+| Verilog top                 | Protocol | PHY                          |
 |---|---|---|
-| `liteeth_udp_usp_gth_sgmii` | UDP | Xilinx UltraScale+ GTH SGMII |
+| `liteeth_udp_usp_gth_sgmii` | UDP      | Xilinx UltraScale+ GTH SGMII |
 
 FakeRAM macros live at `designs/<platform>/liteeth/sram/{lef,lib}/`.
 

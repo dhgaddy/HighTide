@@ -25,13 +25,15 @@ hightide_design(
     },
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
-        # PPA-tuned: prior 5-ns / util-30 build hit +0.63 ns of setup
-        # headroom (Fmax 228 MHz) at 8.6 % GRT congestion / 0 overflow.
-        # Tighten clock to 4.5 ns and util to 38; drop halo 20→15 (PDN-0179
-        # was originally fixed at ≥ 15 µm, 20 was margin).
-        "CORE_UTILIZATION": "38",
+        # PPA-tuned round 2: prior 4.5-ns / util-38 / halo-15 build hit
+        # Fmax 240 MHz with +340 ps of setup headroom and 10.6 % GRT
+        # congestion / 0 overflow.  Tighten clock 4.5→4.2 ns (target ~238
+        # MHz, leaves ~40 ps headroom), util 38→42, halo 15→12 (PDN-0179
+        # was fixed at ≥ 15 µm originally — 12 is a measured step into
+        # the unknown).
+        "CORE_UTILIZATION": "42",
         "PLACE_DENSITY_LB_ADDON": "0.15",
-        "MACRO_PLACE_HALO": "15 15",
+        "MACRO_PLACE_HALO": "12 12",
         "TNS_END_PERCENT": "100",
         # Same ODB-1200 pattern as asap7 — drop split_load from the move
         # sequence to keep the rest of repair_timing active.

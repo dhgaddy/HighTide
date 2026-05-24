@@ -2,7 +2,7 @@ library(fakeram_1rw1r_130w1024d_sram) {
     technology (cmos);
     delay_model : table_lookup;
     revision : 1.0;
-    date : "2026-05-19 17:28:17Z";
+    date : "2026-05-24 08:32:14Z";
     comment : "SRAM";
     time_unit : "1ns";
     voltage_unit : "1V";
@@ -74,8 +74,8 @@ library(fakeram_1rw1r_130w1024d_sram) {
     type (fakeram_1rw1r_130w1024d_sram_DATA) {
         base_type : array ;
         data_type : bit ;
-        bit_width : 130;
-        bit_from : 129;
+        bit_width : 65;
+        bit_from : 64;
         bit_to : 0 ;
         downto : true ;
     }
@@ -88,12 +88,12 @@ library(fakeram_1rw1r_130w1024d_sram) {
         downto : true ;
     }
 cell(fakeram_1rw1r_130w1024d_sram) {
-    area : 4483396.182;
+    area : 2242134.134;
     interface_timing : true;
     memory() {
         type : ram;
         address_width : 10;
-        word_width : 130;
+        word_width : 65;
     }
     pin(r0_clk)   {
         direction : input;

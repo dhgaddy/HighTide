@@ -52,9 +52,19 @@ hightide_design(
         "PLACE_DENSITY": "0.40",
         "MACRO_PLACE_HALO": "100 100",
         "GDS_ALLOW_EMPTY": "fakeram.*|pcie_us",
-        # ODB-1200 — drop split_load from SETUP_MOVE_SEQUENCE; skip the
-        # post-GRT repair_timing block.  Same workaround as asap7 litepci.
+        # ODB-1200 — drop split_load from SETUP_MOVE_SEQUENCE; matches
+        # the asap7 litepci workaround.  Re-enable post-GRT repair (no
+        # SKIP_INCREMENTAL_REPAIR=1) to give hold repair a chance to
+        # soak the ~9.3 ns CTS skew via data-side delay buffer insertion;
+        # the banked-macros + smaller floorplan may avoid the ODB-1200
+        # hold-pass crash that originally forced the skip.  If ODB-1200
+        # recurs, add SKIP_INCREMENTAL_REPAIR=1 back.
         "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
-        "SKIP_INCREMENTAL_REPAIR": "1",
+        # Tighter CTS clustering — force a more-balanced clock tree to
+        # reduce the ~9.3 ns launch/capture skew (default sky130hd value
+        # is ~100 um).  Trades a few extra clock buffers for hopefully
+        # lower per-leaf insertion-delay variance across the 21-macro
+        # spread.
+        "CTS_BUF_DISTANCE": "60",
     },
 )

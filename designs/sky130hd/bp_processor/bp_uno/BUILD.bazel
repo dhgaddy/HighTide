@@ -4,17 +4,19 @@ load("//designs/src/bp_processor:defs.bzl", "BP_COMMON_ARGS")
 _ARGS = dict(BP_COMMON_ARGS)
 
 _ARGS.update({
-    # First-pass sky130hd port: 560 macros + ~414k cells.
-    # nangate45 needs a fixed 3500x3500 die at halo=25 to avoid MPL-0040.
-    # sky130hd sites are ~4.7x larger area than nangate45, so let RTLMP
-    # spread macros into a CORE_UTILIZATION-sized die; NVDLA partitions on
-    # sky130hd take this same approach. Halo follows other 130nm
-    # macro-heavy designs (NVDLA partitions use 40-60).
+    # sky130hd port (140 macros + ~710k insts). Stdcell utilization stays
+    # very low (~12% at util=30), so the limiter is pin-cluster congestion
+    # at the icache `data_mems[*]` macros, not global density. First pass
+    # at halo=60 / lb_addon=0.10 ended GRT with 35 overflow-by-1 on
+    # met2/met4 right next to the cache macros. Bump halo and lb_addon to
+    # give the router more channel space at the macro edges; the bigger
+    # die that CORE_UTILIZATION carves out absorbs both (nangate45's MPL-0040
+    # at halo=60 was at util=25/DIE=2500, much tighter than this).
     "CORE_UTILIZATION": "30",
     "PLACE_PINS_ARGS": "-min_distance 20 -min_distance_in_tracks",
-    "MACRO_PLACE_HALO": "60 60",
+    "MACRO_PLACE_HALO": "80 80",
     "MACRO_BLOCKAGE_HALO": "0.5",
-    "PLACE_DENSITY_LB_ADDON": "0.10",
+    "PLACE_DENSITY_LB_ADDON": "0.20",
 })
 
 hightide_design(

@@ -1,0 +1,39 @@
+load("//:defs.bzl", "hightide_design")
+
+filegroup(
+    name = "sram_lefs",
+    srcs = glob(["sram/lef/*.lef"]),
+)
+
+filegroup(
+    name = "sram_libs",
+    srcs = glob(["sram/lib/*.lib"]),
+)
+
+hightide_design(
+    name = "snitch_cluster",
+    top = "snitch_cluster_wrapper",
+    platform = "nangate45",
+    verilog_files = ["//designs/src/snitch_cluster:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "IO_CONSTRAINTS": [":io.tcl"],
+        "FOOTPRINT_TCL": [":io.tcl"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HDL_FRONTEND": "slang",
+        "VERILOG_INCLUDE_DIRS": "designs/src/snitch_cluster/dev/generated/deps/include designs/src/snitch_cluster/dev/generated",
+        "VERILOG_DEFINES": "-D VERILATOR",
+        "SYNTH_MEMORY_MAX_BITS": "8193",
+        "SYNTH_HIERARCHICAL": "1",
+        "SYNTH_ARGS": "-noshare",
+        "CORE_UTILIZATION": "30",
+        "PLACE_DENSITY_LB_ADDON": "0.15",
+        "MACRO_PLACE_HALO": "40 40",
+        "TNS_END_PERCENT": "100",
+        "SKIP_CTS_REPAIR_TIMING": "1",
+        "SKIP_INCREMENTAL_REPAIR": "1",
+    },
+)

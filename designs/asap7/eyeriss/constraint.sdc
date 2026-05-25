@@ -2,7 +2,7 @@ current_design TOP
 
 set clk_name  clock
 set clk_port_name clock
-set clk_period 2400
+set clk_period 2200
 set clk_io_pct 0.2
 
 set clk_port [get_ports $clk_port_name]

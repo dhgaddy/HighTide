@@ -27,16 +27,16 @@ hightide_design(
     },
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
-        # PPA round 2: prior util 30 / halo 30 closed setup at exactly
-        # +2.8 ps (Fmax 40 MHz on 25 ns clock).  No clock headroom, but
-        # the floorplan still has area to give: bump util 30→34 and
-        # tighten halo 30→25 to shrink the die ~12 %.  Shorter wires on
-        # the TOP_controller → pSumSRAM2 distribution signal should keep
-        # setup positive even at the tighter util — if it goes red we'll
-        # back the halo off in round 3.
+        # PPA round 3: round 2's halo=25 cleared setup with +1.7 ns
+        # headroom (min clock 23.3 ns) but produced 18 DRT shorts in
+        # one cluster — clknet_leaf_81_clock ran into the met5 VSS
+        # straps because CTS didn't have clearance around the macros.
+        # Halo 25→28 restores leaf-buffer clearance; clock 25→24 ns
+        # cashes in the 1.7 ns headroom (min was 23.3 ns).  Util stays
+        # at 34 (round-2 win).
         "CORE_UTILIZATION": "34",
         "PLACE_DENSITY_LB_ADDON": "0.15",
-        "MACRO_PLACE_HALO": "25 25",
+        "MACRO_PLACE_HALO": "28 28",
         "TNS_END_PERCENT": "100",
         # Same ODB-1200 pattern as asap7 — drop split_load from the move
         # sequence to keep the rest of repair_timing active.

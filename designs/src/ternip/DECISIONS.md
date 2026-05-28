@@ -22,10 +22,11 @@ None — ternip closes with RTLMP placement.
 ## asap7
 
 **Status**: finishing
-**Last updated**: 2026-05-28 (upstream bump to `187957b5`).
+**Last updated**: 2026-05-28 (basejump_stl bump to `b48037e2`).
 
 ### Decisions
 - **2026-05-28 `187957b5`**: bumped `dev/repo` to upstream `187957b5` — single commit, improves rowwise multioperand combinational operations in `rtl/fus/ternip_rowwise_operation.sv`. Closes #148.
+- **2026-05-28 `b48037e2`**: bumped `dev/basejump_stl` to `b48037e2` (3 commits: rp_groups `.v` extensions, `bsg_fifo_1r1w_narrowed.sv` update, `bsg_reduce balanced_p` param). None touch files in `_BSG_FILES` — regenerated `dev/bsg/` is bit-identical, build is pure cache hit. Closes #149.
 
 ### Configuration
 

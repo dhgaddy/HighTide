@@ -221,8 +221,21 @@ If the only change is regenerating RTL from upstream with no flow-config impact,
 
 7. **Test the flow:**
    ```bash
-   bazel build //designs/$1/$0:$0_final
+   # Build :<design>_gallery (not :<design>_final) so the layout PNG gets
+   # rendered and cached too — update-results becomes a pure cache fetch.
+   bazel build //designs/$1/$0:$0_gallery
    ```
+   Run one platform at a time on the local machine — these can be big
+   designs and parallel platform builds may exhaust memory.
+
+8. **Refresh the webpage (once, before opening the PR):** after every
+   supported platform for this design has built green (1–3 platforms,
+   whichever the design has), run the `/update-results` skill **once**
+   so `webpage/results.html`, the Design Portfolio badges in
+   `webpage/index.html`, `webpage/gallery.html`, and the per-row layout
+   PNGs in `webpage/figures/` reflect the new builds together. Commit
+   the webpage diff as part of the PR for the design bump — not after
+   each individual platform build.
 
 ### B. Update tool dependencies (JDK, sbt, sv2v, Python packages, etc.)
 
@@ -276,9 +289,15 @@ If the only change is regenerating RTL from upstream with no flow-config impact,
 
 4. **Test:**
    ```bash
-   bazel build //designs/$1/$0:$0_final
+   bazel build //designs/$1/$0:$0_gallery
    ```
-   (Bazel re-runs only affected stages when arguments or sources change.)
+   One platform at a time on the local machine. (Bazel re-runs only
+   affected stages when arguments or sources change.)
+
+5. **Refresh the webpage (once, before opening the PR):** once every
+   affected platform has built green, run `/update-results` a single
+   time and commit the webpage diff alongside the parameter change in
+   the same PR.
 
 ### D. Add FakeRAM for newly identified memories
 
@@ -332,8 +351,14 @@ If the only change is regenerating RTL from upstream with no flow-config impact,
 
 4. **Test the new platform:**
    ```bash
-   bazel build //designs/<new-platform>/$0:$0_final
+   bazel build //designs/<new-platform>/$0:$0_gallery
    ```
+   One platform at a time on the local machine.
+
+5. **Refresh the webpage (once, before opening the PR):** once the new
+   platform has built green, run `/update-results` a single time so the
+   new platform shows up in `webpage/results.html` + Design Portfolio
+   badges, and commit the webpage diff with the port in the same PR.
 
 ## General Notes
 

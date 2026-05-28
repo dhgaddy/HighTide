@@ -22,7 +22,10 @@ None — ternip closes with RTLMP placement.
 ## asap7
 
 **Status**: finishing
-**Last updated**: 2026-05-13 (FakeRAM regen).
+**Last updated**: 2026-05-28 (upstream bump to `187957b5`).
+
+### Decisions
+- **2026-05-28 `187957b5`**: bumped `dev/repo` to upstream `187957b5` — single commit, improves rowwise multioperand combinational operations in `rtl/fus/ternip_rowwise_operation.sv`. Closes #148.
 
 ### Configuration
 

@@ -18,7 +18,7 @@
 `include "tcdm_interface/typedef.svh"
 `include "dca_interface/typedef.svh"
 
-`include "snitch_vm/typedef.svh"
+`include "snitch/typedef.svh"
 
 /// Snitch many-core cluster with improved TCDM interconnect.
 /// Snitch Cluster Top-Level.
@@ -87,55 +87,8 @@ module snitch_cluster
   parameter bit          EnableWideCollectives     = 0,
   /// Enable narrow collective operations.
   parameter bit          EnableNarrowCollectives   = 0,
-  /// Per-core enabling of the standard `E` ISA reduced-register extension.
-  parameter bit [NrCores-1:0] RVE           = '0,
-  /// Per-core enabling of the standard `F` ISA extensions.
-  parameter bit [NrCores-1:0] RVF           = '0,
-  /// Per-core enabling of the standard `D` ISA extensions.
-  parameter bit [NrCores-1:0] RVD           = '0,
-  /// Per-core enabling of `XDivSqrt` ISA extensions.
-  parameter bit [NrCores-1:0] XDivSqrt      = '0,
-  // Small-float extensions
-  /// FP 16-bit
-  parameter bit [NrCores-1:0] XF16          = '0,
-  /// FP 16 alt a.k.a. brain-float
-  parameter bit [NrCores-1:0] XF16ALT       = '0,
-  /// FP 8-bit
-  parameter bit [NrCores-1:0] XF8           = '0,
-  /// FP 8-bit alt
-  parameter bit [NrCores-1:0] XF8ALT        = '0,
-  /// Enable SIMD support.
-  parameter bit [NrCores-1:0] XFVEC         = '0,
-  /// Enable DOTP support.
-  parameter bit [NrCores-1:0] XFDOTP        = '0,
-  /// Per-core enabling of the custom `Xdma` ISA extensions.
-  parameter bit [NrCores-1:0] Xdma          = '0,
-  /// Per-core enabling of the custom `Xssr` ISA extensions.
-  parameter bit [NrCores-1:0] Xssr          = '0,
-  /// Per-core enabling of the custom `Xfrep` ISA extensions.
-  parameter bit [NrCores-1:0] Xfrep         = '0,
-  /// Per-core enabling of the custom `Xcopift` ISA extensions.
-  parameter bit [NrCores-1:0] Xcopift       = '0,
-  /// Per-core enabling of the custom 'Xpulppostmod' ISA extensions.
-  parameter bit [NrCores-1:0] Xpulppostmod  = '0,
-  /// Per-core enabling of the custom 'Xpulpabs' ISA extensions.
-  parameter bit [NrCores-1:0] Xpulpabs      = '0,
-  /// Per-core enabling of the custom 'Xpulpbitop' ISA extensions.
-  parameter bit [NrCores-1:0] Xpulpbitop    = '0,
-  /// Per-core enabling of the custom 'Xpulpbr' ISA extensions.
-  parameter bit [NrCores-1:0] Xpulpbr       = '0,
-  /// Per-core enabling of the custom 'Xpulpclip' ISA extensions.
-  parameter bit [NrCores-1:0] Xpulpclip     = '0,
-  /// Per-core enabling of the custom 'Xpulpmacsi' ISA extensions.
-  parameter bit [NrCores-1:0] Xpulpmacsi    = '0,
-  /// Per-core enabling of the custom 'Xpulpminmax' ISA extensions.
-  parameter bit [NrCores-1:0] Xpulpminmax   = '0,
-  /// Per-core enabling of the custom 'Xpulpslet' ISA extensions.
-  parameter bit [NrCores-1:0] Xpulpslet     = '0,
-  /// Per-core enabling of the custom 'Xpulpvect' ISA extensions.
-  parameter bit [NrCores-1:0] Xpulpvect     = '0,
-  /// Per-core enabling of the custom 'Xpulpvectshufflepack' ISA extensions.
-  parameter bit [NrCores-1:0] Xpulpvectshufflepack = '0,
+  /// ISA configurations of all cores.
+  parameter snitch_pkg::isa_cfg_t IsaCfg [NrCores] = '{default: '0},
   // Per-core enable of private IPU.
   parameter bit [NrCores-1:0] PrivateIpu    = '0,
   /// # Core-global parameters
@@ -164,9 +117,9 @@ module snitch_cluster
   /// Per-core depth of TCDM Mux unifying SSR 0 and Snitch requests.
   parameter int unsigned SsrMuxRespDepth [NrCores] = '{default: 0},
   /// Per-core internal parameters for each SSR.
-  parameter snitch_ssr_pkg::ssr_cfg_t [NumSsrsMax-1:0] SsrCfgs [NrCores] = '{default: '0},
+  parameter snitch_ssr_pkg::ssr_cfg_t [cf_math_pkg::iomsb(NumSsrsMax):0] SsrCfgs [NrCores] = '{default: '0},
   /// Per-core register indices for each SSR.
-  parameter logic [NumSsrsMax-1:0][4:0]  SsrRegs [NrCores] = '{default: 0},
+  parameter logic [cf_math_pkg::iomsb(NumSsrsMax):0][4:0]  SsrRegs [NrCores] = '{default: 0},
   /// Per-core amount of sequencer instructions for IPU and FPU if enabled.
   parameter int unsigned NumSequencerInstr [NrCores] = '{default: 0},
   /// Per-core amount of sequencer loops for FPU if enabled.
@@ -231,15 +184,8 @@ module snitch_cluster
   parameter type         wide_out_resp_t   = logic,
   parameter type         wide_in_req_t     = logic,
   parameter type         wide_in_resp_t    = logic,
-  /// User field is given as type as the subfields are config dependent!
-  parameter type         user_narrow_t     = logic,
-  parameter type         user_dma_t        = logic,
-  // TCDM Ports
-  parameter type         tcdm_dma_req_t    = logic,
-  parameter type         tcdm_dma_rsp_t    = logic,
   // Memory configuration input types; these vary depending on implementation.
   parameter type         sram_cfg_t        = logic,
-  parameter type         sram_cfgs_t       = logic,
   // XIF parameters
   parameter bit          EnableXif         = 1'b1,
   parameter int unsigned XifIdWidth        = 4,
@@ -270,14 +216,12 @@ module snitch_cluster
   /// Width of the external DCA interface
   parameter int unsigned DcaDataWidth       = WideDataWidth,
   /// Derived parameters
-  // TODO(colluca): this currently does not compile in Verilator (https://github.com/verilator/verilator/issues/6818)
-  // localparam type dca_req_t = `DCA_REQ_STRUCT(DataWidth),
-  // localparam type dca_rsp_t = `DCA_RSP_STRUCT(DataWidth)
-  // Workaround:
-  localparam type dca_req_chan_t = `DCA_REQ_CHAN_STRUCT(DcaDataWidth),
-  localparam type dca_req_t = `GENERIC_REQRSP_REQ_STRUCT(dca_req_chan_t),
-  localparam type dca_rsp_chan_t = `DCA_RSP_CHAN_STRUCT(DcaDataWidth),
-  localparam type dca_rsp_t = `GENERIC_REQRSP_RSP_STRUCT(dca_rsp_chan_t)
+  localparam int unsigned TCDMSize = NrBanks * TCDMDepth * (NarrowDataWidth/8),
+  localparam int unsigned TCDMAddrWidth = $clog2(TCDMSize),
+  localparam type dca_req_t = `DCA_REQ_STRUCT(DcaDataWidth),
+  localparam type dca_rsp_t = `DCA_RSP_STRUCT(DcaDataWidth),
+  localparam type tcdm_dma_req_t = `TCDM_REQ_STRUCT(WideDataWidth, TCDMAddrWidth, 1),
+  localparam type tcdm_dma_rsp_t = `TCDM_RSP_STRUCT(WideDataWidth)
 ) (
   /// System clock. If `IsoCrossing` is enabled this port is the _fast_ clock.
   /// The slower, half-frequency clock, is derived internally.
@@ -312,7 +256,9 @@ module snitch_cluster
   input  logic [PhysicalAddrWidth-1:0]            cluster_base_offset_i,
   /// Configuration inputs for the memory cuts used in implementation.
   /// These signals are pseudo-static.
-  input  sram_cfgs_t                              sram_cfgs_i,
+  input  sram_cfg_t                               sram_cfg_tcdm_i,
+  input  sram_cfg_t [NrHives-1:0]                 sram_cfg_icache_tag_i,
+  input  sram_cfg_t [NrHives-1:0]                 sram_cfg_icache_data_i,
   /// Bypass half-frequency clock. (`d2` = divide-by-two). This signal is
   /// pseudo-static.
   input  logic                                    clk_d2_bypass_i,
@@ -367,13 +313,16 @@ module snitch_cluster
   /// Minimum width to hold the core number.
   localparam int unsigned CoreIDWidth = cf_math_pkg::idx_width(NrCores);
   localparam int unsigned TCDMMemAddrWidth = $clog2(TCDMDepth);
-  localparam int unsigned TCDMSize = NrBanks * TCDMDepth * (NarrowDataWidth/8);
-  localparam int unsigned TCDMAddrWidth = $clog2(TCDMSize);
   localparam int unsigned TCDMSizeNapotRounded = 1 << TCDMAddrWidth;
   localparam int unsigned BanksPerHyperBank = NrBanks / NrHyperBanks;
   localparam int unsigned BanksPerSuperBank = WideDataWidth / NarrowDataWidth;
   localparam int unsigned NrSuperBanks = NrBanks / BanksPerSuperBank;
   localparam int unsigned DcaLaneDataWidth = NarrowDataWidth;
+
+  // tcdm_user_t contains the following fields:
+  // [CoreIDWidth:1] core_id
+  // [0:0]           is_core
+  localparam int unsigned TcdmUserWidth = CoreIDWidth + 1;
 
   function automatic int unsigned get_tcdm_ports(int unsigned core);
     return (NumSsrs[core] > 1 ? NumSsrs[core] : 1);
@@ -391,8 +340,8 @@ module snitch_cluster
 
   // User widths
   localparam int unsigned CoreUserWidth   = 64;
-  localparam int unsigned NarrowUserWidth = $bits(user_narrow_t);
-  localparam int unsigned WideUserWidth   = $bits(user_dma_t);
+  localparam int unsigned NarrowUserWidth = $bits(snitch_cluster_pkg::user_narrow_t);
+  localparam int unsigned WideUserWidth   = $bits(snitch_cluster_pkg::user_dma_t);
 
   // Core Requests, SoC Request, PTW.
   localparam int unsigned NrNarrowMasters = 3;
@@ -410,9 +359,6 @@ module snitch_cluster
   localparam int unsigned NrWideSlaves = 3 + IntBootromEnable;
   localparam int unsigned NrWideRuleIdcs = NrWideSlaves - 1;
   localparam int unsigned NrWideRules = (1 + AliasRegionEnable) * NrWideRuleIdcs;
-
-  localparam bit [NrCores-1:0] Xpulpv2 = Xpulpabs | Xpulpbitop | Xpulpbr | Xpulpclip | Xpulpmacsi |
-    Xpulpminmax | Xpulpslet | Xpulpvect | Xpulpvectshufflepack;
 
   // AXI Configuration
   localparam axi_pkg::xbar_cfg_t ClusterXbarCfg = '{
@@ -487,10 +433,20 @@ module snitch_cluster
   // the Xpulp extension.
   function automatic bit supports_xpulp(int unsigned hive_id);
     for (int i = 0; i < NrCores; i++) begin
-      if ((Hive[i] == hive_id) && (Xpulpv2[i] != 0))
+      bit Xpulpv2 = snitch_pkg::calculate_xpulpv2(IsaCfg[i]);
+      if ((Hive[i] == hive_id) && (Xpulpv2 != 0))
         return 1;
     end
     return 0;
+  endfunction
+
+  // If at least one core in the hive doesn't have a private IPU, then a shared IPU is needed
+  // in this hive.
+  function automatic int unsigned dma_count();
+    automatic int unsigned cnt = 0;
+    for (int i = 0; i < NrCores; i++)
+      if (IsaCfg[i].Xdma) cnt++;
+    return cnt;
   endfunction
 
   // --------
@@ -513,18 +469,13 @@ module snitch_cluster
   typedef logic [CollectiveWidth-1:0]   collective_op_t;
   typedef logic [AtomicIdWidth-1:0]     atomic_id_t;
 
-  // Struct replaced by logic array to workaround Questa optimization bug.
-  // typedef struct packed {
-  //   logic [CoreIDWidth-1:0] core_id;
-  //   bit                     is_core;
-  // } tcdm_user_t;
-  typedef logic [CoreIDWidth:0] tcdm_user_t;
+  typedef logic [TcdmUserWidth-1:0] tcdm_user_t;
 
   // Regbus peripherals.
-  `AXI_TYPEDEF_ALL(axi_mst, addr_t, id_mst_t, data_t, strb_t, user_narrow_t)
-  `AXI_TYPEDEF_ALL(axi_slv, addr_t, id_slv_t, data_t, strb_t, user_narrow_t)
-  `AXI_TYPEDEF_ALL(axi_mst_dma, addr_t, id_dma_mst_t, data_dma_t, strb_dma_t, user_dma_t)
-  `AXI_TYPEDEF_ALL(axi_slv_dma, addr_t, id_dma_slv_t, data_dma_t, strb_dma_t, user_dma_t)
+  `AXI_TYPEDEF_ALL(axi_mst, addr_t, id_mst_t, data_t, strb_t, snitch_cluster_pkg::user_narrow_t)
+  `AXI_TYPEDEF_ALL(axi_slv, addr_t, id_slv_t, data_t, strb_t, snitch_cluster_pkg::user_narrow_t)
+  `AXI_TYPEDEF_ALL(axi_mst_dma, addr_t, id_dma_mst_t, data_dma_t, strb_dma_t, snitch_cluster_pkg::user_dma_t)
+  `AXI_TYPEDEF_ALL(axi_slv_dma, addr_t, id_dma_slv_t, data_dma_t, strb_dma_t, snitch_cluster_pkg::user_dma_t)
 
   `AXI_LITE_TYPEDEF_ALL(axi_lite, addr_t, data_t, strb_t)
 
@@ -534,12 +485,12 @@ module snitch_cluster
   `REQRSP_TYPEDEF_ALL(reqrsp, addr_t, data_t, strb_t, user_t)
   // Reqrsp interface in the cluster additionally contains the cluster ID
   // (used for atomic operations) in the user field
-  `REQRSP_TYPEDEF_ALL(reqrsp_amo, addr_t, data_t, strb_t, user_narrow_t)
+  `REQRSP_TYPEDEF_ALL(reqrsp_amo, addr_t, data_t, strb_t, snitch_cluster_pkg::user_narrow_t)
 
   `MEM_TYPEDEF_ALL(mem, tcdm_mem_addr_t, data_t, strb_t, tcdm_user_t)
   `MEM_TYPEDEF_ALL(mem_dma, tcdm_mem_addr_t, data_dma_t, strb_dma_t, logic)
 
-  `TCDM_TYPEDEF_ALL(tcdm, tcdm_addr_t, data_t, strb_t, tcdm_user_t)
+  `TCDM_TYPEDEF_ALL(tcdm, NarrowDataWidth, TCDMAddrWidth, TcdmUserWidth)
 
   // Define dca_lane_req_t and dca_lane_rsp_t
   `DCA_TYPEDEF_ALL(dca_lane, DcaLaneDataWidth)
@@ -573,53 +524,22 @@ module snitch_cluster
     addr_t end_addr;
   } xbar_rule_t;
 
-  typedef struct packed {
-    acc_addr_e   addr;
-    logic [4:0]  id;
-    logic [31:0] data_op;
-    data_t       data_arga;
-    data_t       data_argb;
-    addr_t       data_argc;
-  } acc_req_t;
-
-    typedef struct packed {
-    logic [4:0] id;
-    logic       error;
-    data_t      data;
-  } acc_resp_t;
-
-  `SNITCH_VM_TYPEDEF(PhysicalAddrWidth)
+  `SNITCH_VM_TYPEDEF_ALL(PhysicalAddrWidth)
+  `SNITCH_INSTR_TYPEDEF_ALL(PhysicalAddrWidth)
+  `SNITCH_ACC_TYPEDEF_ALL(NarrowDataWidth, PhysicalAddrWidth)
 
   typedef struct packed {
-    // Slow domain.
-    logic       flush_i_valid;
-    addr_t      inst_addr;
-    logic       inst_cacheable;
-    logic       inst_valid;
-    // Fast domain.
-    acc_req_t   acc_req;
-    logic       acc_qvalid;
-    logic       acc_pready;
-    // Slow domain.
-    logic [1:0] ptw_valid;
-    va_t [1:0]  ptw_va;
-    pa_t [1:0]  ptw_ppn;
+    logic           flush_i_valid;
+    instr_req_t     instr_req;
+    acc_req_t       acc_req;
+    ptw_req_t [1:0] ptw_req;
   } hive_req_t;
 
   typedef struct packed {
-    // Slow domain.
-    logic          flush_i_ready;
-    logic [31:0]   inst_data;
-    logic          inst_ready;
-    logic          inst_error;
-    // Fast domain.
-    logic          acc_qready;
-    acc_resp_t     acc_resp;
-    logic          acc_pvalid;
-    // Slow domain.
-    logic [1:0]    ptw_ready;
-    l0_pte_t [1:0] ptw_pte;
-    logic [1:0]    ptw_is_4mega;
+    logic           flush_i_ready;
+    instr_rsp_t     instr_rsp;
+    acc_rsp_t       acc_rsp;
+    ptw_rsp_t [1:0] ptw_rsp;
   } hive_rsp_t;
 
   // ---------------------------
@@ -793,7 +713,8 @@ module snitch_cluster
     '{idx: TCDMDMA,    start_addr: tcdm_start_address,     end_addr: tcdm_end_address}
   };
   always_comb begin
-    automatic int unsigned i = 0;
+    automatic int unsigned i;
+    i = 0;
     enabled_dma_xbar_rule[i] = dma_xbar_rules[0]; i++; // TCDM
     enabled_dma_xbar_rule[i] = dma_xbar_rules[1]; i++; // ZeroMemory
     if (IntBootromEnable) begin
@@ -810,10 +731,7 @@ module snitch_cluster
   // i.e. they are handled outside of the cluster, e.g. in the NoC router
   typedef bit [DmaXbarCfg.NoMstPorts-1:0] wide_mst_connectivity_t;
   typedef wide_mst_connectivity_t [DmaXbarCfg.NoSlvPorts-1:0] wide_xbar_connectivity_t;
-  localparam wide_mst_connectivity_t WideMstCollectiveConnectivity = wide_mst_connectivity_t'{
-    SoCDMAOut: 1'b1,
-    default: 1'b0
-  };
+  localparam wide_mst_connectivity_t WideMstCollectiveConnectivity = wide_mst_connectivity_t'(1 << SoCDMAOut);
   localparam wide_xbar_connectivity_t DmaCollectiveConnectivity = wide_xbar_connectivity_t'{
     default: WideMstCollectiveConnectivity
   };
@@ -896,7 +814,7 @@ module snitch_cluster
 
   for (genvar i = 0; i < 2; i++) begin : gen_dma_rw_mem_ports
     assign ext_dma_req[i].q.addr = tcdm_addr_t'(ext_dma_req_q_addr_nontrunc[i]);
-    assign ext_dma_req[i].q.amo = reqrsp_pkg::AMONone;
+    assign ext_dma_req[i].q.amo = snitch_pkg::AMONone;
     assign ext_dma_req[i].q.user = '0;
   end
 
@@ -904,11 +822,8 @@ module snitch_cluster
     .NumInp (2),
     .NumOut (NrSuperBanks),
     .NumHyperBanks (NrHyperBanks),
-    .tcdm_req_t (tcdm_dma_req_t),
-    .tcdm_rsp_t (tcdm_dma_rsp_t),
     .mem_req_t (mem_dma_req_t),
     .mem_rsp_t (mem_dma_rsp_t),
-    .user_t (logic),
     .TcdmAddrWidth (TCDMAddrWidth),
     .MemAddrWidth (TCDMMemAddrWidth),
     .DataWidth (WideDataWidth),
@@ -926,11 +841,8 @@ module snitch_cluster
     .NumInp (NumExpWideTcdmPorts),
     .NumOut (NrSuperBanks),
     .NumHyperBanks (NrHyperBanks),
-    .tcdm_req_t (tcdm_dma_req_t),
-    .tcdm_rsp_t (tcdm_dma_rsp_t),
     .mem_req_t (mem_dma_req_t),
     .mem_rsp_t (mem_dma_rsp_t),
-    .user_t (logic),
     .TcdmAddrWidth (TCDMAddrWidth),
     .MemAddrWidth (TCDMMemAddrWidth),
     .DataWidth (WideDataWidth),
@@ -990,7 +902,7 @@ module snitch_cluster
       ) i_data_mem (
         .clk_i,
         .rst_ni,
-        .impl_i (sram_cfgs_i.tcdm),
+        .impl_i (sram_cfg_tcdm_i),
         .impl_o (  ),
         .req_i (mem_cs),
         .we_i (mem_wen),
@@ -1043,14 +955,12 @@ module snitch_cluster
     .NumInp (NumTCDMIn),
     .NumOut (NrBanks),
     .NumHyperBanks (NrHyperBanks),
-    .tcdm_req_t (tcdm_req_t),
-    .tcdm_rsp_t (tcdm_rsp_t),
     .mem_req_t (mem_req_t),
     .mem_rsp_t (mem_rsp_t),
     .TcdmAddrWidth (TCDMAddrWidth),
     .MemAddrWidth (TCDMMemAddrWidth),
     .DataWidth (NarrowDataWidth),
-    .user_t (tcdm_user_t),
+    .UserWidth (TcdmUserWidth),
     .MemoryResponseLatency (1 + RegisterTCDMCuts),
     .Radix (Radix),
     .Topology (Topology),
@@ -1135,6 +1045,7 @@ module snitch_cluster
     snitch_cc #(
       .AddrWidth (PhysicalAddrWidth),
       .DataWidth (NarrowDataWidth),
+      .TcdmUserWidth (TcdmUserWidth),
       .DMADataWidth (WideDataWidth),
       .DMAIdWidth (WideIdWidthIn),
       .DMAUserWidth (WideUserWidth),
@@ -1146,15 +1057,12 @@ module snitch_cluster
       .drsp_t (reqrsp_rsp_t),
       .tcdm_req_t (tcdm_req_t),
       .tcdm_rsp_t (tcdm_rsp_t),
-      .tcdm_user_t (tcdm_user_t),
       .axi_ar_chan_t (axi_mst_dma_ar_chan_t),
       .axi_aw_chan_t (axi_mst_dma_aw_chan_t),
       .axi_req_t (axi_mst_dma_req_t),
       .axi_rsp_t (axi_mst_dma_resp_t),
       .hive_req_t (hive_req_t),
       .hive_rsp_t (hive_rsp_t),
-      .acc_req_t (acc_req_t),
-      .acc_resp_t (acc_resp_t),
       .dma_events_t (dma_events_t),
       .EnableXif (EnableXif),
       .XifIdWidth (XifIdWidth),
@@ -1164,31 +1072,7 @@ module snitch_cluster
       .x_commit_t (x_commit_t),
       .x_result_t (x_result_t),
       .BootAddr (BootAddrInternal),
-      .RVE (RVE[i]),
-      .RVF (RVF[i]),
-      .RVD (RVD[i]),
-      .XDivSqrt (XDivSqrt[i]),
-      .XF16 (XF16[i]),
-      .XF16ALT (XF16ALT[i]),
-      .XF8 (XF8[i]),
-      .XF8ALT (XF8ALT[i]),
-      .XFVEC (XFVEC[i]),
-      .XFDOTP (XFDOTP[i]),
-      .Xdma (Xdma[i]),
-      .IsoCrossing (IsoCrossing),
-      .Xfrep (Xfrep[i]),
-      .Xssr (Xssr[i]),
-      .Xcopift (Xcopift[i]),
-      .Xpulppostmod (Xpulppostmod[i]),
-      .Xpulpabs (Xpulpabs[i]),
-      .Xpulpbitop (Xpulpbitop[i]),
-      .Xpulpbr (Xpulpbr[i]),
-      .Xpulpclip (Xpulpclip[i]),
-      .Xpulpmacsi (Xpulpmacsi[i]),
-      .Xpulpminmax (Xpulpminmax[i]),
-      .Xpulpslet (Xpulpslet[i]),
-      .Xpulpvect (Xpulpvect[i]),
-      .Xpulpvectshufflepack (Xpulpvectshufflepack[i]),
+      .IsaCfg (IsaCfg[i]),
       .PrivateIpu (PrivateIpu[i]),
       .VMSupport (VMSupport),
       .NumIntOutstandingLoads (NumIntOutstandingLoads[i]),
@@ -1202,8 +1086,8 @@ module snitch_cluster
       .NumSequencerLoops (NumSequencerLoops[i]),
       .NumSsrs (NumSsrs[i]),
       .SsrMuxRespDepth (SsrMuxRespDepth[i]),
-      .SsrCfgs (SsrCfgs[i][NumSsrs[i]-1:0]),
-      .SsrRegs (SsrRegs[i][NumSsrs[i]-1:0]),
+      .SsrCfgs (SsrCfgs[i][cf_math_pkg::iomsb(NumSsrs[i]):0]),
+      .SsrRegs (SsrRegs[i][cf_math_pkg::iomsb(NumSsrs[i]):0]),
       .RegisterOffloadReq (RegisterOffloadReq),
       .RegisterOffloadRsp (RegisterOffloadRsp),
       .RegisterCoreReq (RegisterCoreReq),
@@ -1266,7 +1150,7 @@ module snitch_cluster
         tcdm_req[TcdmPortsOffs+j].q.user[0] = 1;
       end
     end
-    if (Xdma[i]) begin : gen_dma_connection
+    if (IsaCfg[i].Xdma) begin : gen_dma_connection
       for (genvar j = 0; j < DMANumChannels; j++) begin : gen_dma_connection
         assign wide_axi_mst_req[SDMAMst + j] = axi_dma_req[j];
         assign axi_dma_res[j] = wide_axi_mst_rsp[SDMAMst + j];
@@ -1314,7 +1198,6 @@ module snitch_cluster
       .ICacheL1DataScm (ICacheL1DataScm[i]),
       .IsoCrossing (IsoCrossing),
       .sram_cfg_t  (sram_cfg_t),
-      .sram_cfgs_t (sram_cfgs_t),
       .axi_req_t (axi_mst_dma_req_t),
       .axi_rsp_t (axi_mst_dma_resp_t)
     ) i_snitch_hive (
@@ -1329,7 +1212,8 @@ module snitch_cluster
       .axi_rsp_i (wide_axi_mst_rsp[SDMAMst+DMANumChannels+i]),
       .icache_prefetch_enable_i (icache_prefetch_enable),
       .icache_events_o(icache_events_reshape),
-      .sram_cfgs_i
+      .sram_cfg_icache_tag_i  (sram_cfg_icache_tag_i[i]),
+      .sram_cfg_icache_data_i (sram_cfg_icache_data_i[i])
     );
   end
 
@@ -1409,14 +1293,14 @@ module snitch_cluster
   // User field for the AXI transmission
   // Encodes the atomic ID and (if enabled) collective operation information
   atomic_id_t   atomic_id;
-  user_narrow_t cluster_user;
+  snitch_cluster_pkg::user_narrow_t cluster_user;
 
   // Atomic ID, needs to be unique ID of cluster
   // cluster_id + HartIdOffset + 1 (because 0 is for non-atomic masters)
   assign atomic_id = (hart_base_id_i / NrCores) + (hart_base_id_i % NrCores) + 1'b1;
 
   if (EnableNarrowCollectives) begin : gen_user
-    assign cluster_user = '{
+    assign cluster_user = snitch_cluster_pkg::user_narrow_ext_t'{
       collective_mask: addr_t'(core_to_axi_req.q.user[CollectiveWidth+:PhysicalAddrWidth]),
       collective_op:   collective_op_t'(core_to_axi_req.q.user[0+:CollectiveWidth]),
       atomic_id:       atomic_id,
@@ -1519,10 +1403,7 @@ module snitch_cluster
   // i.e. they are handled outside of the cluster, e.g. in the NoC router
   typedef bit [ClusterXbarCfg.NoMstPorts-1:0] narrow_mst_connectivity_t;
   typedef narrow_mst_connectivity_t [ClusterXbarCfg.NoSlvPorts-1:0] xbar_connectivity_t;
-  localparam narrow_mst_connectivity_t MasterCollectiveConnectivity = narrow_mst_connectivity_t'{
-    SoC: 1'b1,
-    default: 1'b0
-  };
+  localparam narrow_mst_connectivity_t MasterCollectiveConnectivity = narrow_mst_connectivity_t'(1 << SoC);
   localparam xbar_connectivity_t ClusterCollectiveConnectivity = xbar_connectivity_t'{
     default: MasterCollectiveConnectivity
   };
@@ -1590,8 +1471,7 @@ module snitch_cluster
     .AddrWidth (PhysicalAddrWidth),
     .DataWidth (NarrowDataWidth),
     .IdWidth (NarrowIdWidthOut),
-    // TODO(colluca): this is fragile as it depends on the tcdm_user_t definition
-    .UserWidth (CoreIDWidth + 1),
+    .UserWidth (TcdmUserWidth),
     .BufDepth (MemoryMacroLatency + 1)
   ) i_axi_to_tcdm (
     .clk_i,
@@ -1801,7 +1681,7 @@ module snitch_cluster
   `ASSERT_INIT(AliasRegionAddrAlign,
     ~AliasRegionEnable || ((TCDMSizeNapotRounded - 1) & AliasRegionBase) == 0)
   // Make sure we only have one DMA in the system.
-  `ASSERT_INIT(NumberDMA, $onehot0(Xdma))
+  `ASSERT_INIT(NumberDMA, dma_count() <= 1)
   `ASSERT_INIT(UserCsrWidth, (CollectiveWidth + PhysicalAddrWidth) < 64,
     $sformatf("64-bit user CSR too small to accomodate %d-bit collective and %d-bit address", CollectiveWidth, PhysicalAddrWidth))
   // TODO(colluca): extend to support any DcaDataWidth that is an integer multiple of NarrowDataWidth

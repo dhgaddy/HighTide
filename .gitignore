@@ -3,6 +3,8 @@ sv2v
 **/dev/liteeth_builds
 **/dev/litedram_build_*
 **/litedram_core.v.orig
+**/dev/bender
+**/dev/repo/.bender/
 .claude/scheduled_tasks.lock
 bazel-*
 !patches/bazel-*

@@ -11,9 +11,11 @@
 
 
 
+
 `include "axi/typedef.svh"
 `include "tcdm_interface/typedef.svh"
 `include "dca_interface/typedef.svh"
+`include "cv_x_if/typedef.svh"
 
 // verilog_lint: waive-start package-filename
 package snitch_cluster_pkg;
@@ -62,19 +64,11 @@ package snitch_cluster_pkg;
     0
 };
 
-  localparam int unsigned XifNumRs = 3;
-  localparam int unsigned XifIdWidth = 4;
-  localparam int unsigned XifRfrWidth = 32;
-  localparam int unsigned XifRfwWidth = 32;
-  localparam int unsigned XifNumHarts = NrCores;
-  localparam int unsigned XifHartIdWidth = 32;
-  localparam logic [25:0] XifMisa = 0;
-  localparam int unsigned XifDualRead = 0;
-  localparam int unsigned XifIssueRegisterSplit = 0;
-
   localparam int unsigned Hive [NrCores] = '{0, 0, 0, 0, 0};
 
   localparam int unsigned TcdmAddrWidth = $clog2(TcdmSize*1024);
+
+  localparam int unsigned XifIdWidth = 4;
 
   typedef struct packed {
     logic [2:0] ema;
@@ -82,18 +76,11 @@ package snitch_cluster_pkg;
     logic [0:0] emas;
   } sram_cfg_t;
 
-  typedef struct packed {
-    sram_cfg_t [
-    2
--1:0] icache_tag;
-    sram_cfg_t [
-    2
--1:0] icache_data;
-    sram_cfg_t tcdm;
-  } sram_cfgs_t;
-
   // Define dca_req_t and dca_rsp_t
   `DCA_TYPEDEF_ALL(dca, WideDataWidth)
+
+  // Define x_issue_req_t, x_issue_resp_t, x_register_t, x_commit_t, x_result_t
+  `CV_X_IF_TYPEDEF_ALL(XifIdWidth)
 
   typedef logic [AddrWidth-1:0]         addr_t;
   typedef logic [NarrowDataWidth-1:0]   data_t;
@@ -105,7 +92,11 @@ package snitch_cluster_pkg;
   typedef logic [WideIdWidthIn-1:0]     wide_in_id_t;
   typedef logic [WideIdWidthOut-1:0]    wide_out_id_t;
 
-// Generate the user field type definitions depending on the configuration
+  typedef struct packed {
+    addr_t                          collective_mask;
+    logic [CollectiveWidth-1:0]     collective_op;
+    logic [AtomicIdWidth-1:0]       atomic_id;
+  } user_narrow_ext_t;
   typedef struct packed {
     logic [AtomicIdWidth-1:0]       atomic_id;
   } user_narrow_t;
@@ -120,47 +111,7 @@ package snitch_cluster_pkg;
   `AXI_TYPEDEF_ALL(wide_in, addr_t, wide_in_id_t, data_dma_t, strb_dma_t, user_dma_t)
   `AXI_TYPEDEF_ALL(wide_out, addr_t, wide_out_id_t, data_dma_t, strb_dma_t, user_dma_t)
 
-  typedef logic [TcdmAddrWidth-1:0]     tcdm_addr_t;
-
-  `TCDM_TYPEDEF_ALL(tcdm_dma, tcdm_addr_t, data_dma_t, strb_dma_t, logic)
-
-  typedef logic [XifHartIdWidth-1:0]       x_hartid_t;
-  typedef logic [XifIdWidth-1:0]           x_id_t;
-  typedef logic [XifNumRs+XifDualRead-1:0] x_readregflags_t;
-
-  typedef struct packed {
-    logic [31:0] instr;
-    x_hartid_t   hartid;
-    x_id_t       id;
-  } x_issue_req_t;
-
-  typedef struct packed {
-    logic            accept;
-    logic            writeback;
-    x_readregflags_t register_read;
-  } x_issue_resp_t;
-
-  typedef struct packed {
-    x_hartid_t                            hartid;
-    x_id_t                                id;
-    logic [XifNumRs-1:0][XifRfrWidth-1:0] rs;
-    x_readregflags_t                      rs_valid;
-  } x_register_t;
-
-  typedef struct packed {
-    x_hartid_t hartid;
-    x_id_t     id;
-    logic      commit_kill;
-  } x_commit_t;
-
-  typedef struct packed {
-    x_hartid_t              hartid;
-    x_id_t                  id;
-    logic [XifRfwWidth-1:0] data;
-    logic [4:0]             rd;
-    logic                   we;
-  } x_result_t;
-
+  `TCDM_TYPEDEF_ALL(tcdm_dma, WideDataWidth, TcdmAddrWidth, 1)
 
   function automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] get_cached_regions();
     automatic snitch_pma_pkg::rule_t [snitch_pma_pkg::NrMaxRules-1:0] cached_regions;
@@ -485,6 +436,149 @@ package snitch_cluster_pkg;
                         fpnew_pkg::DISABLED,
                         fpnew_pkg::DISABLED}}, // DOTP
         PipeConfig: fpnew_pkg::BEFORE
+    }
+  };
+
+  localparam snitch_pkg::isa_cfg_t IsaCfg [5] = '{
+    '{
+      RVE: 0,
+      RVF: 1,
+      RVD: 1,
+      Xdma: 0,
+      Xssr: 1,
+      Xfrep: 1,
+      Xcopift: 1,
+      XF16: 1,
+      XF16ALT: 1,
+      XF8: 1,
+      XF8ALT: 1,
+      XDivSqrt: 0,
+      XFVEC: 1,
+      XFDOTP: 1,
+      // FMA architecture is "merged" -> mulexp and macexp instructions are supported
+      XFAUX: FPUImplementation[0].UnitTypes[3] == fpnew_pkg::MERGED,
+      Xpulppostmod: 0,
+      Xpulpabs: 0,
+      Xpulpbitop: 0,
+      Xpulpbr: 0,
+      Xpulpclip: 0,
+      Xpulpmacsi: 0,
+      Xpulpminmax: 0,
+      Xpulpslet: 0,
+      Xpulpvect: 0,
+      Xpulpvectshufflepack: 0
+    },
+    '{
+      RVE: 0,
+      RVF: 1,
+      RVD: 1,
+      Xdma: 0,
+      Xssr: 1,
+      Xfrep: 1,
+      Xcopift: 1,
+      XF16: 1,
+      XF16ALT: 1,
+      XF8: 1,
+      XF8ALT: 1,
+      XDivSqrt: 0,
+      XFVEC: 1,
+      XFDOTP: 1,
+      // FMA architecture is "merged" -> mulexp and macexp instructions are supported
+      XFAUX: FPUImplementation[1].UnitTypes[3] == fpnew_pkg::MERGED,
+      Xpulppostmod: 0,
+      Xpulpabs: 0,
+      Xpulpbitop: 0,
+      Xpulpbr: 0,
+      Xpulpclip: 0,
+      Xpulpmacsi: 0,
+      Xpulpminmax: 0,
+      Xpulpslet: 0,
+      Xpulpvect: 0,
+      Xpulpvectshufflepack: 0
+    },
+    '{
+      RVE: 0,
+      RVF: 1,
+      RVD: 1,
+      Xdma: 0,
+      Xssr: 1,
+      Xfrep: 1,
+      Xcopift: 1,
+      XF16: 1,
+      XF16ALT: 1,
+      XF8: 1,
+      XF8ALT: 1,
+      XDivSqrt: 0,
+      XFVEC: 1,
+      XFDOTP: 1,
+      // FMA architecture is "merged" -> mulexp and macexp instructions are supported
+      XFAUX: FPUImplementation[2].UnitTypes[3] == fpnew_pkg::MERGED,
+      Xpulppostmod: 0,
+      Xpulpabs: 0,
+      Xpulpbitop: 0,
+      Xpulpbr: 0,
+      Xpulpclip: 0,
+      Xpulpmacsi: 0,
+      Xpulpminmax: 0,
+      Xpulpslet: 0,
+      Xpulpvect: 0,
+      Xpulpvectshufflepack: 0
+    },
+    '{
+      RVE: 0,
+      RVF: 1,
+      RVD: 1,
+      Xdma: 0,
+      Xssr: 1,
+      Xfrep: 1,
+      Xcopift: 1,
+      XF16: 1,
+      XF16ALT: 1,
+      XF8: 1,
+      XF8ALT: 1,
+      XDivSqrt: 0,
+      XFVEC: 1,
+      XFDOTP: 1,
+      // FMA architecture is "merged" -> mulexp and macexp instructions are supported
+      XFAUX: FPUImplementation[3].UnitTypes[3] == fpnew_pkg::MERGED,
+      Xpulppostmod: 0,
+      Xpulpabs: 0,
+      Xpulpbitop: 0,
+      Xpulpbr: 0,
+      Xpulpclip: 0,
+      Xpulpmacsi: 0,
+      Xpulpminmax: 0,
+      Xpulpslet: 0,
+      Xpulpvect: 0,
+      Xpulpvectshufflepack: 0
+    },
+    '{
+      RVE: 0,
+      RVF: 1,
+      RVD: 1,
+      Xdma: 1,
+      Xssr: 0,
+      Xfrep: 0,
+      Xcopift: 0,
+      XF16: 0,
+      XF16ALT: 0,
+      XF8: 0,
+      XF8ALT: 0,
+      XDivSqrt: 0,
+      XFVEC: 0,
+      XFDOTP: 0,
+      // FMA architecture is "merged" -> mulexp and macexp instructions are supported
+      XFAUX: FPUImplementation[4].UnitTypes[3] == fpnew_pkg::MERGED,
+      Xpulppostmod: 0,
+      Xpulpabs: 0,
+      Xpulpbitop: 0,
+      Xpulpbr: 0,
+      Xpulpclip: 0,
+      Xpulpmacsi: 0,
+      Xpulpminmax: 0,
+      Xpulpslet: 0,
+      Xpulpvect: 0,
+      Xpulpvectshufflepack: 0
     }
   };
 

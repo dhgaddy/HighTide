@@ -122,6 +122,24 @@ while IFS= read -r line; do
         case "$line" in
             *floo_axi_chimney.sv) continue ;;
         esac
+        # Skip fpnew + its transitive deps (axi_riscv_atomics, fpu_div_sqrt_mvp,
+        # cvxif, idma, riscv-dbg, snitch_cluster, cf_math_pkg/lzc/etc that only
+        # exist as fpnew deps). FlooNoC v0.8.x's Reduction Feature added these
+        # under `-t floo_synth` even though our narrow-wide mesh top
+        # (floonoc_mesh_top.sv) never instantiates anything from them — the
+        # reduction unit (floo_alu.sv, floo_reduction_unit.sv) is std-cell-only
+        # and just references the fpnew design as comment-level "inspired by".
+        # Pulling fpnew_top.sv through yosys-slang trips on its
+        # `~{NumLanes{EnableSIMDMask}}` expression (#83 follow-up).
+        case "$line" in
+            */checkouts/fpnew-*) continue ;;
+            */checkouts/axi_riscv_atomics-*) continue ;;
+            */checkouts/fpu_div_sqrt_mvp-*) continue ;;
+            */checkouts/cvxif-*) continue ;;
+            */checkouts/idma-*) continue ;;
+            */checkouts/riscv-dbg-*) continue ;;
+            */checkouts/snitch_cluster-*) continue ;;
+        esac
         SV_FILES+=("$line")
     fi
 done <<< "$FLIST_RAW"

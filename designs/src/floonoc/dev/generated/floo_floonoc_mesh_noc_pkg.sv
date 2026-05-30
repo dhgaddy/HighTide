@@ -77,6 +77,12 @@ typedef struct packed {
 typedef logic route_t;
 
 
+  typedef struct packed {
+    id_t idx;
+    id_t start_addr;
+    id_t end_addr;
+  } route_map_rule_t;
+
   localparam int unsigned SamNumRules = 20;
 
 typedef struct packed {
@@ -158,11 +164,23 @@ localparam sam_rule_t[SamNumRules-1:0] Sam = '{
     IdAddrOffset: 0,
     NumSamRules: 20,
     NumRoutes: 0,
-    EnMultiCast: 1'b0,
-    EnParallelReduction: 1'b0,
-    EnNarrowOffloadReduction: 1'b0,
-    EnWideOffloadReduction: 1'b0};
+    CollectiveCfg: '{    OpCfg: '{    EnNarrowMulticast: 1'b0,
+    EnWideMulticast: 1'b0,
+    EnLsbAnd: 1'b0,
+    EnFpAdd: 1'b0,
+    EnFpMul: 1'b0,
+    EnFpMin: 1'b0,
+    EnFpMax: 1'b0,
+    EnIntAdd: 1'b0,
+    EnIntMul: 1'b0,
+    EnIntMinS: 1'b0,
+    EnIntMinU: 1'b0,
+    EnIntMaxS: 1'b0,
+    EnIntMaxU: 1'b0},
+    NarrRedCfg: RedDefaultCfg,
+    WideRedCfg: RedDefaultCfg}};
 
+  
 
     typedef logic[47:0] axi_narrow_in_addr_t;
 typedef logic[63:0] axi_narrow_in_data_t;

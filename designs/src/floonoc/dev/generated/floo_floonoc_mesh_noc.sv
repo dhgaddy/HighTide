@@ -1374,6 +1374,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -1448,6 +1449,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -1522,6 +1524,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -1593,6 +1596,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -1664,6 +1668,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -1738,6 +1743,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -1812,6 +1818,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -1883,6 +1890,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -1954,6 +1962,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -2028,6 +2037,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -2102,6 +2112,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -2173,6 +2184,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -2241,6 +2253,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -2312,6 +2325,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -2383,6 +2397,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)
@@ -2451,6 +2466,7 @@ floo_nw_router #(
   .OutFifoDepth (2),
   .id_t(id_t),
   .hdr_t(hdr_t),
+  .CollectiveCfg(RouteCfg.CollectiveCfg),
   .floo_req_t(floo_req_t),
   .floo_rsp_t(floo_rsp_t),
   .floo_wide_t(floo_wide_t)

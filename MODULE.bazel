@@ -54,6 +54,17 @@ git_override(
     module_name = "openroad",
     commit = "578be38ad2297637e938cbc9cb35e5a05d8936ff",
     init_submodules = True,
+    patch_strip = 1,
+    patches = [
+        # CTS-0122 false skip in dbNet::getFirstOutput() — drops the
+        # driver of clock nets whose source pin is `clock: true`
+        # (macro clock-outs like PCIe `user_clk`, clock-buffer
+        # outputs).  Merged upstream as OpenROAD#10549 (commit
+        # cd4f5041); carry locally until bazel-orfs bumps the
+        # openroad pin past it, then delete this patch and the
+        # patches[] entry.  See patches/openroad-cts-0122-fix.patch.
+        "//patches:openroad-cts-0122-fix.patch",
+    ],
     remote = "https://github.com/The-OpenROAD-Project/OpenROAD.git",
 )
 

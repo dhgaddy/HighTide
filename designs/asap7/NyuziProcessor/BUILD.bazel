@@ -18,11 +18,12 @@ hightide_design(
         "SDC_FILE": [":constraint.sdc"],
         "ADDITIONAL_LEFS": [":sram_lefs"],
         "ADDITIONAL_LIBS": [":sram_libs"],
+        "PDN_TCL": [":pdn.tcl"],
         "PRE_CTS_TCL": [":pre_cts.tcl"],
     },
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
-        "CORE_UTILIZATION": "55",
+        "CORE_UTILIZATION": "65",
         "PLACE_DENSITY_LB_ADDON": "0.22",
         "MACRO_PLACE_HALO": "6 6",
         "TNS_END_PERCENT": "100",
@@ -36,5 +37,13 @@ hightide_design(
         # the CTS repair pass entirely; route still does its own
         # hold-repair so this is safe.
         "SKIP_CTS_REPAIR_TIMING": "1",
+        # ODB-0445 at post-GRT repair_timing once CORE_UTILIZATION was
+        # raised 55→65 (denser place exposed a different repair path).
+        # "No undo_updateField support for type dbTechNonDefaultRule" —
+        # the resizer's undo mechanism can't handle NDR rule changes
+        # made during repair. Same workaround family as snitch_cluster /
+        # litedram: skip the post-GRT incremental repair; detailed-route
+        # hold-repair still runs.
+        "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

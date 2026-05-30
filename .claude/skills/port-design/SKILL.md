@@ -157,3 +157,15 @@ After a successful build, check:
 - `bazel-bin/designs/$2/$0/reports/$2/$0/base/` for QoR reports
 - No DRC violations in the final report
 - Timing meets the target clock period (some slack is expected for initial ports)
+
+### 13. Record the port in DECISIONS.md
+
+Append a new `## $2` section to `designs/src/$0/DECISIONS.md`. If the file doesn't exist yet, create it using `designs/src/gemmini/DECISIONS.md` as the canonical template (header + per-variant table + per-platform sections).
+
+Each platform section should capture:
+- **Status**: `finishing` or `not yet finishing`
+- **Configuration**: a table of every non-default `BUILD.bazel` `arguments` knob, the SDC clock period, and which `pdn.tcl` / `io.tcl` / `pre_cts.tcl` files are wired in. For workaround knobs, point at the CLAUDE.md bug-table row rather than repeating the rationale.
+- **Decisions**: dated bullet list of non-obvious calls made during the port (why this utilization, what congestion you hit, why a custom PDN was needed, which prior design's experience you reused), with commit hashes once you commit.
+- **Known issues / open questions**: active workarounds, anything pending.
+
+**Do not** add the port summary to `CLAUDE.md`. CLAUDE.md's "Build status" section is a pure index of which (design, platform) pairs reach `_final`; per-design narrative belongs in DECISIONS.md. Update CLAUDE.md only to move the new (design, platform) row between the cached / local-only / not-finishing lists.

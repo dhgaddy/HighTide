@@ -224,3 +224,17 @@ Repeat step 6 for nangate45 and sky130hd as needed. Each platform needs its own:
 - `BUILD.bazel` (adjust utilization/density for the technology)
 - `constraint.sdc` (adjust clock period for the technology)
 - `sram/` directory with platform-specific FakeRAM files (if applicable)
+
+### 11. Create DECISIONS.md
+
+Create `designs/src/$0/DECISIONS.md` with one `## <platform>` section per technology this design targets. Use `designs/src/gemmini/DECISIONS.md` as the canonical template (header + per-variant table + per-platform sections).
+
+Each platform section should capture:
+- **Status**: `finishing` or `not yet finishing`
+- **Configuration**: a table of every non-default `BUILD.bazel` `arguments` knob, the SDC clock period, and which `pdn.tcl` / `io.tcl` / `pre_cts.tcl` files are wired in.
+- **Decisions**: dated bullet list of the non-obvious calls made (why this utilization, why this SDC, what congestion / IR / timing surfaces you fought), with commit hashes.
+- **Known issues / open questions**: active workarounds, anything pending.
+
+For pre-existing designs that need a DECISIONS.md retroactively, the `update-design --init-decisions <design>` skill bootstraps a starter file from git history + BUILD.bazel + SDC.
+
+**Do not** add the new design's narrative to `CLAUDE.md`. CLAUDE.md's "Build status" is a pure index of which (design, platform) pairs reach `_final`; per-design narrative belongs in DECISIONS.md. Update CLAUDE.md only to add the design to the Platforms table and to the appropriate status list (cached / local-only / not-finishing).

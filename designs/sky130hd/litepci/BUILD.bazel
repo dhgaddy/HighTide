@@ -40,17 +40,31 @@ hightide_design(
     },
     arguments = {
         "VERILOG_DEFINES": "-D USE_SKY130HD_CELLS",
-        # Round-2 PPA tune: 45%→55% util (GRT peak at 45% was 19% on met2 —
-        # plenty of room).  pcie_us LEF settled at 1000×1000 µm (885 µm pin
-        # column + margin).
+        # Real-FakeRAM build: dev/inline_fakeram.py wires the 20 large
+        # DMA / TLP memories to explicit fakeram instances so STA sees
+        # real reg-to-reg paths.  Util / density / halo carried over
+        # from the mocked-build route-fix iteration (util 30, halo 100)
+        # as a conservative starting point — sky130hd's coarse pitch +
+        # 1000×1000 pcie_us + 20 large FakeRAMs is the hardest of the
+        # three platforms to route.  Will retune after first real-timing
+        # measurement.
         "CORE_UTILIZATION": "30",
         "PLACE_DENSITY": "0.40",
         "MACRO_PLACE_HALO": "100 100",
         "GDS_ALLOW_EMPTY": "fakeram.*|pcie_us",
-        # See asap7 BUILD.bazel — flow does not yet patch litepcie's
-        # inferred memories to explicit fakeram instances.
-        "SYNTH_MOCK_LARGE_MEMORIES": "1",
-        "SYNTH_MEMORY_MAX_BITS": "4096",
-        "SKIP_INCREMENTAL_REPAIR": "1",
+        # ODB-1200 — drop split_load from SETUP_MOVE_SEQUENCE; matches
+        # the asap7 litepci workaround.  Re-enable post-GRT repair (no
+        # SKIP_INCREMENTAL_REPAIR=1) to give hold repair a chance to
+        # soak the ~9.3 ns CTS skew via data-side delay buffer insertion;
+        # the banked-macros + smaller floorplan may avoid the ODB-1200
+        # hold-pass crash that originally forced the skip.  If ODB-1200
+        # recurs, add SKIP_INCREMENTAL_REPAIR=1 back.
+        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
+        # Tighter CTS clustering — force a more-balanced clock tree to
+        # reduce the ~9.3 ns launch/capture skew (default sky130hd value
+        # is ~100 um).  Trades a few extra clock buffers for hopefully
+        # lower per-leaf insertion-delay variance across the 21-macro
+        # spread.
+        "CTS_BUF_DISTANCE": "60",
     },
 )

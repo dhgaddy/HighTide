@@ -40,19 +40,19 @@ hightide_design(
     },
     arguments = {
         "VERILOG_DEFINES": "-D USE_NANGATE45_CELLS",
-        # Round-2 PPA tune: 50%→60% util (GRT peak was 36% on metal2 at 50%,
-        # leaving ~15 percentage points of headroom before the 50% wall).
+        # Real-FakeRAM build: dev/inline_fakeram.py wires the 20 large
+        # DMA / TLP memories to explicit fakeram instances so STA sees
+        # real reg-to-reg paths.  Util / density carried over from the
+        # mocked build as a starting point; will retune after first
+        # real-timing measurement.
         "CORE_UTILIZATION": "60",
         "PLACE_DENSITY": "0.70",
         "MACRO_PLACE_HALO": "15 15",
         "GDS_ALLOW_EMPTY": "fakeram.*|pcie_us",
-        # See asap7 BUILD.bazel — flow does not yet patch litepcie's
-        # inferred memories to explicit fakeram instances.  Mock until
-        # we add a generic LiteX → fakeram patcher.  SKIP_INCREMENTAL_REPAIR
-        # avoids the post-GRT repair_timing non-convergence loop the mocked
-        # memories trigger.
-        "SYNTH_MOCK_LARGE_MEMORIES": "1",
-        "SYNTH_MEMORY_MAX_BITS": "4096",
+        # ODB-1200 — drop split_load from SETUP_MOVE_SEQUENCE; skip the
+        # post-GRT repair_timing block (hold-pass calls split_load too).
+        # Same workaround as asap7 litepci.
+        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
         "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

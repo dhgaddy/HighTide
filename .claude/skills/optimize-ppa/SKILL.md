@@ -254,3 +254,14 @@ Continue iterating until either:
 - Further utilization increases cause unresolvable congestion/DRC
 - Further clock tightening causes timing violations that cannot be closed
 - The user is satisfied with the achieved PPA
+
+### 6a. Record the sweep in DECISIONS.md
+
+Once the user accepts a result, append the outcome to `designs/src/<design>/DECISIONS.md` under the `## <platform>` section (create the section if it's missing). Capture:
+- **An updated Configuration table** reflecting the new knobs that landed.
+- **A new dated "Decisions" bullet** describing the sweep — what changed, the per-iteration table (util / SDC / Fmax / area / DRC / runtime) including any failed iterations and why, which Step 0 prior-art DECISIONS.md informed the choices, and the commit hash once you commit.
+- **Any new "Known issues / open questions"** discovered along the way (bug workarounds added, plateaus hit, hold-skew limits, etc.). If a new upstream bug was found, also run `/track-bug` to add it to CLAUDE.md's centralized bug table.
+
+The per-iteration table from Step 6's comparison output transplants directly — keep it. Future readers (including the next invocation of this skill) will rely on it as prior art.
+
+**Do not** add the PPA narrative to `CLAUDE.md`. CLAUDE.md's "Build status" is a pure index; per-design narrative lives in DECISIONS.md. Update CLAUDE.md only if a (design, platform) pair moved between the cached / local-only / not-finishing lists.

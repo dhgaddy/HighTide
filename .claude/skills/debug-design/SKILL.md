@@ -268,3 +268,15 @@ bazel build //designs/<platform>/<design>:<design>_final
 Compare metrics before and after (WNS, TNS, Fmax, DRC count, cell count) to verify the fix improved the situation.
 
 Once the design is passing cleanly, suggest that the user run `/optimize-ppa` to maximize utilization and clock frequency.
+
+## Step 7: Record the fix in DECISIONS.md
+
+After the fix lands, append a dated bullet to `designs/src/<design>/DECISIONS.md` under the `## <platform>` section (create the section, or the whole file, if missing — use `designs/src/gemmini/DECISIONS.md` as the canonical template). Capture:
+- **What surfaced** — the error code or symptom (stage, log marker).
+- **Root cause** — what you traced it back to (e.g. PDN-0195 via-removal near macros, MPL-0040 annealing failure, RTL-bounded path).
+- **Fix applied** — the BUILD.bazel argument, the new tcl file, the SDC tweak, with commit hash.
+- **Which prior design's experience you reused** — credit the DECISIONS.md / bug-table row you pulled the workaround from (the Step 0 prior-art search).
+
+If the fix is a workaround for a new upstream bug, also run `/track-bug` so the cross-cutting CLAUDE.md table gets a row pointing at the upstream issue.
+
+**Do not** add the debug story to `CLAUDE.md`. CLAUDE.md's "Build status" is a pure index; per-design narrative belongs in DECISIONS.md. Only update CLAUDE.md if the (design, platform) pair changed status (moved between cached / local-only / not-finishing).

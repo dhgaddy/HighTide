@@ -1,3 +1,41 @@
+module Queue1_DebugModuleRspIO (
+	clock,
+	reset,
+	io_enq_ready,
+	io_enq_valid,
+	io_enq_bits_data,
+	io_enq_bits_op,
+	io_deq_ready,
+	io_deq_valid,
+	io_deq_bits_data,
+	io_deq_bits_op
+);
+	input clock;
+	input reset;
+	output wire io_enq_ready;
+	input io_enq_valid;
+	input [31:0] io_enq_bits_data;
+	input [1:0] io_enq_bits_op;
+	input io_deq_ready;
+	output wire io_deq_valid;
+	output wire [31:0] io_deq_bits_data;
+	output wire [1:0] io_deq_bits_op;
+	reg [33:0] ram;
+	reg full;
+	wire do_enq = ~full & io_enq_valid;
+	always @(posedge clock or posedge reset)
+		if (reset)
+			full <= 1'h0;
+		else if (~(do_enq == (io_deq_ready & full)))
+			full <= do_enq;
+	always @(posedge clock)
+		if (do_enq)
+			ram <= {io_enq_bits_data, io_enq_bits_op};
+	assign io_enq_ready = ~full;
+	assign io_deq_valid = full;
+	assign io_deq_bits_data = ram[33:2];
+	assign io_deq_bits_op = ram[1:0];
+endmodule
 module CoreCSR (
 	clock,
 	reset,
@@ -11,6 +49,7 @@ module CoreCSR (
 	io_reset,
 	io_cg,
 	io_pcStart,
+	io_bootAddr,
 	io_halted,
 	io_fault,
 	io_coralnpu_csr_value_0,
@@ -21,7 +60,7 @@ module CoreCSR (
 	io_coralnpu_csr_value_5,
 	io_coralnpu_csr_value_6,
 	io_coralnpu_csr_value_7,
-	io_coralnpu_csr_value_8
+	io_coralnpu_csr_value_8,
 );
 	input clock;
 	input reset;
@@ -35,6 +74,7 @@ module CoreCSR (
 	output wire io_reset;
 	output wire io_cg;
 	output wire [31:0] io_pcStart;
+	input [31:0] io_bootAddr;
 	input io_halted;
 	input io_fault;
 	input [31:0] io_coralnpu_csr_value_0;
@@ -46,41 +86,484 @@ module CoreCSR (
 	input [31:0] io_coralnpu_csr_value_6;
 	input [31:0] io_coralnpu_csr_value_7;
 	input [31:0] io_coralnpu_csr_value_8;
+	wire _rsp_queue_io_deq_valid;
+	wire [31:0] _rsp_queue_io_deq_bits_data;
+	wire [1:0] _rsp_queue_io_deq_bits_op;
 	reg [31:0] resetReg;
 	reg [31:0] pcStartReg;
+	reg bootAddrCapture;
 	reg [31:0] statusReg;
-	wire readDataValid = (((((((((((io_fabric_readDataAddr_bits == 32'h0000010c) | (io_fabric_readDataAddr_bits == 32'h00000008)) | (io_fabric_readDataAddr_bits == 32'h00000110)) | (io_fabric_readDataAddr_bits == 32'h00000118)) | (io_fabric_readDataAddr_bits == 32'h00000100)) | (io_fabric_readDataAddr_bits == 32'h0000011c)) | (io_fabric_readDataAddr_bits == 32'h00000104)) | (io_fabric_readDataAddr_bits == 32'h00000108)) | (io_fabric_readDataAddr_bits == 32'h00000004)) | (io_fabric_readDataAddr_bits == 32'h00000114)) | (io_fabric_readDataAddr_bits == 32'h00000000)) | (io_fabric_readDataAddr_bits == 32'h00000120);
+	reg req_valid_pulse;
+	wire _io_fabric_writeResp_T_2 = io_fabric_writeDataAddr_bits == 32'h00000808;
+	wire _io_fabric_writeResp_T_4 = io_fabric_writeDataAddr_bits == 32'h00000814;
+	wire readDataValid = (((((((((((((((((io_fabric_readDataAddr_bits == 32'h00000804) | (io_fabric_readDataAddr_bits == 32'h00000110)) | (io_fabric_readDataAddr_bits == 32'h00000000)) | (io_fabric_readDataAddr_bits == 32'h00000104)) | (io_fabric_readDataAddr_bits == 32'h00000008)) | (io_fabric_readDataAddr_bits == 32'h00000118)) | (io_fabric_readDataAddr_bits == 32'h00000800)) | (io_fabric_readDataAddr_bits == 32'h00000808)) | (io_fabric_readDataAddr_bits == 32'h00000810)) | (io_fabric_readDataAddr_bits == 32'h00000004)) | (io_fabric_readDataAddr_bits == 32'h00000114)) | (io_fabric_readDataAddr_bits == 32'h00000108)) | (io_fabric_readDataAddr_bits == 32'h00000814)) | (io_fabric_readDataAddr_bits == 32'h00000120)) | (io_fabric_readDataAddr_bits == 32'h00000100)) | (io_fabric_readDataAddr_bits == 32'h0000011c)) | (io_fabric_readDataAddr_bits == 32'h0000010c)) | (io_fabric_readDataAddr_bits == 32'h0000080c);
 	reg readDataNext_pipe_v;
 	reg [127:0] readDataNext_pipe_b;
-	wire _io_fabric_writeResp_T_1 = io_fabric_writeDataAddr_bits == 32'h00000000;
-	wire _io_fabric_writeResp_T_2 = io_fabric_writeDataAddr_bits == 32'h00000004;
+	wire _io_fabric_writeResp_T_10 = io_fabric_writeDataAddr_bits == 32'h00000000;
+	wire _io_fabric_writeResp_T_6 = io_fabric_writeDataAddr_bits == 32'h00000004;
+	wire _io_fabric_writeResp_T_1 = io_fabric_writeDataAddr_bits == 32'h00000800;
+	wire _io_fabric_writeResp_T_8 = io_fabric_writeDataAddr_bits == 32'h00000804;
 	always @(posedge clock or posedge reset)
 		if (reset) begin
 			resetReg <= 32'h00000003;
 			pcStartReg <= 32'h00000000;
+			bootAddrCapture <= 1'h1;
 			statusReg <= 32'h00000000;
+			req_valid_pulse <= 1'h0;
 			readDataNext_pipe_v <= 1'h0;
 		end
 		else begin
-			if (io_fabric_writeDataAddr_valid & _io_fabric_writeResp_T_1)
+			if (io_fabric_writeDataAddr_valid & _io_fabric_writeResp_T_10)
 				resetReg <= io_fabric_writeDataBits[31:0];
-			if (io_fabric_writeDataAddr_valid & _io_fabric_writeResp_T_2)
+			if (bootAddrCapture)
+				pcStartReg <= io_bootAddr;
+			else if (io_fabric_writeDataAddr_valid & _io_fabric_writeResp_T_6)
 				pcStartReg <= io_fabric_writeDataBits[63:32];
+			bootAddrCapture <= 1'h0;
 			statusReg <= {30'h00000000, io_fault, io_halted};
+			if (io_fabric_writeDataAddr_valid & _io_fabric_writeResp_T_1)
+			if (io_fabric_writeDataAddr_valid & _io_fabric_writeResp_T_8)
+			if (io_fabric_writeDataAddr_valid & _io_fabric_writeResp_T_2)
 			readDataNext_pipe_v <= readDataValid;
 		end
 	wire _GEN = io_fabric_readDataAddr_bits[31:4] == 28'h0000000;
 	wire _GEN_0 = io_fabric_readDataAddr_bits[31:4] == 28'h0000010;
-	wire _GEN_1 = io_fabric_readDataAddr_bits[31:4] == 28'h0000011;
+	wire _GEN_1 = io_fabric_readDataAddr_bits[31:4] == 28'h0000080;
+	wire _GEN_2 = io_fabric_readDataAddr_bits[31:4] == 28'h0000081;
+	wire _GEN_3 = io_fabric_readDataAddr_bits[31:4] == 28'h0000011;
 	always @(posedge clock)
 		if (readDataValid)
-			readDataNext_pipe_b <= {(_GEN_1 ? io_coralnpu_csr_value_7 : (_GEN_0 ? io_coralnpu_csr_value_3 : 32'h00000000)), (_GEN_1 ? io_coralnpu_csr_value_6 : (_GEN_0 ? io_coralnpu_csr_value_2 : (_GEN ? statusReg : 32'h00000000))), (_GEN_1 ? io_coralnpu_csr_value_5 : (_GEN_0 ? io_coralnpu_csr_value_1 : (_GEN ? pcStartReg : 32'h00000000))), (_GEN_1 ? io_coralnpu_csr_value_4 : (_GEN_0 ? io_coralnpu_csr_value_0 : (io_fabric_readDataAddr_bits[31:4] == 28'h0000012 ? io_coralnpu_csr_value_8 : (_GEN ? resetReg : 32'h00000000))))};
+	Queue1_DebugModuleRspIO rsp_queue(
+		.clock(clock),
+		.reset(reset),
+		.io_deq_ready(io_fabric_writeDataAddr_valid & _io_fabric_writeResp_T_4),
+		.io_deq_valid(_rsp_queue_io_deq_valid),
+		.io_deq_bits_data(_rsp_queue_io_deq_bits_data),
+		.io_deq_bits_op(_rsp_queue_io_deq_bits_op)
+	);
 	assign io_fabric_readData_valid = readDataNext_pipe_v;
 	assign io_fabric_readData_bits = readDataNext_pipe_b;
-	assign io_fabric_writeResp = io_fabric_writeDataAddr_valid & (_io_fabric_writeResp_T_2 | _io_fabric_writeResp_T_1);
+	assign io_fabric_writeResp = io_fabric_writeDataAddr_valid & (((((_io_fabric_writeResp_T_10 | _io_fabric_writeResp_T_8) | _io_fabric_writeResp_T_6) | _io_fabric_writeResp_T_4) | _io_fabric_writeResp_T_2) | _io_fabric_writeResp_T_1);
 	assign io_reset = resetReg[0];
 	assign io_cg = resetReg[1];
-	assign io_pcStart = pcStartReg;
+	assign io_pcStart = (bootAddrCapture ? io_bootAddr : pcStartReg);
+endmodule
+module Queue1_DebugModuleReqIO (
+	clock,
+	reset,
+	io_enq_ready,
+	io_enq_valid,
+	io_enq_bits_address,
+	io_enq_bits_data,
+	io_enq_bits_op,
+	io_deq_ready,
+	io_deq_valid,
+	io_deq_bits_address,
+	io_deq_bits_data,
+	io_deq_bits_op
+);
+	input clock;
+	input reset;
+	output wire io_enq_ready;
+	input io_enq_valid;
+	input [31:0] io_enq_bits_address;
+	input [31:0] io_enq_bits_data;
+	input [1:0] io_enq_bits_op;
+	input io_deq_ready;
+	output wire io_deq_valid;
+	output wire [31:0] io_deq_bits_address;
+	output wire [31:0] io_deq_bits_data;
+	output wire [1:0] io_deq_bits_op;
+	reg [65:0] ram;
+	reg full;
+	wire do_enq = ~full & io_enq_valid;
+	always @(posedge clock or posedge reset)
+		if (reset)
+			full <= 1'h0;
+		else if (~(do_enq == (io_deq_ready & full)))
+			full <= do_enq;
+	always @(posedge clock)
+		if (do_enq)
+			ram <= {io_enq_bits_address, io_enq_bits_data, io_enq_bits_op};
+	assign io_enq_ready = ~full;
+	assign io_deq_valid = full;
+	assign io_deq_bits_address = ram[65:34];
+	assign io_deq_bits_data = ram[33:2];
+	assign io_deq_bits_op = ram[1:0];
+endmodule
+module DebugModule (
+	clock,
+	reset,
+	io_ext_req_ready,
+	io_ext_req_valid,
+	io_ext_req_bits_address,
+	io_ext_req_bits_data,
+	io_ext_req_bits_op,
+	io_ext_rsp_ready,
+	io_ext_rsp_valid,
+	io_ext_rsp_bits_data,
+	io_ext_rsp_bits_op,
+	io_csr_valid,
+	io_csr_bits_addr,
+	io_csr_bits_index,
+	io_csr_bits_rs1,
+	io_csr_bits_op,
+	io_csr_rs1,
+	io_csr_rd_valid,
+	io_csr_rd_bits,
+	io_scalar_rd_ready,
+	io_scalar_rd_valid,
+	io_scalar_rd_bits_addr,
+	io_scalar_rd_bits_data,
+	io_scalar_rs_idx,
+	io_scalar_rs_data,
+	io_float_rd_valid,
+	io_float_rd_addr,
+	io_float_rd_data_mantissa,
+	io_float_rd_data_exponent,
+	io_float_rd_data_sign,
+	io_float_rs_valid,
+	io_float_rs_addr,
+	io_float_rs_data_mantissa,
+	io_float_rs_data_exponent,
+	io_float_rs_data_sign,
+	io_itcm_readDataAddr_valid,
+	io_itcm_readDataAddr_bits,
+	io_itcm_readData_valid,
+	io_itcm_readData_bits,
+	io_itcm_writeDataAddr_valid,
+	io_itcm_writeDataAddr_bits,
+	io_itcm_writeDataBits,
+	io_itcm_writeDataStrb,
+	io_itcm_writeResp,
+	io_dtcm_readDataAddr_valid,
+	io_dtcm_readDataAddr_bits,
+	io_dtcm_readData_valid,
+	io_dtcm_readData_bits,
+	io_dtcm_writeDataAddr_valid,
+	io_dtcm_writeDataAddr_bits,
+	io_dtcm_writeDataBits,
+	io_dtcm_writeDataStrb,
+	io_dtcm_writeResp,
+	io_haltreq_0,
+	io_resumereq_0,
+	io_resumeack_0,
+	io_ndmreset,
+	io_halted_0,
+	io_running_0,
+	io_havereset_0
+);
+	input clock;
+	input reset;
+	output wire io_ext_req_ready;
+	input io_ext_req_valid;
+	input [31:0] io_ext_req_bits_address;
+	input [31:0] io_ext_req_bits_data;
+	input [1:0] io_ext_req_bits_op;
+	input io_ext_rsp_ready;
+	output wire io_ext_rsp_valid;
+	output wire [31:0] io_ext_rsp_bits_data;
+	output wire [1:0] io_ext_rsp_bits_op;
+	output wire io_csr_valid;
+	output wire [4:0] io_csr_bits_addr;
+	output wire [11:0] io_csr_bits_index;
+	output wire [4:0] io_csr_bits_rs1;
+	output wire [1:0] io_csr_bits_op;
+	output wire [31:0] io_csr_rs1;
+	input io_csr_rd_valid;
+	input [31:0] io_csr_rd_bits;
+	input io_scalar_rd_ready;
+	output wire io_scalar_rd_valid;
+	output wire [4:0] io_scalar_rd_bits_addr;
+	output wire [31:0] io_scalar_rd_bits_data;
+	output wire [4:0] io_scalar_rs_idx;
+	input [31:0] io_scalar_rs_data;
+	output wire io_float_rd_valid;
+	output wire [4:0] io_float_rd_addr;
+	output wire [22:0] io_float_rd_data_mantissa;
+	output wire [7:0] io_float_rd_data_exponent;
+	output wire io_float_rd_data_sign;
+	output wire io_float_rs_valid;
+	output wire [4:0] io_float_rs_addr;
+	input [22:0] io_float_rs_data_mantissa;
+	input [7:0] io_float_rs_data_exponent;
+	input io_float_rs_data_sign;
+	output wire io_itcm_readDataAddr_valid;
+	output wire [31:0] io_itcm_readDataAddr_bits;
+	input io_itcm_readData_valid;
+	input [127:0] io_itcm_readData_bits;
+	output wire io_itcm_writeDataAddr_valid;
+	output wire [31:0] io_itcm_writeDataAddr_bits;
+	output wire [127:0] io_itcm_writeDataBits;
+	output wire [15:0] io_itcm_writeDataStrb;
+	input io_itcm_writeResp;
+	output wire io_dtcm_readDataAddr_valid;
+	output wire [31:0] io_dtcm_readDataAddr_bits;
+	input io_dtcm_readData_valid;
+	input [127:0] io_dtcm_readData_bits;
+	output wire io_dtcm_writeDataAddr_valid;
+	output wire [31:0] io_dtcm_writeDataAddr_bits;
+	output wire [127:0] io_dtcm_writeDataBits;
+	output wire [15:0] io_dtcm_writeDataStrb;
+	input io_dtcm_writeResp;
+	output wire io_haltreq_0;
+	output wire io_resumereq_0;
+	input io_resumeack_0;
+	output wire io_ndmreset;
+	input io_halted_0;
+	input io_running_0;
+	input io_havereset_0;
+	wire io_float_rd_valid_0;
+	wire io_scalar_rd_valid_0;
+	wire _io_ext_rsp_q_io_enq_ready;
+	wire _req_q_io_deq_valid;
+	wire [31:0] _req_q_io_deq_bits_address;
+	wire [31:0] _req_q_io_deq_bits_data;
+	wire [1:0] _req_q_io_deq_bits_op;
+	reg haltreq_0;
+	reg resumereq_0;
+	reg resumeack_0;
+	reg [31:0] dmcontrol;
+	reg [31:0] data0;
+	reg [31:0] data1;
+	reg [31:0] cmderr;
+	wire _rsp_map_bits_rspBits_data_T_6 = _req_q_io_deq_bits_address == 32'h00000010;
+	wire _rsp_map_bits_rspBits_op_T_53 = _req_q_io_deq_bits_op == 2'h2;
+	wire _rsp_map_bits_rspBits_data_T_21 = _req_q_io_deq_bits_address == 32'h00000017;
+	wire abstractCmdValid = (_req_q_io_deq_valid & _rsp_map_bits_rspBits_op_T_53) & _rsp_map_bits_rspBits_data_T_21;
+	wire cmdtypeIsAccessMemory = _req_q_io_deq_bits_data[31:24] == 8'h02;
+	wire regnoIsCsr = _req_q_io_deq_bits_data[15:0] < 16'h1000;
+	wire regnoIsScalar = |_req_q_io_deq_bits_data[15:12] & (_req_q_io_deq_bits_data[15:0] < 16'h1020);
+	wire regnoIsFloat = (_req_q_io_deq_bits_data[15:0] > 16'h101f) & (_req_q_io_deq_bits_data[15:0] < 16'h1040);
+	wire regnoInvalid = (|_req_q_io_deq_bits_data[15:12] & ~regnoIsScalar) & ~regnoIsFloat;
+	wire itcm = data1 < 32'h00002000;
+	wire dtcm = |data1[31:16] & (data1 < 32'h00018000);
+	wire _cmderr_T_17 = itcm | dtcm;
+	wire _abstractCmdCompleteFloat_T_3 = ~(|_req_q_io_deq_bits_data[31:24]) & regnoIsFloat;
+	wire _abstractCmdComplete_T_8 = ~(|_req_q_io_deq_bits_data[31:24]) & regnoIsScalar;
+	wire abstractCmdComplete = (abstractCmdValid & ((((((((((~(|_req_q_io_deq_bits_data[31:24]) & regnoInvalid) | ((~(|_req_q_io_deq_bits_data[31:24]) & regnoIsCsr) & io_csr_rd_valid)) | ((_abstractCmdComplete_T_8 & io_scalar_rd_ready) & io_scalar_rd_valid_0)) | (_abstractCmdComplete_T_8 & ~_req_q_io_deq_bits_data[16])) | (cmdtypeIsAccessMemory & io_itcm_readData_valid)) | (cmdtypeIsAccessMemory & io_dtcm_readData_valid)) | (cmdtypeIsAccessMemory & _req_q_io_deq_bits_data[16])) | (cmdtypeIsAccessMemory & ~_cmderr_T_17)) | (_abstractCmdCompleteFloat_T_3 & io_float_rd_valid_0)) | (_abstractCmdCompleteFloat_T_3 & ~_req_q_io_deq_bits_data[16]))) | ~io_halted_0;
+	wire _io_float_rs_valid_T = io_halted_0 & abstractCmdValid;
+	wire _rsp_map_bits_rspBits_data_T_15 = _req_q_io_deq_bits_address == 32'h00000016;
+	wire _rsp_map_bits_rspBits_data_T_22 = _req_q_io_deq_bits_op == 2'h1;
+	assign io_scalar_rd_valid_0 = ((_io_float_rs_valid_T & ~(|_req_q_io_deq_bits_data[31:24])) & regnoIsScalar) & _req_q_io_deq_bits_data[16];
+	assign io_float_rd_valid_0 = ((_io_float_rs_valid_T & ~(|_req_q_io_deq_bits_data[31:24])) & regnoIsFloat) & _req_q_io_deq_bits_data[16];
+	wire _rsp_map_bits_rspBits_data_T = _req_q_io_deq_bits_address == 32'h00000004;
+	wire _rsp_map_bits_rspBits_data_T_3 = _req_q_io_deq_bits_address == 32'h00000005;
+	wire _rsp_map_bits_rspBits_data_T_9 = _req_q_io_deq_bits_address == 32'h00000011;
+	wire _rsp_map_bits_rspBits_data_T_12 = _req_q_io_deq_bits_address == 32'h00000012;
+	wire req_q_io_deq_ready = _io_ext_rsp_q_io_enq_ready & (~abstractCmdValid | abstractCmdComplete);
+	wire _io_dtcm_writeDataAddr_valid_T = abstractCmdValid & cmdtypeIsAccessMemory;
+	wire [16:0] _strobe_T_6 = 17'h00003 << data1[3:0];
+	wire [18:0] _strobe_T_9 = 19'h0000f << data1[3:0];
+	wire [15:0] strobe = (_req_q_io_deq_bits_data[22:20] == 3'h0 ? 16'h0001 << data1[3:0] : (_req_q_io_deq_bits_data[22:20] == 3'h1 ? _strobe_T_6[15:0] : (_req_q_io_deq_bits_data[22:20] == 3'h2 ? _strobe_T_9[15:0] : 16'hffff)));
+	wire [382:0] writeDataBits = {351'h0, data0} << {376'h0, data1[3:0], 3'h0};
+	wire [127:0] _GEN = {io_itcm_readData_bits[127:96], io_itcm_readData_bits[95:64], io_itcm_readData_bits[63:32], 32'h00000000};
+	wire [127:0] _GEN_0 = {io_dtcm_readData_bits[127:96], io_dtcm_readData_bits[95:64], io_dtcm_readData_bits[63:32], 32'h00000000};
+	wire _data0_T_63 = abstractCmdComplete & cmdtypeIsAccessMemory;
+	wire [31:0] data0ItcmReadData = (|data1[3:2] ? _GEN[data1[3:2] * 32+:32] : io_itcm_readData_bits[31:0]);
+	wire [31:0] _data0_T_57 = (data1[0] ? {data0ItcmReadData[7:0], data0ItcmReadData[31:8]} : data0ItcmReadData);
+	wire [31:0] data0DtcmReadData = (|data1[3:2] ? _GEN_0[data1[3:2] * 32+:32] : io_dtcm_readData_bits[31:0]);
+	wire [31:0] _data0_T_93 = (data1[0] ? {data0DtcmReadData[7:0], data0DtcmReadData[31:8]} : data0DtcmReadData);
+	wire _data0_T_19 = abstractCmdComplete & ~(|_req_q_io_deq_bits_data[31:24]);
+	wire _abstractcs_wvalid_T = req_q_io_deq_ready & _req_q_io_deq_valid;
+	wire dmcontrol_wvalid = (_abstractcs_wvalid_T & _rsp_map_bits_rspBits_data_T_6) & _rsp_map_bits_rspBits_op_T_53;
+	always @(posedge clock or posedge reset)
+		if (reset) begin
+			haltreq_0 <= 1'h0;
+			resumereq_0 <= 1'h0;
+			resumeack_0 <= 1'h0;
+			dmcontrol <= 32'h00000001;
+			data0 <= 32'h00000000;
+			data1 <= 32'h00000000;
+			cmderr <= 32'h00000000;
+		end
+		else begin
+			if (dmcontrol_wvalid) begin
+				haltreq_0 <= _req_q_io_deq_bits_data[31];
+				dmcontrol <= {dmcontrol[31:26], (_req_q_io_deq_bits_data[25:6] == 20'h00000 ? _req_q_io_deq_bits_data[25:6] : 20'h00001), dmcontrol[5:2], _req_q_io_deq_bits_data[1:0]};
+			end
+			resumereq_0 <= (dmcontrol_wvalid ? _req_q_io_deq_bits_data[30] : ~io_resumeack_0 & resumereq_0);
+			resumeack_0 <= ~haltreq_0 & (io_resumeack_0 | resumeack_0);
+			if ((_req_q_io_deq_valid & _rsp_map_bits_rspBits_data_T) & _rsp_map_bits_rspBits_op_T_53)
+				data0 <= _req_q_io_deq_bits_data;
+			else if (((((_data0_T_19 & io_halted_0) & _req_q_io_deq_valid) & ~_req_q_io_deq_bits_data[16]) & regnoIsCsr) & io_csr_rd_valid)
+				data0 <= io_csr_rd_bits;
+			else if ((((_data0_T_19 & io_halted_0) & _req_q_io_deq_valid) & ~_req_q_io_deq_bits_data[16]) & regnoIsScalar)
+				data0 <= io_scalar_rs_data;
+			else if ((((_data0_T_19 & io_halted_0) & _req_q_io_deq_valid) & ~_req_q_io_deq_bits_data[16]) & regnoIsFloat)
+				data0 <= {io_float_rs_data_sign, io_float_rs_data_exponent, io_float_rs_data_mantissa};
+			else if ((((_data0_T_63 & io_halted_0) & _req_q_io_deq_valid) & ~_req_q_io_deq_bits_data[16]) & io_itcm_readData_valid)
+				data0 <= (data1[1] ? {_data0_T_57[15:0], _data0_T_57[31:16]} : _data0_T_57);
+			else if ((((_data0_T_63 & io_halted_0) & _req_q_io_deq_valid) & ~_req_q_io_deq_bits_data[16]) & io_dtcm_readData_valid)
+				data0 <= (data1[1] ? {_data0_T_93[15:0], _data0_T_93[31:16]} : _data0_T_93);
+			else if (dmcontrol[0])
+				;
+			else
+				data0 <= 32'h00000000;
+			if ((_req_q_io_deq_valid & _rsp_map_bits_rspBits_data_T_3) & _rsp_map_bits_rspBits_op_T_53)
+				data1 <= _req_q_io_deq_bits_data;
+			else if ((((_req_q_io_deq_valid & _req_q_io_deq_bits_data[19]) & abstractCmdComplete) & cmdtypeIsAccessMemory) & io_halted_0)
+				data1 <= data1 + {24'h000000, 8'h01 << _req_q_io_deq_bits_data[22:20]};
+			if ((_abstractcs_wvalid_T & _rsp_map_bits_rspBits_data_T_15) & _rsp_map_bits_rspBits_op_T_53)
+				cmderr <= {29'h00000000, cmderr[2:0] & ~_req_q_io_deq_bits_data[10:8]};
+			else if (abstractCmdValid & ~io_halted_0)
+				cmderr <= 32'h00000004;
+			else if (((abstractCmdValid & ~(|_req_q_io_deq_bits_data[31:24])) & |{_rsp_map_bits_rspBits_op_T_53, _rsp_map_bits_rspBits_data_T_22}) & (_req_q_io_deq_bits_data[22:20] != 3'h2))
+				cmderr <= 32'h00000002;
+			else if ((abstractCmdValid & cmdtypeIsAccessMemory) & ~_cmderr_T_17)
+				cmderr <= 32'h00000005;
+			else if (dmcontrol[0])
+				;
+			else
+				cmderr <= 32'h00000000;
+		end
+	Queue1_DebugModuleReqIO req_q(
+		.clock(clock),
+		.reset(reset),
+		.io_enq_ready(io_ext_req_ready),
+		.io_enq_valid(io_ext_req_valid),
+		.io_enq_bits_address(io_ext_req_bits_address),
+		.io_enq_bits_data(io_ext_req_bits_data),
+		.io_enq_bits_op(io_ext_req_bits_op),
+		.io_deq_ready(req_q_io_deq_ready),
+		.io_deq_valid(_req_q_io_deq_valid),
+		.io_deq_bits_address(_req_q_io_deq_bits_address),
+		.io_deq_bits_data(_req_q_io_deq_bits_data),
+		.io_deq_bits_op(_req_q_io_deq_bits_op)
+	);
+	Queue1_DebugModuleRspIO io_ext_rsp_q(
+		.clock(clock),
+		.reset(reset),
+		.io_enq_ready(_io_ext_rsp_q_io_enq_ready),
+		.io_enq_valid(_req_q_io_deq_valid & (~abstractCmdValid | abstractCmdComplete)),
+		.io_enq_bits_data((_rsp_map_bits_rspBits_data_T & _rsp_map_bits_rspBits_data_T_22 ? data0 : (_rsp_map_bits_rspBits_data_T_3 & _rsp_map_bits_rspBits_data_T_22 ? data1 : (_rsp_map_bits_rspBits_data_T_6 & _rsp_map_bits_rspBits_data_T_22 ? dmcontrol : (_rsp_map_bits_rspBits_data_T_9 & _rsp_map_bits_rspBits_data_T_22 ? {14'h0000, {2 {resumeack_0}}, 4'h0, {2 {io_running_0}}, {2 {io_halted_0}}, 8'h83} : (_rsp_map_bits_rspBits_data_T_12 & _rsp_map_bits_rspBits_data_T_22 ? 32'h002007b4 : (_rsp_map_bits_rspBits_data_T_15 & _rsp_map_bits_rspBits_data_T_22 ? {cmderr[23:0], 8'h01} : 32'h00000000))))))),
+		.io_enq_bits_op((((((((_rsp_map_bits_rspBits_data_T & |{_rsp_map_bits_rspBits_op_T_53, _rsp_map_bits_rspBits_data_T_22}) | (_rsp_map_bits_rspBits_data_T_3 & |{_rsp_map_bits_rspBits_op_T_53, _rsp_map_bits_rspBits_data_T_22})) | (_rsp_map_bits_rspBits_data_T_6 & |{_rsp_map_bits_rspBits_op_T_53, _rsp_map_bits_rspBits_data_T_22})) | (_rsp_map_bits_rspBits_data_T_9 & |{_rsp_map_bits_rspBits_op_T_53, _rsp_map_bits_rspBits_data_T_22})) | (_rsp_map_bits_rspBits_data_T_12 & |{_rsp_map_bits_rspBits_op_T_53, _rsp_map_bits_rspBits_data_T_22})) | (_rsp_map_bits_rspBits_data_T_15 & |{_rsp_map_bits_rspBits_op_T_53, _rsp_map_bits_rspBits_data_T_22})) | ((_req_q_io_deq_bits_address == 32'h00000038) & |{_rsp_map_bits_rspBits_op_T_53, _rsp_map_bits_rspBits_data_T_22}) ? 2'h0 : (((_rsp_map_bits_rspBits_data_T_21 & ~(|_req_q_io_deq_bits_data[31:24])) & |{_rsp_map_bits_rspBits_op_T_53, _rsp_map_bits_rspBits_data_T_22}) & regnoInvalid ? 2'h2 : (((_rsp_map_bits_rspBits_data_T_21 & ~(|_req_q_io_deq_bits_data[31:24])) & |{_rsp_map_bits_rspBits_op_T_53, _rsp_map_bits_rspBits_data_T_22}) | (_rsp_map_bits_rspBits_data_T_21 & cmdtypeIsAccessMemory) ? 2'h0 : 2'h3)))),
+		.io_deq_ready(io_ext_rsp_ready),
+		.io_deq_valid(io_ext_rsp_valid),
+		.io_deq_bits_data(io_ext_rsp_bits_data),
+		.io_deq_bits_op(io_ext_rsp_bits_op)
+	);
+	assign io_csr_valid = (_io_float_rs_valid_T & ~(|_req_q_io_deq_bits_data[31:24])) & regnoIsCsr;
+	assign io_csr_bits_addr = 5'h00;
+	assign io_csr_bits_index = _req_q_io_deq_bits_data[11:0];
+	assign io_csr_bits_rs1 = 5'h00;
+	assign io_csr_bits_op = {~_req_q_io_deq_bits_data[16], 1'h0};
+	assign io_csr_rs1 = (_req_q_io_deq_bits_data[16] ? data0 : 32'h00000000);
+	assign io_scalar_rd_valid = io_scalar_rd_valid_0;
+	assign io_scalar_rd_bits_addr = _req_q_io_deq_bits_data[4:0];
+	assign io_scalar_rd_bits_data = data0;
+	assign io_scalar_rs_idx = (((_io_float_rs_valid_T & ~(|_req_q_io_deq_bits_data[31:24])) & regnoIsScalar) & ~_req_q_io_deq_bits_data[16] ? _req_q_io_deq_bits_data[4:0] : 5'h00);
+	assign io_float_rd_valid = io_float_rd_valid_0;
+	assign io_float_rd_addr = _req_q_io_deq_bits_data[4:0];
+	assign io_float_rd_data_mantissa = data0[22:0];
+	assign io_float_rd_data_exponent = data0[30:23];
+	assign io_float_rd_data_sign = data0[31];
+	assign io_float_rs_valid = ((_io_float_rs_valid_T & ~(|_req_q_io_deq_bits_data[31:24])) & regnoIsFloat) & ~_req_q_io_deq_bits_data[16];
+	assign io_float_rs_addr = _req_q_io_deq_bits_data[4:0];
+	assign io_itcm_readDataAddr_valid = (_io_dtcm_writeDataAddr_valid_T & ~_req_q_io_deq_bits_data[16]) & itcm;
+	assign io_itcm_readDataAddr_bits = data1;
+	assign io_itcm_writeDataAddr_valid = (_io_dtcm_writeDataAddr_valid_T & _req_q_io_deq_bits_data[16]) & itcm;
+	assign io_itcm_writeDataAddr_bits = data1;
+	assign io_itcm_writeDataBits = writeDataBits[127:0];
+	assign io_itcm_writeDataStrb = strobe;
+	assign io_dtcm_readDataAddr_valid = (_io_dtcm_writeDataAddr_valid_T & ~_req_q_io_deq_bits_data[16]) & dtcm;
+	assign io_dtcm_readDataAddr_bits = data1;
+	assign io_dtcm_writeDataAddr_valid = (_io_dtcm_writeDataAddr_valid_T & _req_q_io_deq_bits_data[16]) & dtcm;
+	assign io_dtcm_writeDataAddr_bits = data1;
+	assign io_dtcm_writeDataBits = writeDataBits[127:0];
+	assign io_dtcm_writeDataStrb = strobe;
+	assign io_haltreq_0 = haltreq_0;
+	assign io_resumereq_0 = resumereq_0;
+	assign io_ndmreset = dmcontrol[1];
+endmodule
+module CoralNPURRArbiter (
+	clock,
+	reset,
+	io_in_0_ready,
+	io_in_0_valid,
+	io_in_0_bits_address,
+	io_in_0_bits_data,
+	io_in_0_bits_op,
+	io_in_1_ready,
+	io_in_1_valid,
+	io_in_1_bits_address,
+	io_in_1_bits_data,
+	io_in_1_bits_op,
+	io_out_ready,
+	io_out_valid,
+	io_out_bits_address,
+	io_out_bits_data,
+	io_out_bits_op,
+	io_chosen
+);
+	input clock;
+	input reset;
+	output wire io_in_0_ready;
+	input io_in_0_valid;
+	input [31:0] io_in_0_bits_address;
+	input [31:0] io_in_0_bits_data;
+	input [1:0] io_in_0_bits_op;
+	output wire io_in_1_ready;
+	input io_in_1_valid;
+	input [31:0] io_in_1_bits_address;
+	input [31:0] io_in_1_bits_data;
+	input [1:0] io_in_1_bits_op;
+	input io_out_ready;
+	output wire io_out_valid;
+	output wire [31:0] io_out_bits_address;
+	output wire [31:0] io_out_bits_data;
+	output wire [1:0] io_out_bits_op;
+	output wire io_chosen;
+	wire io_chosen_choice;
+	wire io_out_valid_0 = (io_chosen_choice ? io_in_1_valid : io_in_0_valid);
+	reg ctrl_validMask_grantMask_lastGrant;
+	wire ctrl_validMask_1 = io_in_1_valid & ~ctrl_validMask_grantMask_lastGrant;
+	assign io_chosen_choice = ctrl_validMask_1 | ~io_in_0_valid;
+	always @(posedge clock or posedge reset)
+		if (reset)
+			ctrl_validMask_grantMask_lastGrant <= 1'h0;
+		else if (io_out_ready & io_out_valid_0)
+			ctrl_validMask_grantMask_lastGrant <= io_chosen_choice;
+	assign io_in_0_ready = ~ctrl_validMask_1 & io_out_ready;
+	assign io_in_1_ready = (~ctrl_validMask_grantMask_lastGrant | ~(ctrl_validMask_1 | io_in_0_valid)) & io_out_ready;
+	assign io_out_valid = io_out_valid_0;
+	assign io_out_bits_address = (io_chosen_choice ? io_in_1_bits_address : io_in_0_bits_address);
+	assign io_out_bits_data = (io_chosen_choice ? io_in_1_bits_data : io_in_0_bits_data);
+	assign io_out_bits_op = (io_chosen_choice ? io_in_1_bits_op : io_in_0_bits_op);
+	assign io_chosen = io_chosen_choice;
+endmodule
+module Queue1_UInt1 (
+	clock,
+	reset,
+	io_enq_ready,
+	io_enq_valid,
+	io_enq_bits,
+	io_deq_ready,
+	io_deq_valid,
+	io_deq_bits
+);
+	input clock;
+	input reset;
+	output wire io_enq_ready;
+	input io_enq_valid;
+	input io_enq_bits;
+	input io_deq_ready;
+	output wire io_deq_valid;
+	output wire io_deq_bits;
+	reg full;
+	wire do_enq = ~full & io_enq_valid;
+	reg ram;
+	always @(posedge clock or posedge reset)
+		if (reset)
+			full <= 1'h0;
+		else if (~(do_enq == (io_deq_ready & full)))
+			full <= do_enq;
+	always @(posedge clock)
+		if (do_enq)
+			ram <= io_enq_bits;
+	assign io_enq_ready = ~full;
+	assign io_deq_valid = full;
+	assign io_deq_bits = ram;
 endmodule
 module Regfile (
 	clock,
@@ -1054,7 +1537,6 @@ module Regfile (
 			write_fail_12 <= ((io_writeData_3_valid & io_writeData_4_valid) & (io_writeData_3_bits_addr == io_writeData_4_bits_addr)) & |io_writeData_3_bits_addr;
 			write_fail_13 <= ((io_writeData_3_valid & io_writeData_5_valid) & (io_writeData_3_bits_addr == io_writeData_5_bits_addr)) & |io_writeData_3_bits_addr;
 			write_fail_14 <= ((io_writeData_4_valid & io_writeData_5_valid) & (io_writeData_4_bits_addr == io_writeData_5_bits_addr)) & |io_writeData_4_bits_addr;
-			scoreboard_error <= (scoreboard & scoreboard_clr) != scoreboard_clr;
 		end
 	assign io_target_0_data = busAddr_0;
 	assign io_target_1_data = busAddr_1;
@@ -1097,6 +1579,7 @@ module FetchControl (
 	io_iflush_bits,
 	io_branch_valid,
 	io_branch_bits,
+	io_fetchData_ready,
 	io_fetchData_valid,
 	io_fetchData_bits_addr,
 	io_fetchData_bits_inst_0,
@@ -1104,8 +1587,11 @@ module FetchControl (
 	io_fetchData_bits_inst_2,
 	io_fetchData_bits_inst_3,
 	io_fetchData_bits_fault,
+	io_fetchAddr_ready,
 	io_fetchAddr_valid,
 	io_fetchAddr_bits,
+	io_flushTx,
+	io_bufferRequest_nReady,
 	io_bufferRequest_nValid,
 	io_bufferRequest_bits_0_addr,
 	io_bufferRequest_bits_0_inst,
@@ -1118,8 +1604,7 @@ module FetchControl (
 	io_bufferRequest_bits_2_brchFwd,
 	io_bufferRequest_bits_3_addr,
 	io_bufferRequest_bits_3_inst,
-	io_bufferRequest_bits_3_brchFwd,
-	io_bufferSpaces
+	io_bufferRequest_bits_3_brchFwd
 );
 	input clock;
 	input reset;
@@ -1130,6 +1615,7 @@ module FetchControl (
 	input [31:0] io_iflush_bits;
 	input io_branch_valid;
 	input [31:0] io_branch_bits;
+	output wire io_fetchData_ready;
 	input io_fetchData_valid;
 	input [31:0] io_fetchData_bits_addr;
 	input [31:0] io_fetchData_bits_inst_0;
@@ -1137,8 +1623,11 @@ module FetchControl (
 	input [31:0] io_fetchData_bits_inst_2;
 	input [31:0] io_fetchData_bits_inst_3;
 	input io_fetchData_bits_fault;
+	input io_fetchAddr_ready;
 	output wire io_fetchAddr_valid;
 	output wire [31:0] io_fetchAddr_bits;
+	output wire io_flushTx;
+	input [2:0] io_bufferRequest_nReady;
 	output wire [2:0] io_bufferRequest_nValid;
 	output wire [31:0] io_bufferRequest_bits_0_addr;
 	output wire [31:0] io_bufferRequest_bits_0_inst;
@@ -1152,7 +1641,6 @@ module FetchControl (
 	output wire [31:0] io_bufferRequest_bits_3_addr;
 	output wire [31:0] io_bufferRequest_bits_3_inst;
 	output wire io_bufferRequest_bits_3_brchFwd;
-	input [3:0] io_bufferSpaces;
 	wire [127:0] predecode_insts_shifted = {io_fetchData_bits_inst_3, io_fetchData_bits_inst_2, io_fetchData_bits_inst_1, io_fetchData_bits_inst_0} >> {121'h0000000000000000000000000000000, io_fetchData_bits_addr[3:2], 5'h00};
 	wire [31:0] predecode_addrs_1 = io_fetchData_bits_addr + 32'h00000004;
 	wire [31:0] predecode_addrs_2 = io_fetchData_bits_addr + 32'h00000008;
@@ -1165,43 +1653,73 @@ module FetchControl (
 	wire predecode_jumped_3 = _predecode_validsIn_T_9[2] & ((predecode_insts_shifted[102:96] == 7'h6f) | (((predecode_insts_shifted[102:96] == 7'h63) & predecode_insts_shifted[127]) & (predecode_insts_shifted[110:109] != 2'h1)));
 	wire [3:0] predecode_firstJumpOH_enc = (predecode_jumped_0 ? 4'h1 : (predecode_jumped_1 ? 4'h2 : (predecode_jumped_2 ? 4'h4 : {predecode_jumped_3, 3'h0})));
 	wire predecode_hasJumpedBefore_2 = predecode_jumped_0 | predecode_jumped_1;
+	wire [31:0] predecode_nextPc = ((((predecode_firstJumpOH_enc[0] ? io_fetchData_bits_addr + {{12 {predecode_insts_shifted[31]}}, (predecode_insts_shifted[2] ? {predecode_insts_shifted[19:12], predecode_insts_shifted[20], predecode_insts_shifted[30:21]} : {{8 {predecode_insts_shifted[31]}}, predecode_insts_shifted[7], predecode_insts_shifted[30:25], predecode_insts_shifted[11:8]}), 1'h0} : 32'h00000000) | (predecode_firstJumpOH_enc[1] ? predecode_addrs_1 + {{12 {predecode_insts_shifted[63]}}, (predecode_insts_shifted[34] ? {predecode_insts_shifted[51:44], predecode_insts_shifted[52], predecode_insts_shifted[62:53]} : {{8 {predecode_insts_shifted[63]}}, predecode_insts_shifted[39], predecode_insts_shifted[62:57], predecode_insts_shifted[43:40]}), 1'h0} : 32'h00000000)) | (predecode_firstJumpOH_enc[2] ? predecode_addrs_2 + {{12 {predecode_insts_shifted[95]}}, (predecode_insts_shifted[66] ? {predecode_insts_shifted[83:76], predecode_insts_shifted[84], predecode_insts_shifted[94:85]} : {{8 {predecode_insts_shifted[95]}}, predecode_insts_shifted[71], predecode_insts_shifted[94:89], predecode_insts_shifted[75:72]}), 1'h0} : 32'h00000000)) | (predecode_firstJumpOH_enc[3] ? predecode_addrs_3 + {{12 {predecode_insts_shifted[127]}}, (predecode_insts_shifted[98] ? {predecode_insts_shifted[115:108], predecode_insts_shifted[116], predecode_insts_shifted[126:117]} : {{8 {predecode_insts_shifted[127]}}, predecode_insts_shifted[103], predecode_insts_shifted[126:121], predecode_insts_shifted[107:104]}), 1'h0} : 32'h00000000)) | (predecode_firstJumpOH_enc == 4'h0 ? {io_fetchData_bits_addr[31:4] + 28'h0000001, 4'h0} : 32'h00000000);
+	wire [2:0] predecode_result_y_1 = {1'h0, {1'h0, |_predecode_validsIn_T_9} + {1'h0, |_predecode_validsIn_T_9[2:1] & ~predecode_jumped_0}} + {1'h0, {1'h0, predecode_validsIn_2 & ~predecode_hasJumpedBefore_2} + {1'h0, _predecode_validsIn_T_9[2] & ~(predecode_hasJumpedBefore_2 | predecode_jumped_2)}};
 	reg pastBranchOrFlush;
 	wire currentBranchOrFlush = io_iflush_valid | io_branch_valid;
 	wire ongoingBranchOrFlush = pastBranchOrFlush | currentBranchOrFlush;
 	reg faulted;
 	wire fetchFaultValid = (faulted | (io_fetchData_valid & io_fetchData_bits_fault)) & ~io_branch_valid;
-	wire writeToBuffer = (io_fetchData_valid & ~fetchFaultValid) & ~ongoingBranchOrFlush;
-	wire [3:0] nValid = (writeToBuffer ? {1'h0, {1'h0, {1'h0, |_predecode_validsIn_T_9} + {1'h0, |_predecode_validsIn_T_9[2:1] & ~predecode_jumped_0}} + {1'h0, {1'h0, predecode_validsIn_2 & ~predecode_hasJumpedBefore_2} + {1'h0, _predecode_validsIn_T_9[2] & ~(predecode_hasJumpedBefore_2 | predecode_jumped_2)}}} : 4'h0);
+	wire io_fetchData_ready_0 = (io_bufferRequest_nReady >= predecode_result_y_1) | fetchFaultValid;
+	wire writeToBuffer = ((io_fetchData_ready_0 & io_fetchData_valid) & ~fetchFaultValid) & ~ongoingBranchOrFlush;
+	reg ongoingFetch_valid;
+	reg [31:0] ongoingFetch_bits;
 	reg pc_valid;
 	reg [31:0] pc_bits;
-	wire blockNewFetch = (((~pc_valid | io_fetchData_valid) | currentBranchOrFlush) | ({1'h0, io_bufferSpaces} < ({1'h0, nValid} + 5'h04))) | fetchFaultValid;
+	wire blockNewFetch = ((~pc_valid | currentBranchOrFlush) | ongoingFetch_valid) | fetchFaultValid;
+	reg pcFetched;
+	wire newJump = writeToBuffer & (((predecode_jumped_0 | predecode_jumped_1) | predecode_jumped_2) | predecode_jumped_3);
+	wire [31:0] _pcNext_T_2 = {io_csr_value_0[31:2], 2'h0};
+	wire _pcNext_T_5 = ~blockNewFetch & pcFetched;
+	wire [31:0] _pcNext_T_9 = {pc_bits[31:4] + 28'h0000001, 4'h0};
+	wire [31:0] fetch_bits = (ongoingFetch_valid ? ongoingFetch_bits : 32'h00000000) | (blockNewFetch ? 32'h00000000 : (pc_valid ? (io_iflush_valid ? io_iflush_bits : (io_branch_valid ? io_branch_bits : (newJump ? predecode_nextPc : (_pcNext_T_5 ? _pcNext_T_9 : pc_bits)))) : _pcNext_T_2));
+	wire fetch_valid = ongoingFetch_valid | ~blockNewFetch;
+	reg pendingJump;
+	reg io_fetchAddr_prevPending;
+	reg [31:0] io_fetchAddr_prevBits;
+	wire newFetchInitiated = fetch_valid & ~ongoingFetch_valid;
 	always @(posedge clock or posedge reset)
 		if (reset) begin
 			pastBranchOrFlush <= 1'h0;
 			faulted <= 1'h0;
+			ongoingFetch_valid <= 1'h0;
+			ongoingFetch_bits <= 32'h00000000;
 			pc_valid <= 1'h0;
 			pc_bits <= 32'h00000000;
+			pcFetched <= 1'h0;
+			pendingJump <= 1'h0;
+			io_fetchAddr_prevPending <= 1'h0;
 		end
 		else begin
-			pastBranchOrFlush <= ongoingBranchOrFlush & blockNewFetch;
+			pastBranchOrFlush <= ongoingBranchOrFlush & ~newFetchInitiated;
 			faulted <= fetchFaultValid;
+			ongoingFetch_valid <= ~io_fetchAddr_ready & fetch_valid;
+			ongoingFetch_bits <= (io_fetchAddr_ready ? 32'h00000000 : fetch_bits);
 			pc_valid <= 1'h1;
 			if (pc_valid) begin
 				if (io_iflush_valid)
 					pc_bits <= io_iflush_bits;
 				else if (io_branch_valid)
 					pc_bits <= io_branch_bits;
-				else if (writeToBuffer)
-					pc_bits <= ((((predecode_firstJumpOH_enc[0] ? io_fetchData_bits_addr + {{12 {predecode_insts_shifted[31]}}, (predecode_insts_shifted[2] ? {predecode_insts_shifted[19:12], predecode_insts_shifted[20], predecode_insts_shifted[30:21]} : {{8 {predecode_insts_shifted[31]}}, predecode_insts_shifted[7], predecode_insts_shifted[30:25], predecode_insts_shifted[11:8]}), 1'h0} : 32'h00000000) | (predecode_firstJumpOH_enc[1] ? predecode_addrs_1 + {{12 {predecode_insts_shifted[63]}}, (predecode_insts_shifted[34] ? {predecode_insts_shifted[51:44], predecode_insts_shifted[52], predecode_insts_shifted[62:53]} : {{8 {predecode_insts_shifted[63]}}, predecode_insts_shifted[39], predecode_insts_shifted[62:57], predecode_insts_shifted[43:40]}), 1'h0} : 32'h00000000)) | (predecode_firstJumpOH_enc[2] ? predecode_addrs_2 + {{12 {predecode_insts_shifted[95]}}, (predecode_insts_shifted[66] ? {predecode_insts_shifted[83:76], predecode_insts_shifted[84], predecode_insts_shifted[94:85]} : {{8 {predecode_insts_shifted[95]}}, predecode_insts_shifted[71], predecode_insts_shifted[94:89], predecode_insts_shifted[75:72]}), 1'h0} : 32'h00000000)) | (predecode_firstJumpOH_enc[3] ? predecode_addrs_3 + {{12 {predecode_insts_shifted[127]}}, (predecode_insts_shifted[98] ? {predecode_insts_shifted[115:108], predecode_insts_shifted[116], predecode_insts_shifted[126:117]} : {{8 {predecode_insts_shifted[127]}}, predecode_insts_shifted[103], predecode_insts_shifted[126:121], predecode_insts_shifted[107:104]}), 1'h0} : 32'h00000000)) | (predecode_firstJumpOH_enc == 4'h0 ? {io_fetchData_bits_addr[31:4] + 28'h0000001, 4'h0} : 32'h00000000);
+				else if (newJump)
+					pc_bits <= predecode_nextPc;
+				else if (_pcNext_T_5)
+					pc_bits <= _pcNext_T_9;
 			end
 			else
-				pc_bits <= {io_csr_value_0[31:2], 2'h0};
+				pc_bits <= _pcNext_T_2;
+			pcFetched <= (pc_valid ? ~currentBranchOrFlush & ((~newJump & pcFetched) | ~blockNewFetch) : ~blockNewFetch);
+			pendingJump <= (pendingJump | newJump) & ~newFetchInitiated;
+			io_fetchAddr_prevPending <= fetch_valid & ~io_fetchAddr_ready;
 		end
+	always @(posedge clock) io_fetchAddr_prevBits <= fetch_bits;
 	assign io_fetchFault_valid = fetchFaultValid;
 	assign io_fetchFault_bits = io_fetchData_bits_addr;
-	assign io_fetchAddr_valid = ~blockNewFetch;
-	assign io_fetchAddr_bits = (blockNewFetch ? 32'h00000000 : pc_bits);
-	assign io_bufferRequest_nValid = nValid[2:0];
+	assign io_fetchData_ready = io_fetchData_ready_0;
+	assign io_fetchAddr_valid = fetch_valid;
+	assign io_fetchAddr_bits = fetch_bits;
+	assign io_flushTx = (ongoingBranchOrFlush | pendingJump) | newJump;
+	assign io_bufferRequest_nValid = (writeToBuffer ? predecode_result_y_1 : 3'h0);
 	assign io_bufferRequest_bits_0_addr = io_fetchData_bits_addr;
 	assign io_bufferRequest_bits_0_inst = predecode_insts_shifted[31:0];
 	assign io_bufferRequest_bits_0_brchFwd = predecode_jumped_0;
@@ -1215,11 +1733,940 @@ module FetchControl (
 	assign io_bufferRequest_bits_3_inst = predecode_insts_shifted[127:96];
 	assign io_bufferRequest_bits_3_brchFwd = predecode_jumped_3;
 endmodule
+module IndexAllocatorShifting (
+	clock,
+	reset,
+	io_alloc_ready,
+	io_alloc_valid,
+	io_alloc_bits,
+	io_free_valid,
+	io_free_bits
+);
+	input clock;
+	input reset;
+	input io_alloc_ready;
+	output wire io_alloc_valid;
+	output wire io_alloc_bits;
+	input io_free_valid;
+	input io_free_bits;
+	reg state_regs_0;
+	reg state_regs_1;
+	reg [1:0] state_nAvail;
+	reg state_isNonEmpty;
+	wire io_alloc_valid_0 = state_isNonEmpty | io_free_valid;
+	wire _state_T_16 = io_alloc_ready & io_alloc_valid_0;
+	wire _state_T_17 = ~state_nAvail[1] & io_free_valid;
+	wire _state_T_3 = _state_T_16 & ~_state_T_17;
+	wire _state_T_12 = ~_state_T_16 & _state_T_17;
+	wire _state_T_19 = (_state_T_16 & _state_T_17) & state_isNonEmpty;
+	wire _state_T_22 = state_nAvail[1] & io_free_valid;
+	wire _state_defaultSel_T_2 = ((_state_T_3 | _state_T_12) | _state_T_19) | _state_T_22;
+	wire _GEN = (_state_T_3 & state_isNonEmpty) & (state_nAvail != 2'h3);
+	wire _GEN_0 = _state_T_19 & ~state_nAvail[1];
+	wire _GEN_1 = _state_T_12 & ~state_nAvail[1];
+	always @(posedge clock or posedge reset)
+		if (reset) begin
+			state_regs_0 <= 1'h0;
+			state_regs_1 <= 1'h1;
+			state_nAvail <= 2'h2;
+			state_isNonEmpty <= 1'h1;
+		end
+		else begin
+			state_regs_0 <= (((_GEN & (state_nAvail[1] ? state_regs_1 : state_regs_0)) | (_GEN_1 & (state_nAvail[0] ? state_regs_0 : io_free_bits))) | (_GEN_0 & io_free_bits)) | (~_state_defaultSel_T_2 & state_regs_0);
+			state_regs_1 <= (((_GEN & state_regs_1) | (_GEN_1 & (state_nAvail[0] ? io_free_bits : state_regs_1))) | (_GEN_0 & state_regs_1)) | (~_state_defaultSel_T_2 & state_regs_1);
+			state_nAvail <= (((_GEN ? state_nAvail - 2'h1 : 2'h0) | (_GEN_1 ? state_nAvail + 2'h1 : 2'h0)) | (_GEN_0 ? state_nAvail : 2'h0)) | (_state_defaultSel_T_2 ? 2'h0 : state_nAvail);
+			state_isNonEmpty <= (((_GEN & state_nAvail[1]) | (_state_T_12 & ~state_nAvail[1])) | (_GEN_0 & state_isNonEmpty)) | (~_state_defaultSel_T_2 & state_isNonEmpty);
+		end
+	assign io_alloc_valid = io_alloc_valid_0;
+	assign io_alloc_bits = (state_isNonEmpty ? state_regs_0 : io_free_bits);
+endmodule
+module FetchReorderBuffer (
+	clock,
+	reset,
+	io_newTx_ready,
+	io_newTx_valid,
+	io_newTx_bits_txid,
+	io_newTx_bits_addr,
+	io_busResp_valid,
+	io_busResp_bits_txid,
+	io_busResp_bits_resp_data,
+	io_busResp_bits_resp_fault,
+	io_commit_ready,
+	io_commit_valid,
+	io_commit_bits_addr,
+	io_commit_bits_resp_data,
+	io_commit_bits_resp_fault,
+	io_freeTxid_valid,
+	io_freeTxid_bits,
+	io_flush
+);
+	input clock;
+	input reset;
+	output wire io_newTx_ready;
+	input io_newTx_valid;
+	input io_newTx_bits_txid;
+	input [31:0] io_newTx_bits_addr;
+	input io_busResp_valid;
+	input io_busResp_bits_txid;
+	input [127:0] io_busResp_bits_resp_data;
+	input io_busResp_bits_resp_fault;
+	input io_commit_ready;
+	output wire io_commit_valid;
+	output wire [31:0] io_commit_bits_addr;
+	output wire [127:0] io_commit_bits_resp_data;
+	output wire io_commit_bits_resp_fault;
+	output wire io_freeTxid_valid;
+	output wire io_freeTxid_bits;
+	input io_flush;
+	reg state_queue_0_txid;
+	reg [31:0] state_queue_0_addr;
+	reg state_queue_0_resp_valid;
+	reg [127:0] state_queue_0_resp_bits_data;
+	reg state_queue_0_resp_bits_fault;
+	reg state_queue_1_txid;
+	reg [31:0] state_queue_1_addr;
+	reg state_queue_1_resp_valid;
+	reg [127:0] state_queue_1_resp_bits_data;
+	reg state_queue_1_resp_bits_fault;
+	reg [1:0] state_nElem;
+	reg [1:0] state_nCancelled;
+	wire _founds_T_2 = state_queue_0_txid == io_busResp_bits_txid;
+	wire _founds_T_6 = state_queue_1_txid == io_busResp_bits_txid;
+	wire _s2Precondition_dontNeedTrim_T = state_nCancelled == 2'h0;
+	wire precondition_noOverflow = state_nElem != 2'h3;
+	wire precondition_nCancelledReasonable = state_nCancelled <= state_nElem;
+	wire _noDuplicateTxid_T_22 = state_queue_0_txid == state_queue_1_txid;
+	wire s1Precondition = (((precondition_noOverflow & precondition_nCancelledReasonable) & ~(((|state_nElem & state_nElem[1]) & _noDuplicateTxid_T_22) | ((state_nElem[1] & |state_nElem) & _noDuplicateTxid_T_22))) & (_s2Precondition_dontNeedTrim_T | state_queue_0_resp_valid)) & ~(io_busResp_valid & (((|state_nElem & state_queue_0_resp_valid) & _founds_T_2) | ((state_nElem[1] & state_queue_1_resp_valid) & _founds_T_6)));
+	wire founds_0 = |state_nElem & _founds_T_2;
+	wire founds_1 = state_nElem[1] & _founds_T_6;
+	wire [1:0] _duplicateTxid_T_1 = {1'h0, founds_0} + {1'h0, founds_1};
+	wire precondition = ((((precondition_noOverflow & precondition_nCancelledReasonable) & ~(((|state_nElem & state_nElem[1]) & _noDuplicateTxid_T_22) | ((state_nElem[1] & |state_nElem) & _noDuplicateTxid_T_22))) & (_s2Precondition_dontNeedTrim_T | state_queue_0_resp_valid)) & ~_duplicateTxid_T_1[1]) & ~((founds_0 & state_queue_0_resp_valid) | (founds_1 & state_queue_1_resp_valid));
+	wire respFound = precondition & (founds_0 | founds_1);
+	wire _GEN = respFound & founds_0;
+	wire s1Reject = io_busResp_valid & ~respFound;
+	wire _GEN_0 = ~io_busResp_valid | precondition;
+	wire s1State_queue_0_txid = (s1Precondition & _GEN_0) & state_queue_0_txid;
+	wire _GEN_1 = s1Precondition & _GEN_0;
+	wire s1State_queue_0_resp_valid = s1Precondition & (io_busResp_valid ? precondition & (_GEN | state_queue_0_resp_valid) : state_queue_0_resp_valid);
+	wire s2State_y_1_txid = (s1Precondition & _GEN_0) & state_queue_1_txid;
+	wire s2State_y_1_resp_valid = s1Precondition & (io_busResp_valid ? precondition & ((respFound & ~founds_0) | state_queue_1_resp_valid) : state_queue_1_resp_valid);
+	wire [1:0] s1State_nElem = (_GEN_1 ? state_nElem : 2'h0);
+	wire [1:0] s1State_nCancelled = (_GEN_1 ? state_nCancelled : 2'h0);
+	wire s2Valid = ((~s1Reject & |state_nElem) & _s2Precondition_dontNeedTrim_T) & state_queue_0_resp_valid;
+	wire s2Commit = io_commit_ready & s2Valid;
+	wire s2Precondition = (((precondition_noOverflow & precondition_nCancelledReasonable) & ~(((|state_nElem & state_nElem[1]) & _noDuplicateTxid_T_22) | ((state_nElem[1] & |state_nElem) & _noDuplicateTxid_T_22))) & (_s2Precondition_dontNeedTrim_T | state_queue_0_resp_valid)) & (~s2Commit | s2Valid);
+	wire s2State_precondition = ((((s1State_nElem != 2'h3) & (s1State_nCancelled <= s1State_nElem)) & ~(((|state_nElem & state_nElem[1]) & _noDuplicateTxid_T_22) | ((state_nElem[1] & |state_nElem) & _noDuplicateTxid_T_22))) & ((s1State_nCancelled == 2'h0) | s1State_queue_0_resp_valid)) & |s1State_nElem;
+	wire [1:0] _s2State_T_6_nElem = (s2State_precondition ? s1State_nElem - 2'h1 : 2'h0);
+	wire [1:0] _s2State_T_6_nCancelled = (s2State_precondition & |s1State_nCancelled ? s1State_nCancelled - 2'h1 : 2'h0);
+	wire _GEN_2 = ~s2Commit | s2State_precondition;
+	wire [1:0] _s2State_T_7_nElem = (s2Commit ? _s2State_T_6_nElem : s1State_nElem);
+	wire s2State_queue_0_txid = s2Precondition & (s2Commit ? s2State_precondition & (s1State_nElem[1] ? s2State_y_1_txid : s1State_queue_0_txid) : s1State_queue_0_txid);
+	wire s2State_queue_0_resp_valid = s2Precondition & (s2Commit ? s2State_precondition & (s1State_nElem[1] ? s2State_y_1_resp_valid : s1State_queue_0_resp_valid) : s1State_queue_0_resp_valid);
+	wire s2State_queue_1_txid = (s2Precondition & _GEN_2) & s2State_y_1_txid;
+	wire s2State_queue_1_resp_valid = (s2Precondition & _GEN_2) & s2State_y_1_resp_valid;
+	wire [1:0] s2State_nElem = (s2Precondition ? _s2State_T_7_nElem : 2'h0);
+	wire [1:0] s2State_nCancelled = (s2Precondition ? (s2Commit ? _s2State_T_6_nCancelled : s1State_nCancelled) : 2'h0);
+	wire _s3State_dontNeedTrim_T = s2State_nCancelled == 2'h0;
+	wire s3State_noOverflow = s2State_nElem != 2'h3;
+	wire s3State_nCancelledReasonable = s2State_nCancelled <= s2State_nElem;
+	wire s3Precondition = ((s3State_noOverflow & s3State_nCancelledReasonable) & ~(((|state_nElem & state_nElem[1]) & _noDuplicateTxid_T_22) | ((state_nElem[1] & |state_nElem) & _noDuplicateTxid_T_22))) & (_s3State_dontNeedTrim_T | s2State_queue_0_resp_valid);
+	wire _s3State_T_2 = ((s3State_noOverflow & s3State_nCancelledReasonable) & ~(((|state_nElem & state_nElem[1]) & _noDuplicateTxid_T_22) | ((state_nElem[1] & |state_nElem) & _noDuplicateTxid_T_22))) & (_s3State_dontNeedTrim_T | s2State_queue_0_resp_valid);
+	wire _s3State_T_3_queue_0_txid = _s3State_T_2 & s2State_queue_0_txid;
+	wire _GEN_3 = _s3State_T_2 & s2Precondition;
+	wire _s3State_T_3_queue_0_resp_valid = _s3State_T_2 & s2State_queue_0_resp_valid;
+	wire _s3State_T_3_queue_1_txid = _s3State_T_2 & s2State_queue_1_txid;
+	wire _s3State_T_3_queue_1_resp_valid = _s3State_T_2 & s2State_queue_1_resp_valid;
+	wire [1:0] _s3State_T_3_nElem = (_GEN_3 ? _s2State_T_7_nElem : 2'h0);
+	wire [1:0] _s3State_T_3_nCancelled = (_GEN_3 ? _s2State_T_7_nElem : 2'h0);
+	wire s3State_keepCancelled_0 = |_s3State_T_3_nCancelled & _s3State_T_3_queue_0_resp_valid;
+	wire [1:0] s3State_offset = (s3State_keepCancelled_0 | (_s3State_T_3_nCancelled[1] & _s3State_T_3_queue_1_resp_valid) ? {1'h0, ~s3State_keepCancelled_0} : _s3State_T_3_nCancelled);
+	wire _s3State_T_5 = ((_s3State_T_3_nElem != 2'h3) & (_s3State_T_3_nCancelled <= _s3State_T_3_nElem)) & ~(((|state_nElem & state_nElem[1]) & _noDuplicateTxid_T_22) | ((state_nElem[1] & |state_nElem) & _noDuplicateTxid_T_22));
+	wire [1:0] _s3State_T_20 = _s3State_T_3_nElem - s3State_offset;
+	wire _GEN_4 = |_s3State_T_20 & s3State_offset[0];
+	wire _GEN_5 = ~_s3State_T_20[1] | (s3State_offset[0] - 1'h1);
+	wire [1:0] _s3State_T_22_nElem = (_s3State_T_5 ? _s3State_T_20 : 2'h0);
+	wire [1:0] _s3State_T_22_nCancelled = (_s3State_T_5 ? _s3State_T_3_nCancelled - s3State_offset : 2'h0);
+	wire s3State_queue_0_txid = s3Precondition & (io_flush ? _s3State_T_5 & (_GEN_4 ? _s3State_T_3_queue_1_txid : _s3State_T_3_queue_0_txid) : s2State_queue_0_txid);
+	wire s3State_queue_0_resp_valid = s3Precondition & (io_flush ? _s3State_T_5 & (_GEN_4 ? _s3State_T_3_queue_1_resp_valid : _s3State_T_3_queue_0_resp_valid) : s2State_queue_0_resp_valid);
+	wire s4State_y_1_resp_valid = s3Precondition & (io_flush ? _s3State_T_5 & (_GEN_5 ? _s3State_T_3_queue_1_resp_valid : _s3State_T_3_queue_0_resp_valid) : s2State_queue_1_resp_valid);
+	wire [1:0] s3State_nElem = (s3Precondition ? (io_flush ? _s3State_T_22_nElem : s2State_nElem) : 2'h0);
+	wire [1:0] s3State_nCancelled = (s3Precondition ? (io_flush ? _s3State_T_22_nCancelled : s2State_nCancelled) : 2'h0);
+	wire s4Discard = ((~s1Reject & ~s2Commit) & |s3State_nElem) & |s3State_nCancelled;
+	wire _s4State_precondition_dontNeedTrim_T = s3State_nCancelled == 2'h0;
+	wire s4Precondition_noOverflow = s3State_nElem != 2'h3;
+	wire s4Precondition_nCancelledReasonable = s3State_nCancelled <= s3State_nElem;
+	wire s4Precondition = (((s4Precondition_noOverflow & s4Precondition_nCancelledReasonable) & ~(((|state_nElem & state_nElem[1]) & _noDuplicateTxid_T_22) | ((state_nElem[1] & |state_nElem) & _noDuplicateTxid_T_22))) & (_s4State_precondition_dontNeedTrim_T | s3State_queue_0_resp_valid)) & (~s4Discard | s3State_queue_0_resp_valid);
+	wire s4State_precondition = (((s4Precondition_noOverflow & s4Precondition_nCancelledReasonable) & ~(((|state_nElem & state_nElem[1]) & _noDuplicateTxid_T_22) | ((state_nElem[1] & |state_nElem) & _noDuplicateTxid_T_22))) & (_s4State_precondition_dontNeedTrim_T | s3State_queue_0_resp_valid)) & |s3State_nElem;
+	wire _s4State_T_6_queue_0_resp_valid = s4State_precondition & (s3State_nElem[1] ? s4State_y_1_resp_valid : s3State_queue_0_resp_valid);
+	wire _s4State_T_6_queue_1_resp_valid = s4State_precondition & s4State_y_1_resp_valid;
+	wire [1:0] _s4State_T_6_nElem = (s4State_precondition ? s3State_nElem - 2'h1 : 2'h0);
+	wire [1:0] _s4State_T_6_nCancelled = (s4State_precondition & |s3State_nCancelled ? s3State_nCancelled - 2'h1 : 2'h0);
+	wire s4State_keepCancelled_0 = |_s4State_T_6_nCancelled & _s4State_T_6_queue_0_resp_valid;
+	wire [1:0] s4State_offset = (s4State_keepCancelled_0 | (_s4State_T_6_nCancelled[1] & _s4State_T_6_queue_1_resp_valid) ? {1'h0, ~s4State_keepCancelled_0} : _s4State_T_6_nCancelled);
+	wire _s4State_T_8 = ((_s4State_T_6_nElem != 2'h3) & (_s4State_T_6_nCancelled <= _s4State_T_6_nElem)) & ~(((|state_nElem & state_nElem[1]) & _noDuplicateTxid_T_22) | ((state_nElem[1] & |state_nElem) & _noDuplicateTxid_T_22));
+	wire [1:0] _s4State_T_23 = _s4State_T_6_nElem - s4State_offset;
+	wire _GEN_6 = |_s4State_T_23 & s4State_offset[0];
+	wire [1:0] _s4State_T_25_nElem = (_s4State_T_8 ? _s4State_T_23 : 2'h0);
+	wire [1:0] _s4State_T_25_nCancelled = (_s4State_T_8 ? _s4State_T_6_nCancelled - s4State_offset : 2'h0);
+	wire [1:0] _s4State_T_26_nCancelled = (s4Discard ? _s4State_T_25_nCancelled : s3State_nCancelled);
+	wire s4State_queue_0_resp_valid = s4Precondition & (s4Discard ? _s4State_T_8 & (_GEN_6 ? _s4State_T_6_queue_1_resp_valid : _s4State_T_6_queue_0_resp_valid) : s3State_queue_0_resp_valid);
+	wire [1:0] s4State_nElem = (s4Precondition ? (s4Discard ? _s4State_T_25_nElem : s3State_nElem) : 2'h0);
+	wire [1:0] s4State_nCancelled = (s4Precondition ? _s4State_T_26_nCancelled : 2'h0);
+	wire s5Fire = ~s4State_nElem[1] & io_newTx_valid;
+	wire _s5State_precondition_dontNeedTrim_T = s4State_nCancelled == 2'h0;
+	wire s5Precondition_noOverflow = s4State_nElem != 2'h3;
+	wire s5Precondition_nCancelledReasonable = s4State_nCancelled <= s4State_nElem;
+	wire s5Precondition = (((s5Precondition_noOverflow & s5Precondition_nCancelledReasonable) & ~(((|state_nElem & state_nElem[1]) & _noDuplicateTxid_T_22) | ((state_nElem[1] & |state_nElem) & _noDuplicateTxid_T_22))) & (_s5State_precondition_dontNeedTrim_T | s4State_queue_0_resp_valid)) & (~s5Fire | ~s4State_nElem[1]);
+	wire s5State_precondition = (((s5Precondition_noOverflow & s5Precondition_nCancelledReasonable) & ~(((|state_nElem & state_nElem[1]) & _noDuplicateTxid_T_22) | ((state_nElem[1] & |state_nElem) & _noDuplicateTxid_T_22))) & (_s5State_precondition_dontNeedTrim_T | s4State_queue_0_resp_valid)) & ~s4State_nElem[1];
+	wire [1:0] _s5State_T_1_nElem = (s5State_precondition ? s4State_nElem + 2'h1 : 2'h0);
+	wire _GEN_7 = ~s5Fire | s5State_precondition;
+	wire s5State_queue_0_resp_valid = (s5Precondition & (~s5Fire | (s5State_precondition & s4State_nElem[0]))) & s4State_queue_0_resp_valid;
+	wire _GEN_8 = (s5Precondition & _GEN_7) & s4Precondition;
+	wire [31:0] s1State_queue_0_addr = (_GEN_1 ? state_queue_0_addr : 32'h00000000);
+	wire [31:0] s2State_y_1_addr = (_GEN_1 ? state_queue_1_addr : 32'h00000000);
+	wire [31:0] _s2State_T_7_queue_0_addr = (s2Commit ? (s2State_precondition & _GEN_1 ? (s1State_nElem[1] ? state_queue_1_addr : state_queue_0_addr) : 32'h00000000) : s1State_queue_0_addr);
+	wire _GEN_9 = (s2Precondition & _GEN_2) & _GEN_1;
+	wire [31:0] s2State_queue_1_addr = (_GEN_9 ? state_queue_1_addr : 32'h00000000);
+	wire [31:0] _s3State_T_3_queue_0_addr = (_GEN_3 ? _s2State_T_7_queue_0_addr : 32'h00000000);
+	wire _GEN_10 = _s3State_T_2 & _GEN_9;
+	wire [31:0] _s3State_T_3_queue_1_addr = (_GEN_10 ? state_queue_1_addr : 32'h00000000);
+	wire [31:0] _GEN_11 = (s3State_nElem[1] ? (io_flush ? (_s3State_T_5 ? (_GEN_5 ? _s3State_T_3_queue_1_addr : _s3State_T_3_queue_0_addr) : 32'h00000000) : s2State_queue_1_addr) : (io_flush ? (_s3State_T_5 ? (_GEN_4 ? _s3State_T_3_queue_1_addr : _s3State_T_3_queue_0_addr) : 32'h00000000) : (s2Precondition ? _s2State_T_7_queue_0_addr : 32'h00000000)));
+	wire _GEN_12 = ~respFound | founds_0;
+	wire [127:0] _s1State_T_queue_0_resp_bits_data = (io_busResp_valid ? (precondition ? (_GEN ? io_busResp_bits_resp_data : state_queue_0_resp_bits_data) : 128'h00000000000000000000000000000000) : state_queue_0_resp_bits_data);
+	wire [127:0] _s1State_T_queue_1_resp_bits_data = (io_busResp_valid ? (precondition ? (_GEN_12 ? state_queue_1_resp_bits_data : io_busResp_bits_resp_data) : 128'h00000000000000000000000000000000) : state_queue_1_resp_bits_data);
+	wire [127:0] s1State_queue_0_resp_bits_data = (s1Precondition ? _s1State_T_queue_0_resp_bits_data : 128'h00000000000000000000000000000000);
+	wire s1State_queue_0_resp_bits_fault = s1Precondition & (io_busResp_valid ? precondition & (_GEN ? io_busResp_bits_resp_fault : state_queue_0_resp_bits_fault) : state_queue_0_resp_bits_fault);
+	wire s2State_y_1_resp_bits_fault = s1Precondition & (io_busResp_valid ? precondition & (_GEN_12 ? state_queue_1_resp_bits_fault : io_busResp_bits_resp_fault) : state_queue_1_resp_bits_fault);
+	wire [127:0] _GEN_13 = (s1State_nElem[1] ? _s1State_T_queue_1_resp_bits_data : _s1State_T_queue_0_resp_bits_data);
+	wire _GEN_14 = s2State_precondition & s1Precondition;
+	wire [127:0] _s2State_T_7_queue_0_resp_bits_data = (s2Commit ? (_GEN_14 ? _GEN_13 : 128'h00000000000000000000000000000000) : s1State_queue_0_resp_bits_data);
+	wire s2State_queue_0_resp_bits_fault = s2Precondition & (s2Commit ? s2State_precondition & (s1State_nElem[1] ? s2State_y_1_resp_bits_fault : s1State_queue_0_resp_bits_fault) : s1State_queue_0_resp_bits_fault);
+	wire _GEN_15 = (s2Precondition & _GEN_2) & s1Precondition;
+	wire [127:0] s2State_queue_1_resp_bits_data = (_GEN_15 ? _s1State_T_queue_1_resp_bits_data : 128'h00000000000000000000000000000000);
+	wire s2State_queue_1_resp_bits_fault = (s2Precondition & _GEN_2) & s2State_y_1_resp_bits_fault;
+	wire [127:0] _s3State_T_3_queue_0_resp_bits_data = (_GEN_3 ? _s2State_T_7_queue_0_resp_bits_data : 128'h00000000000000000000000000000000);
+	wire _s3State_T_3_queue_0_resp_bits_fault = _s3State_T_2 & s2State_queue_0_resp_bits_fault;
+	wire _GEN_16 = _s3State_T_2 & _GEN_15;
+	wire [127:0] _s3State_T_3_queue_1_resp_bits_data = (_GEN_16 ? _s1State_T_queue_1_resp_bits_data : 128'h00000000000000000000000000000000);
+	wire _s3State_T_3_queue_1_resp_bits_fault = _s3State_T_2 & s2State_queue_1_resp_bits_fault;
+	wire s3State_queue_0_resp_bits_fault = s3Precondition & (io_flush ? _s3State_T_5 & (_GEN_4 ? _s3State_T_3_queue_1_resp_bits_fault : _s3State_T_3_queue_0_resp_bits_fault) : s2State_queue_0_resp_bits_fault);
+	wire s4State_y_1_txid = s3Precondition & (io_flush ? _s3State_T_5 & (_GEN_5 ? _s3State_T_3_queue_1_txid : _s3State_T_3_queue_0_txid) : s2State_queue_1_txid);
+	wire s4State_y_1_resp_bits_fault = s3Precondition & (io_flush ? _s3State_T_5 & (_GEN_5 ? _s3State_T_3_queue_1_resp_bits_fault : _s3State_T_3_queue_0_resp_bits_fault) : s2State_queue_1_resp_bits_fault);
+	wire [127:0] _GEN_17 = (s3State_nElem[1] ? (io_flush ? (_s3State_T_5 ? (_GEN_5 ? _s3State_T_3_queue_1_resp_bits_data : _s3State_T_3_queue_0_resp_bits_data) : 128'h00000000000000000000000000000000) : s2State_queue_1_resp_bits_data) : (io_flush ? (_s3State_T_5 ? (_GEN_4 ? _s3State_T_3_queue_1_resp_bits_data : _s3State_T_3_queue_0_resp_bits_data) : 128'h00000000000000000000000000000000) : (s2Precondition ? _s2State_T_7_queue_0_resp_bits_data : 128'h00000000000000000000000000000000)));
+	wire _s4State_T_6_queue_0_txid = s4State_precondition & (s3State_nElem[1] ? s4State_y_1_txid : s3State_queue_0_txid);
+	wire _GEN_18 = s4State_precondition & s3Precondition;
+	wire _s4State_T_6_queue_0_resp_bits_fault = s4State_precondition & (s3State_nElem[1] ? s4State_y_1_resp_bits_fault : s3State_queue_0_resp_bits_fault);
+	wire _s4State_T_6_queue_1_txid = s4State_precondition & s4State_y_1_txid;
+	wire _s4State_T_6_queue_1_resp_bits_fault = s4State_precondition & s4State_y_1_resp_bits_fault;
+	wire _GEN_19 = ~_s4State_T_23[1] | (s4State_offset[0] - 1'h1);
+	wire s4State_queue_0_txid = s4Precondition & (s4Discard ? _s4State_T_8 & (_GEN_6 ? _s4State_T_6_queue_1_txid : _s4State_T_6_queue_0_txid) : s3State_queue_0_txid);
+	wire s4State_queue_1_txid = s4Precondition & (s4Discard ? _s4State_T_8 & (_GEN_19 ? _s4State_T_6_queue_1_txid : _s4State_T_6_queue_0_txid) : s4State_y_1_txid);
+	always @(posedge clock or posedge reset)
+		if (reset) begin
+			state_queue_0_txid <= 1'h0;
+			state_queue_0_addr <= 32'h00000000;
+			state_queue_0_resp_valid <= 1'h0;
+			state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+			state_queue_0_resp_bits_fault <= 1'h0;
+			state_queue_1_txid <= 1'h0;
+			state_queue_1_addr <= 32'h00000000;
+			state_queue_1_resp_valid <= 1'h0;
+			state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+			state_queue_1_resp_bits_fault <= 1'h0;
+			state_nElem <= 2'h0;
+			state_nCancelled <= 2'h0;
+		end
+		else begin
+			state_queue_0_txid <= s5Precondition & (s5Fire ? s5State_precondition & (s4State_nElem[0] ? s4State_queue_0_txid : io_newTx_bits_txid) : s4State_queue_0_txid);
+			if (s5Precondition) begin
+				if (s5Fire) begin
+					if (s5State_precondition) begin
+						if (s4State_nElem[0]) begin
+							if (s4Precondition) begin
+								if (s4Discard) begin
+									if (_s4State_T_8) begin
+										if (_GEN_6) begin
+											if (_GEN_18) begin
+												if (io_flush) begin
+													if (_s3State_T_5) begin
+														if (_GEN_5)
+															state_queue_0_addr <= _s3State_T_3_queue_1_addr;
+														else if (_GEN_3) begin
+															if (s2Commit) begin
+																if (s2State_precondition) begin
+																	if (s1State_nElem[1])
+																		state_queue_0_addr <= s2State_y_1_addr;
+																	else if (_GEN_1)
+																		;
+																	else
+																		state_queue_0_addr <= 32'h00000000;
+																end
+																else
+																	state_queue_0_addr <= 32'h00000000;
+															end
+															else if (_GEN_1)
+																;
+															else
+																state_queue_0_addr <= 32'h00000000;
+														end
+														else
+															state_queue_0_addr <= 32'h00000000;
+													end
+													else
+														state_queue_0_addr <= 32'h00000000;
+												end
+												else
+													state_queue_0_addr <= s2State_queue_1_addr;
+											end
+											else
+												state_queue_0_addr <= 32'h00000000;
+										end
+										else if (_GEN_18)
+											state_queue_0_addr <= _GEN_11;
+										else
+											state_queue_0_addr <= 32'h00000000;
+									end
+									else
+										state_queue_0_addr <= 32'h00000000;
+								end
+								else if (s3Precondition) begin
+									if (io_flush) begin
+										if (_s3State_T_5) begin
+											if (_GEN_4)
+												state_queue_0_addr <= _s3State_T_3_queue_1_addr;
+											else if (_GEN_3) begin
+												if (s2Commit) begin
+													if (s2State_precondition) begin
+														if (s1State_nElem[1])
+															state_queue_0_addr <= s2State_y_1_addr;
+														else if (_GEN_1)
+															;
+														else
+															state_queue_0_addr <= 32'h00000000;
+													end
+													else
+														state_queue_0_addr <= 32'h00000000;
+												end
+												else if (_GEN_1)
+													;
+												else
+													state_queue_0_addr <= 32'h00000000;
+											end
+											else
+												state_queue_0_addr <= 32'h00000000;
+										end
+										else
+											state_queue_0_addr <= 32'h00000000;
+									end
+									else if (s2Precondition) begin
+										if (s2Commit) begin
+											if (s2State_precondition) begin
+												if (s1State_nElem[1])
+													state_queue_0_addr <= s2State_y_1_addr;
+												else if (_GEN_1)
+													;
+												else
+													state_queue_0_addr <= 32'h00000000;
+											end
+											else
+												state_queue_0_addr <= 32'h00000000;
+										end
+										else if (_GEN_1)
+											;
+										else
+											state_queue_0_addr <= 32'h00000000;
+									end
+									else
+										state_queue_0_addr <= 32'h00000000;
+								end
+								else
+									state_queue_0_addr <= 32'h00000000;
+							end
+							else
+								state_queue_0_addr <= 32'h00000000;
+							state_queue_1_addr <= io_newTx_bits_addr;
+						end
+						else begin
+							state_queue_0_addr <= io_newTx_bits_addr;
+							if (s4Precondition) begin
+								if (s4Discard) begin
+									if (_s4State_T_8) begin
+										if (_GEN_19) begin
+											if (_GEN_18) begin
+												if (io_flush) begin
+													if (_s3State_T_5) begin
+														if (_GEN_5) begin
+															if (_GEN_10)
+																;
+															else
+																state_queue_1_addr <= 32'h00000000;
+														end
+														else if (_GEN_3) begin
+															if (s2Commit) begin
+																if (s2State_precondition) begin
+																	if (s1State_nElem[1]) begin
+																		if (_GEN_1)
+																			;
+																		else
+																			state_queue_1_addr <= 32'h00000000;
+																	end
+																	else
+																		state_queue_1_addr <= s1State_queue_0_addr;
+																end
+																else
+																	state_queue_1_addr <= 32'h00000000;
+															end
+															else
+																state_queue_1_addr <= s1State_queue_0_addr;
+														end
+														else
+															state_queue_1_addr <= 32'h00000000;
+													end
+													else
+														state_queue_1_addr <= 32'h00000000;
+												end
+												else if (_GEN_9)
+													;
+												else
+													state_queue_1_addr <= 32'h00000000;
+											end
+											else
+												state_queue_1_addr <= 32'h00000000;
+										end
+										else if (_GEN_18)
+											state_queue_1_addr <= _GEN_11;
+										else
+											state_queue_1_addr <= 32'h00000000;
+									end
+									else
+										state_queue_1_addr <= 32'h00000000;
+								end
+								else if (s3Precondition) begin
+									if (io_flush) begin
+										if (_s3State_T_5) begin
+											if (_GEN_5) begin
+												if (_GEN_10)
+													;
+												else
+													state_queue_1_addr <= 32'h00000000;
+											end
+											else if (_GEN_3) begin
+												if (s2Commit) begin
+													if (s2State_precondition) begin
+														if (s1State_nElem[1]) begin
+															if (_GEN_1)
+																;
+															else
+																state_queue_1_addr <= 32'h00000000;
+														end
+														else
+															state_queue_1_addr <= s1State_queue_0_addr;
+													end
+													else
+														state_queue_1_addr <= 32'h00000000;
+												end
+												else
+													state_queue_1_addr <= s1State_queue_0_addr;
+											end
+											else
+												state_queue_1_addr <= 32'h00000000;
+										end
+										else
+											state_queue_1_addr <= 32'h00000000;
+									end
+									else if (_GEN_9)
+										;
+									else
+										state_queue_1_addr <= 32'h00000000;
+								end
+								else
+									state_queue_1_addr <= 32'h00000000;
+							end
+							else
+								state_queue_1_addr <= 32'h00000000;
+						end
+					end
+					else begin
+						state_queue_0_addr <= 32'h00000000;
+						state_queue_1_addr <= 32'h00000000;
+					end
+					state_nElem <= _s5State_T_1_nElem;
+				end
+				else if (s4Precondition) begin
+					if (s4Discard) begin
+						if (_s4State_T_8) begin
+							if (_GEN_6) begin
+								if (_GEN_18) begin
+									if (io_flush) begin
+										if (_s3State_T_5) begin
+											if (_GEN_5)
+												state_queue_0_addr <= _s3State_T_3_queue_1_addr;
+											else if (_GEN_3) begin
+												if (s2Commit) begin
+													if (s2State_precondition) begin
+														if (s1State_nElem[1])
+															state_queue_0_addr <= s2State_y_1_addr;
+														else if (_GEN_1)
+															;
+														else
+															state_queue_0_addr <= 32'h00000000;
+													end
+													else
+														state_queue_0_addr <= 32'h00000000;
+												end
+												else if (_GEN_1)
+													;
+												else
+													state_queue_0_addr <= 32'h00000000;
+											end
+											else
+												state_queue_0_addr <= 32'h00000000;
+										end
+										else
+											state_queue_0_addr <= 32'h00000000;
+									end
+									else
+										state_queue_0_addr <= s2State_queue_1_addr;
+								end
+								else
+									state_queue_0_addr <= 32'h00000000;
+							end
+							else if (_GEN_18)
+								state_queue_0_addr <= _GEN_11;
+							else
+								state_queue_0_addr <= 32'h00000000;
+							if (_GEN_19) begin
+								if (_GEN_18) begin
+									if (io_flush) begin
+										if (_s3State_T_5) begin
+											if (_GEN_5) begin
+												if (_GEN_10)
+													;
+												else
+													state_queue_1_addr <= 32'h00000000;
+											end
+											else if (_GEN_3) begin
+												if (s2Commit) begin
+													if (s2State_precondition) begin
+														if (s1State_nElem[1]) begin
+															if (_GEN_1)
+																;
+															else
+																state_queue_1_addr <= 32'h00000000;
+														end
+														else
+															state_queue_1_addr <= s1State_queue_0_addr;
+													end
+													else
+														state_queue_1_addr <= 32'h00000000;
+												end
+												else
+													state_queue_1_addr <= s1State_queue_0_addr;
+											end
+											else
+												state_queue_1_addr <= 32'h00000000;
+										end
+										else
+											state_queue_1_addr <= 32'h00000000;
+									end
+									else if (_GEN_9)
+										;
+									else
+										state_queue_1_addr <= 32'h00000000;
+								end
+								else
+									state_queue_1_addr <= 32'h00000000;
+							end
+							else if (_GEN_18)
+								state_queue_1_addr <= _GEN_11;
+							else
+								state_queue_1_addr <= 32'h00000000;
+						end
+						else begin
+							state_queue_0_addr <= 32'h00000000;
+							state_queue_1_addr <= 32'h00000000;
+						end
+						state_nElem <= _s4State_T_25_nElem;
+					end
+					else if (s3Precondition) begin
+						if (io_flush) begin
+							if (_s3State_T_5) begin
+								if (_GEN_4)
+									state_queue_0_addr <= _s3State_T_3_queue_1_addr;
+								else if (_GEN_3) begin
+									if (s2Commit) begin
+										if (s2State_precondition) begin
+											if (s1State_nElem[1])
+												state_queue_0_addr <= s2State_y_1_addr;
+											else if (_GEN_1)
+												;
+											else
+												state_queue_0_addr <= 32'h00000000;
+										end
+										else
+											state_queue_0_addr <= 32'h00000000;
+									end
+									else if (_GEN_1)
+										;
+									else
+										state_queue_0_addr <= 32'h00000000;
+								end
+								else
+									state_queue_0_addr <= 32'h00000000;
+								if (_GEN_5) begin
+									if (_GEN_10)
+										;
+									else
+										state_queue_1_addr <= 32'h00000000;
+								end
+								else if (_GEN_3) begin
+									if (s2Commit) begin
+										if (s2State_precondition) begin
+											if (s1State_nElem[1]) begin
+												if (_GEN_1)
+													;
+												else
+													state_queue_1_addr <= 32'h00000000;
+											end
+											else
+												state_queue_1_addr <= s1State_queue_0_addr;
+										end
+										else
+											state_queue_1_addr <= 32'h00000000;
+									end
+									else
+										state_queue_1_addr <= s1State_queue_0_addr;
+								end
+								else
+									state_queue_1_addr <= 32'h00000000;
+							end
+							else begin
+								state_queue_0_addr <= 32'h00000000;
+								state_queue_1_addr <= 32'h00000000;
+							end
+							state_nElem <= _s3State_T_22_nElem;
+						end
+						else begin
+							if (s2Precondition) begin
+								if (s2Commit) begin
+									if (s2State_precondition) begin
+										if (s1State_nElem[1])
+											state_queue_0_addr <= s2State_y_1_addr;
+										else if (_GEN_1)
+											;
+										else
+											state_queue_0_addr <= 32'h00000000;
+									end
+									else
+										state_queue_0_addr <= 32'h00000000;
+									state_nElem <= _s2State_T_6_nElem;
+								end
+								else if (_GEN_1)
+									;
+								else begin
+									state_queue_0_addr <= 32'h00000000;
+									state_nElem <= 2'h0;
+								end
+							end
+							else begin
+								state_queue_0_addr <= 32'h00000000;
+								state_nElem <= 2'h0;
+							end
+							if (_GEN_9)
+								;
+							else
+								state_queue_1_addr <= 32'h00000000;
+						end
+					end
+					else begin
+						state_queue_0_addr <= 32'h00000000;
+						state_queue_1_addr <= 32'h00000000;
+						state_nElem <= 2'h0;
+					end
+				end
+				else begin
+					state_queue_0_addr <= 32'h00000000;
+					state_queue_1_addr <= 32'h00000000;
+					state_nElem <= 2'h0;
+				end
+			end
+			else begin
+				state_queue_0_addr <= 32'h00000000;
+				state_queue_1_addr <= 32'h00000000;
+				state_nElem <= 2'h0;
+			end
+			state_queue_0_resp_valid <= s5State_queue_0_resp_valid;
+			if (_GEN_8) begin
+				if (s4Discard) begin
+					if (_s4State_T_8) begin
+						if (_GEN_6) begin
+							if (_GEN_18) begin
+								if (io_flush) begin
+									if (_s3State_T_5) begin
+										if (_GEN_5)
+											state_queue_0_resp_bits_data <= _s3State_T_3_queue_1_resp_bits_data;
+										else if (_GEN_3) begin
+											if (s2Commit) begin
+												if (_GEN_14)
+													state_queue_0_resp_bits_data <= _GEN_13;
+												else
+													state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+											end
+											else if (s1Precondition) begin
+												if (io_busResp_valid) begin
+													if (precondition) begin
+														if (_GEN)
+															state_queue_0_resp_bits_data <= io_busResp_bits_resp_data;
+													end
+													else
+														state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+												end
+											end
+											else
+												state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+										end
+										else
+											state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+									end
+									else
+										state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+								end
+								else
+									state_queue_0_resp_bits_data <= s2State_queue_1_resp_bits_data;
+							end
+							else
+								state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+						end
+						else if (_GEN_18)
+							state_queue_0_resp_bits_data <= _GEN_17;
+						else
+							state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+					end
+					else
+						state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+				end
+				else if (s3Precondition) begin
+					if (io_flush) begin
+						if (_s3State_T_5) begin
+							if (_GEN_4)
+								state_queue_0_resp_bits_data <= _s3State_T_3_queue_1_resp_bits_data;
+							else if (_GEN_3) begin
+								if (s2Commit) begin
+									if (_GEN_14)
+										state_queue_0_resp_bits_data <= _GEN_13;
+									else
+										state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+								end
+								else if (s1Precondition) begin
+									if (io_busResp_valid) begin
+										if (precondition) begin
+											if (_GEN)
+												state_queue_0_resp_bits_data <= io_busResp_bits_resp_data;
+										end
+										else
+											state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+									end
+								end
+								else
+									state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+							end
+							else
+								state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+						end
+						else
+							state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+					end
+					else if (s2Precondition) begin
+						if (s2Commit) begin
+							if (_GEN_14)
+								state_queue_0_resp_bits_data <= _GEN_13;
+							else
+								state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+						end
+						else if (s1Precondition) begin
+							if (io_busResp_valid) begin
+								if (precondition) begin
+									if (_GEN)
+										state_queue_0_resp_bits_data <= io_busResp_bits_resp_data;
+								end
+								else
+									state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+							end
+						end
+						else
+							state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+					end
+					else
+						state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+				end
+				else
+					state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+			end
+			else
+				state_queue_0_resp_bits_data <= 128'h00000000000000000000000000000000;
+			state_queue_0_resp_bits_fault <= ((s5Precondition & _GEN_7) & s4Precondition) & (s4Discard ? _s4State_T_8 & (_GEN_6 ? _s4State_T_6_queue_1_resp_bits_fault : _s4State_T_6_queue_0_resp_bits_fault) : s3State_queue_0_resp_bits_fault);
+			state_queue_1_txid <= s5Precondition & (s5Fire ? s5State_precondition & (s4State_nElem[0] ? io_newTx_bits_txid : s4State_queue_1_txid) : s4State_queue_1_txid);
+			state_queue_1_resp_valid <= ((s5Precondition & (~s5Fire | (s5State_precondition & ~s4State_nElem[0]))) & s4Precondition) & (s4Discard ? _s4State_T_8 & (_GEN_19 ? _s4State_T_6_queue_1_resp_valid : _s4State_T_6_queue_0_resp_valid) : s4State_y_1_resp_valid);
+			if (_GEN_8) begin
+				if (s4Discard) begin
+					if (_s4State_T_8) begin
+						if (_GEN_19) begin
+							if (_GEN_18) begin
+								if (io_flush) begin
+									if (_s3State_T_5) begin
+										if (_GEN_5) begin
+											if (_GEN_16) begin
+												if (io_busResp_valid) begin
+													if (precondition) begin
+														if (_GEN_12)
+															;
+														else
+															state_queue_1_resp_bits_data <= io_busResp_bits_resp_data;
+													end
+													else
+														state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+												end
+											end
+											else
+												state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+										end
+										else if (_GEN_3) begin
+											if (s2Commit) begin
+												if (_GEN_14)
+													state_queue_1_resp_bits_data <= _GEN_13;
+												else
+													state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+											end
+											else
+												state_queue_1_resp_bits_data <= s1State_queue_0_resp_bits_data;
+										end
+										else
+											state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+									end
+									else
+										state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+								end
+								else if (_GEN_15) begin
+									if (io_busResp_valid) begin
+										if (precondition) begin
+											if (_GEN_12)
+												;
+											else
+												state_queue_1_resp_bits_data <= io_busResp_bits_resp_data;
+										end
+										else
+											state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+									end
+								end
+								else
+									state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+							end
+							else
+								state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+						end
+						else if (_GEN_18)
+							state_queue_1_resp_bits_data <= _GEN_17;
+						else
+							state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+					end
+					else
+						state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+				end
+				else if (s3Precondition) begin
+					if (io_flush) begin
+						if (_s3State_T_5) begin
+							if (_GEN_5) begin
+								if (_GEN_16) begin
+									if (io_busResp_valid) begin
+										if (precondition) begin
+											if (_GEN_12)
+												;
+											else
+												state_queue_1_resp_bits_data <= io_busResp_bits_resp_data;
+										end
+										else
+											state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+									end
+								end
+								else
+									state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+							end
+							else if (_GEN_3) begin
+								if (s2Commit) begin
+									if (_GEN_14)
+										state_queue_1_resp_bits_data <= _GEN_13;
+									else
+										state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+								end
+								else
+									state_queue_1_resp_bits_data <= s1State_queue_0_resp_bits_data;
+							end
+							else
+								state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+						end
+						else
+							state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+					end
+					else if (_GEN_15) begin
+						if (io_busResp_valid) begin
+							if (precondition) begin
+								if (_GEN_12)
+									;
+								else
+									state_queue_1_resp_bits_data <= io_busResp_bits_resp_data;
+							end
+							else
+								state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+						end
+					end
+					else
+						state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+				end
+				else
+					state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+			end
+			else
+				state_queue_1_resp_bits_data <= 128'h00000000000000000000000000000000;
+			state_queue_1_resp_bits_fault <= ((s5Precondition & _GEN_7) & s4Precondition) & (s4Discard ? _s4State_T_8 & (_GEN_19 ? _s4State_T_6_queue_1_resp_bits_fault : _s4State_T_6_queue_0_resp_bits_fault) : s4State_y_1_resp_bits_fault);
+			if (_GEN_8) begin
+				if (s4Discard)
+					state_nCancelled <= _s4State_T_25_nCancelled;
+				else if (s3Precondition) begin
+					if (io_flush)
+						state_nCancelled <= _s3State_T_22_nCancelled;
+					else if (s2Precondition) begin
+						if (s2Commit)
+							state_nCancelled <= _s2State_T_6_nCancelled;
+						else if (_GEN_1)
+							;
+						else
+							state_nCancelled <= 2'h0;
+					end
+					else
+						state_nCancelled <= 2'h0;
+				end
+				else
+					state_nCancelled <= 2'h0;
+			end
+			else
+				state_nCancelled <= 2'h0;
+		end
+	assign io_newTx_ready = ~s4State_nElem[1];
+	assign io_commit_valid = s2Valid;
+	assign io_commit_bits_addr = state_queue_0_addr;
+	assign io_commit_bits_resp_data = state_queue_0_resp_bits_data;
+	assign io_commit_bits_resp_fault = state_queue_0_resp_bits_fault;
+	assign io_freeTxid_valid = (s1Reject | s2Commit) | s4Discard;
+	assign io_freeTxid_bits = ((s1Reject & io_busResp_bits_txid) | (s2Commit & state_queue_0_txid)) | (s4Discard & s3State_queue_0_txid);
+endmodule
 module Fetcher (
 	clock,
 	reset,
+	io_ctrl_ready,
 	io_ctrl_valid,
 	io_ctrl_bits,
+	io_flushTx,
+	io_fetch_ready,
 	io_fetch_valid,
 	io_fetch_bits_addr,
 	io_fetch_bits_inst_0,
@@ -1235,8 +2682,11 @@ module Fetcher (
 );
 	input clock;
 	input reset;
+	output wire io_ctrl_ready;
 	input io_ctrl_valid;
 	input [31:0] io_ctrl_bits;
+	input io_flushTx;
+	input io_fetch_ready;
 	output wire io_fetch_valid;
 	output wire [31:0] io_fetch_bits_addr;
 	output wire [31:0] io_fetch_bits_inst_0;
@@ -1249,29 +2699,61 @@ module Fetcher (
 	output wire [31:0] io_ibus_addr;
 	input [127:0] io_ibus_rdata;
 	input io_ibus_fault_valid;
-	reg ibusCmd_valid;
-	reg [31:0] ibusCmd_bits;
-	reg fault;
-	wire ibusFired = io_ctrl_valid & io_ibus_ready;
+	wire _reorderBuffer_io_newTx_ready;
+	wire [127:0] _reorderBuffer_io_commit_bits_resp_data;
+	wire _reorderBuffer_io_freeTxid_valid;
+	wire _reorderBuffer_io_freeTxid_bits;
+	wire _txidAllocator_io_alloc_valid;
+	wire _txidAllocator_io_alloc_bits;
+	wire canStartFetch = (io_ctrl_valid & _reorderBuffer_io_newTx_ready) & _txidAllocator_io_alloc_valid;
+	wire ibusAddrFire = canStartFetch & io_ibus_ready;
+	reg reorderBuffer_io_busResp_valid_REG;
+	reg reorderBuffer_io_busResp_bits_txid_REG;
+	reg reorderBuffer_io_busResp_bits_resp_fault_REG;
 	always @(posedge clock or posedge reset)
-		if (reset) begin
-			ibusCmd_valid <= 1'h0;
-			ibusCmd_bits <= 32'h00000000;
-			fault <= 1'h0;
-		end
-		else begin
-			ibusCmd_valid <= ibusFired;
-			ibusCmd_bits <= (ibusFired ? io_ctrl_bits : 32'h00000000);
-			fault <= io_ibus_fault_valid;
-		end
-	assign io_fetch_valid = ibusCmd_valid;
-	assign io_fetch_bits_addr = ibusCmd_bits;
-	assign io_fetch_bits_inst_0 = io_ibus_rdata[31:0];
-	assign io_fetch_bits_inst_1 = io_ibus_rdata[63:32];
-	assign io_fetch_bits_inst_2 = io_ibus_rdata[95:64];
-	assign io_fetch_bits_inst_3 = io_ibus_rdata[127:96];
-	assign io_fetch_bits_fault = fault;
-	assign io_ibus_valid = io_ctrl_valid;
+		if (reset)
+			reorderBuffer_io_busResp_valid_REG <= 1'h0;
+		else
+			reorderBuffer_io_busResp_valid_REG <= ibusAddrFire;
+	always @(posedge clock) begin
+		reorderBuffer_io_busResp_bits_txid_REG <= _txidAllocator_io_alloc_bits;
+		reorderBuffer_io_busResp_bits_resp_fault_REG <= io_ibus_fault_valid;
+	end
+	IndexAllocatorShifting txidAllocator(
+		.clock(clock),
+		.reset(reset),
+		.io_alloc_ready(ibusAddrFire),
+		.io_alloc_valid(_txidAllocator_io_alloc_valid),
+		.io_alloc_bits(_txidAllocator_io_alloc_bits),
+		.io_free_valid(_reorderBuffer_io_freeTxid_valid),
+		.io_free_bits(_reorderBuffer_io_freeTxid_bits)
+	);
+	FetchReorderBuffer reorderBuffer(
+		.clock(clock),
+		.reset(reset),
+		.io_newTx_ready(_reorderBuffer_io_newTx_ready),
+		.io_newTx_valid(ibusAddrFire),
+		.io_newTx_bits_txid(_txidAllocator_io_alloc_bits),
+		.io_newTx_bits_addr(io_ctrl_bits),
+		.io_busResp_valid(reorderBuffer_io_busResp_valid_REG),
+		.io_busResp_bits_txid(reorderBuffer_io_busResp_bits_txid_REG),
+		.io_busResp_bits_resp_data(io_ibus_rdata),
+		.io_busResp_bits_resp_fault(reorderBuffer_io_busResp_bits_resp_fault_REG),
+		.io_commit_ready(io_fetch_ready),
+		.io_commit_valid(io_fetch_valid),
+		.io_commit_bits_addr(io_fetch_bits_addr),
+		.io_commit_bits_resp_data(_reorderBuffer_io_commit_bits_resp_data),
+		.io_commit_bits_resp_fault(io_fetch_bits_fault),
+		.io_freeTxid_valid(_reorderBuffer_io_freeTxid_valid),
+		.io_freeTxid_bits(_reorderBuffer_io_freeTxid_bits),
+		.io_flush(io_flushTx)
+	);
+	assign io_ctrl_ready = ibusAddrFire;
+	assign io_fetch_bits_inst_0 = _reorderBuffer_io_commit_bits_resp_data[31:0];
+	assign io_fetch_bits_inst_1 = _reorderBuffer_io_commit_bits_resp_data[63:32];
+	assign io_fetch_bits_inst_2 = _reorderBuffer_io_commit_bits_resp_data[95:64];
+	assign io_fetch_bits_inst_3 = _reorderBuffer_io_commit_bits_resp_data[127:96];
+	assign io_ibus_valid = canStartFetch;
 	assign io_ibus_addr = {io_ctrl_bits[31:4], 4'h0};
 endmodule
 module CircularBufferMulti (
@@ -1693,9 +3175,10 @@ module UncachedFetch (
 	output wire [31:0] io_pc;
 	output wire io_fault_valid;
 	output wire [31:0] io_fault_bits;
+	wire [2:0] _instructionBuffer_io_feedIn_nReady;
 	wire _instructionBuffer_io_out_0_valid;
 	wire [31:0] _instructionBuffer_io_out_0_bits_addr;
-	wire [3:0] _instructionBuffer_io_nSpace;
+	wire _fetcher_io_ctrl_ready;
 	wire _fetcher_io_fetch_valid;
 	wire [31:0] _fetcher_io_fetch_bits_addr;
 	wire [31:0] _fetcher_io_fetch_bits_inst_0;
@@ -1703,8 +3186,10 @@ module UncachedFetch (
 	wire [31:0] _fetcher_io_fetch_bits_inst_2;
 	wire [31:0] _fetcher_io_fetch_bits_inst_3;
 	wire _fetcher_io_fetch_bits_fault;
+	wire _ctrl_io_fetchData_ready;
 	wire _ctrl_io_fetchAddr_valid;
 	wire [31:0] _ctrl_io_fetchAddr_bits;
+	wire _ctrl_io_flushTx;
 	wire [2:0] _ctrl_io_bufferRequest_nValid;
 	wire [31:0] _ctrl_io_bufferRequest_bits_0_addr;
 	wire [31:0] _ctrl_io_bufferRequest_bits_0_inst;
@@ -1731,10 +3216,9 @@ module UncachedFetch (
 		.io_fetchFault_valid(io_fault_valid),
 		.io_fetchFault_bits(io_fault_bits),
 		.io_csr_value_0(io_csr_value_0),
-		.io_iflush_valid(io_iflush_valid),
-		.io_iflush_bits((io_iflush_valid ? io_iflush_pcNext : 32'h00000000)),
 		.io_branch_valid(branch_valid),
 		.io_branch_bits((io_branch_0_valid ? io_branch_0_value : (io_branch_1_valid ? io_branch_1_value : (io_branch_2_valid ? io_branch_2_value : (io_branch_3_valid ? io_branch_3_value : 32'h00000000))))),
+		.io_fetchData_ready(_ctrl_io_fetchData_ready),
 		.io_fetchData_valid(_fetcher_io_fetch_valid),
 		.io_fetchData_bits_addr(_fetcher_io_fetch_bits_addr),
 		.io_fetchData_bits_inst_0(_fetcher_io_fetch_bits_inst_0),
@@ -1742,8 +3226,11 @@ module UncachedFetch (
 		.io_fetchData_bits_inst_2(_fetcher_io_fetch_bits_inst_2),
 		.io_fetchData_bits_inst_3(_fetcher_io_fetch_bits_inst_3),
 		.io_fetchData_bits_fault(_fetcher_io_fetch_bits_fault),
+		.io_fetchAddr_ready(_fetcher_io_ctrl_ready),
 		.io_fetchAddr_valid(_ctrl_io_fetchAddr_valid),
 		.io_fetchAddr_bits(_ctrl_io_fetchAddr_bits),
+		.io_flushTx(_ctrl_io_flushTx),
+		.io_bufferRequest_nReady(_instructionBuffer_io_feedIn_nReady),
 		.io_bufferRequest_nValid(_ctrl_io_bufferRequest_nValid),
 		.io_bufferRequest_bits_0_addr(_ctrl_io_bufferRequest_bits_0_addr),
 		.io_bufferRequest_bits_0_inst(_ctrl_io_bufferRequest_bits_0_inst),
@@ -1756,14 +3243,16 @@ module UncachedFetch (
 		.io_bufferRequest_bits_2_brchFwd(_ctrl_io_bufferRequest_bits_2_brchFwd),
 		.io_bufferRequest_bits_3_addr(_ctrl_io_bufferRequest_bits_3_addr),
 		.io_bufferRequest_bits_3_inst(_ctrl_io_bufferRequest_bits_3_inst),
-		.io_bufferRequest_bits_3_brchFwd(_ctrl_io_bufferRequest_bits_3_brchFwd),
-		.io_bufferSpaces(_instructionBuffer_io_nSpace)
+		.io_bufferRequest_bits_3_brchFwd(_ctrl_io_bufferRequest_bits_3_brchFwd)
 	);
 	Fetcher fetcher(
 		.clock(clock),
 		.reset(reset),
+		.io_ctrl_ready(_fetcher_io_ctrl_ready),
 		.io_ctrl_valid(_ctrl_io_fetchAddr_valid),
 		.io_ctrl_bits(_ctrl_io_fetchAddr_bits),
+		.io_flushTx(_ctrl_io_flushTx),
+		.io_fetch_ready(_ctrl_io_fetchData_ready),
 		.io_fetch_valid(_fetcher_io_fetch_valid),
 		.io_fetch_bits_addr(_fetcher_io_fetch_bits_addr),
 		.io_fetch_bits_inst_0(_fetcher_io_fetch_bits_inst_0),
@@ -1780,7 +3269,7 @@ module UncachedFetch (
 	InstructionBuffer instructionBuffer(
 		.clock(clock),
 		.reset(reset),
-		.io_feedIn_nReady(),
+		.io_feedIn_nReady(_instructionBuffer_io_feedIn_nReady),
 		.io_feedIn_nValid(_ctrl_io_bufferRequest_nValid),
 		.io_feedIn_bits_0_addr(_ctrl_io_bufferRequest_bits_0_addr),
 		.io_feedIn_bits_0_inst(_ctrl_io_bufferRequest_bits_0_inst),
@@ -1814,9 +3303,8 @@ module UncachedFetch (
 		.io_out_3_bits_addr(io_inst_lanes_3_bits_addr),
 		.io_out_3_bits_inst(io_inst_lanes_3_bits_inst),
 		.io_out_3_bits_brchFwd(io_inst_lanes_3_bits_brchFwd),
-		.io_flush(io_iflush_valid | branch_valid),
 		.io_nEnqueued(),
-		.io_nSpace(_instructionBuffer_io_nSpace)
+		.io_nSpace()
 	);
 	assign io_inst_lanes_0_valid = _instructionBuffer_io_out_0_valid;
 	assign io_inst_lanes_0_bits_addr = _instructionBuffer_io_out_0_bits_addr;
@@ -1846,7 +3334,6 @@ module Csr (
 	io_rd_bits_addr,
 	io_rd_bits_data,
 	io_bru_in_mode_valid,
-	io_bru_in_mode_bits,
 	io_bru_in_mcause_valid,
 	io_bru_in_mcause_bits,
 	io_bru_in_mepc_valid,
@@ -1856,9 +3343,10 @@ module Csr (
 	io_bru_in_halt,
 	io_bru_in_fault,
 	io_bru_in_wfi,
-	io_bru_out_mode,
 	io_bru_out_mepc,
 	io_bru_out_mtvec,
+	io_bru_out_interrupt,
+	io_bru_out_interrupt_cause,
 	io_float_in_fflags_valid,
 	io_float_in_fflags_bits,
 	io_float_out_frm,
@@ -1866,7 +3354,14 @@ module Csr (
 	io_halted,
 	io_fault,
 	io_wfi,
-	io_irq
+	io_irq,
+	io_dm_resume_req,
+	io_dm_single_step,
+	io_dm_dcsr_step,
+	io_dm_current_pc,
+	io_dm_next_pc,
+	io_timer_irq,
+	io_software_irq
 );
 	input clock;
 	input reset;
@@ -1891,7 +3386,6 @@ module Csr (
 	output wire [4:0] io_rd_bits_addr;
 	output wire [31:0] io_rd_bits_data;
 	input io_bru_in_mode_valid;
-	input [1:0] io_bru_in_mode_bits;
 	input io_bru_in_mcause_valid;
 	input [31:0] io_bru_in_mcause_bits;
 	input io_bru_in_mepc_valid;
@@ -1901,9 +3395,10 @@ module Csr (
 	input io_bru_in_halt;
 	input io_bru_in_fault;
 	input io_bru_in_wfi;
-	output wire [1:0] io_bru_out_mode;
 	output wire [31:0] io_bru_out_mepc;
 	output wire [31:0] io_bru_out_mtvec;
+	output wire io_bru_out_interrupt;
+	output wire [31:0] io_bru_out_interrupt_cause;
 	input io_float_in_fflags_valid;
 	input [4:0] io_float_in_fflags_bits;
 	output wire [2:0] io_float_out_frm;
@@ -1912,6 +3407,13 @@ module Csr (
 	output wire io_fault;
 	output wire io_wfi;
 	input io_irq;
+	input io_dm_resume_req;
+	output wire io_dm_single_step;
+	output wire io_dm_dcsr_step;
+	input [31:0] io_dm_current_pc;
+	input [31:0] io_dm_next_pc;
+	input io_timer_irq;
+	input io_software_irq;
 	reg req_valid;
 	reg [4:0] req_bits_addr;
 	reg [11:0] req_bits_index;
@@ -1933,13 +3435,36 @@ module Csr (
 	reg [31:0] mcontext5;
 	reg [31:0] mcontext6;
 	reg [31:0] mcontext7;
+	reg [2:0] dcsr_extcause;
+	reg dcsr_cetrig;
+	reg dcsr_pelp;
+	reg dcsr_ebreakvs;
+	reg dcsr_ebreakvu;
+	reg dcsr_ebreakm;
+	reg dcsr_ebreaks;
+	reg dcsr_ebreaku;
+	reg dcsr_stepie;
+	reg dcsr_stopcount;
+	reg dcsr_stoptime;
+	reg [2:0] dcsr_cause;
+	reg dcsr_v;
+	reg dcsr_mprven;
+	reg dcsr_nmip;
+	reg dcsr_step;
+	reg [1:0] dcsr_prv;
+	reg [31:0] dpc;
+	reg [31:0] dscratch0;
+	reg [31:0] dscratch1;
+	reg [31:0] tdata1_data;
+	reg [31:0] tdata2;
 	reg [4:0] fflags;
 	reg [2:0] frm;
-	reg mie;
+	reg mstatus_mie;
+	reg mstatus_mpie;
+	reg [31:0] mie;
 	reg [31:0] mtvec;
 	reg [31:0] mscratch;
 	reg [31:0] mepc;
-	reg [1:0] mpp;
 	reg [63:0] mcycle;
 	reg [63:0] minstret;
 	wire fflagsEn = req_bits_index == 12'h001;
@@ -1953,6 +3478,14 @@ module Csr (
 	wire mepcEn = req_bits_index == 12'h341;
 	wire mcauseEn = req_bits_index == 12'h342;
 	wire mtvalEn = req_bits_index == 12'h343;
+	wire mipEn = req_bits_index == 12'h344;
+	wire tdata1En = req_bits_index == 12'h7a1;
+	wire tdata2En = req_bits_index == 12'h7a2;
+	wire tinfoEn = req_bits_index == 12'h7a4;
+	wire dcsrEn = req_bits_index == 12'h7b0;
+	wire dpcEn = req_bits_index == 12'h7b1;
+	wire dscratch0En = req_bits_index == 12'h7b2;
+	wire dscratch1En = req_bits_index == 12'h7b3;
 	wire mcontext0En = req_bits_index == 12'h7c0;
 	wire mcontext1En = req_bits_index == 12'h7c1;
 	wire mcontext2En = req_bits_index == 12'h7c2;
@@ -1973,10 +3506,17 @@ module Csr (
 	wire kscm2En = req_bits_index == 12'hfcc;
 	wire kscm3En = req_bits_index == 12'hfd0;
 	wire kscm4En = req_bits_index == 12'hfd4;
-	wire [31:0] rdata = ((((((((((((((((((((((((((((((fflagsEn ? {27'h0000000, fflags} : 32'h00000000) | (frmEn ? {29'h00000000, frm} : 32'h00000000)) | (fcsrEn ? {24'h000000, frm, fflags} : 32'h00000000)) | (mstatusEn ? {19'h00001, mpp, 11'h000} : 32'h00000000)) | (misaEn ? 32'h40001120 : 32'h00000000)) | (mieEn ? {31'h00000000, mie} : 32'h00000000)) | (mtvecEn ? mtvec : 32'h00000000)) | (mscratchEn ? mscratch : 32'h00000000)) | (mepcEn ? mepc : 32'h00000000)) | (mcauseEn ? mcause : 32'h00000000)) | (mtvalEn ? mtval : 32'h00000000)) | (mcontext0En ? mcontext0 : 32'h00000000)) | (mcontext1En ? mcontext1 : 32'h00000000)) | (mcontext2En ? mcontext2 : 32'h00000000)) | (mcontext3En ? mcontext3 : 32'h00000000)) | (mcontext4En ? mcontext4 : 32'h00000000)) | (mcontext5En ? mcontext5 : 32'h00000000)) | (mcontext6En ? mcontext6 : 32'h00000000)) | (mcontext7En ? mcontext7 : 32'h00000000)) | (mpcEn ? mpc : 32'h00000000)) | (mspEn ? msp : 32'h00000000)) | (mcycleEn ? mcycle[31:0] : 32'h00000000)) | (mcyclehEn ? mcycle[63:32] : 32'h00000000)) | (minstretEn ? minstret[31:0] : 32'h00000000)) | (minstrethEn ? minstret[63:32] : 32'h00000000)) | (mvendoridEn ? 32'h00000426 : 32'h00000000)) | (kscm0En ? 32'h74deff88 : 32'h00000000)) | (kscm1En ? 32'hd2253c49 : 32'h00000000)) | (kscm2En ? 32'h8097dcda : 32'h00000000)) | (kscm3En ? 32'h70ac9a28 : 32'h00000000)) | (kscm4En ? 32'h7731fd6e : 32'h00000000);
+	wire mtip_pending = io_timer_irq & mie[7];
+	wire meip_pending = io_irq & mie[11];
+	wire msip_pending = io_software_irq & mie[3];
+	wire _interrupt_pending_T = mtip_pending | meip_pending;
 	wire [127:0] _GEN = {32'h00000000, rdata & ~io_rs1_data, rdata | io_rs1_data, io_rs1_data};
 	wire [31:0] wdata = _GEN[req_bits_op * 32+:32];
+	wire trigger_enabled = (tdata1_data[31:28] == 4'h6) & tdata1_data[6];
+	wire trigger_match = trigger_enabled & (io_dm_current_pc == tdata2);
+	wire _GEN_0 = req_valid & mstatusEn;
 	wire is_csr_write = req_valid & ~(|{req_bits_op == 2'h2, req_bits_op == 2'h1} & (req_bits_rs1 == 5'h00));
+	wire _dcsr_T = req_valid & dcsrEn;
 	always @(posedge clock or posedge reset)
 		if (reset) begin
 			req_valid <= 1'h0;
@@ -2000,13 +3540,36 @@ module Csr (
 			mcontext5 <= 32'h00000000;
 			mcontext6 <= 32'h00000000;
 			mcontext7 <= 32'h00000000;
+			dcsr_extcause <= 3'h0;
+			dcsr_cetrig <= 1'h0;
+			dcsr_pelp <= 1'h0;
+			dcsr_ebreakvs <= 1'h0;
+			dcsr_ebreakvu <= 1'h0;
+			dcsr_ebreakm <= 1'h0;
+			dcsr_ebreaks <= 1'h0;
+			dcsr_ebreaku <= 1'h0;
+			dcsr_stepie <= 1'h0;
+			dcsr_stopcount <= 1'h0;
+			dcsr_stoptime <= 1'h0;
+			dcsr_cause <= 3'h0;
+			dcsr_v <= 1'h0;
+			dcsr_mprven <= 1'h0;
+			dcsr_nmip <= 1'h0;
+			dcsr_step <= 1'h0;
+			dcsr_prv <= 2'h0;
+			dpc <= 32'h00000000;
+			dscratch0 <= 32'h00000000;
+			dscratch1 <= 32'h00000000;
+			tdata1_data <= 32'h60000000;
+			tdata2 <= 32'h00000000;
 			fflags <= 5'h00;
 			frm <= 3'h0;
-			mie <= 1'h0;
+			mstatus_mie <= 1'h0;
+			mstatus_mpie <= 1'h0;
+			mie <= 32'h00000000;
 			mtvec <= 32'h00000000;
 			mscratch <= 32'h00000000;
 			mepc <= 32'h00000000;
-			mpp <= 2'h0;
 			mcycle <= 64'h0000000000000000;
 			minstret <= 64'h0000000000000000;
 		end
@@ -2021,11 +3584,21 @@ module Csr (
 			halted <= io_bru_in_halt | halted;
 			fault <= io_bru_in_fault | fault;
 			if (wfi)
-				wfi <= ~io_irq;
 			else
 				wfi <= io_bru_in_wfi;
-			if (io_bru_in_mode_valid)
-				mode <= io_bru_in_mode_bits;
+				mode <= 2'h2;
+				dcsr_extcause <= 3'h0;
+				dcsr_cause <= newCause;
+				dcsr_prv <= 2'h3;
+			end
+			else begin
+					mode <= 2'h0;
+				if (_dcsr_T) begin
+					dcsr_extcause <= wdata[21:19];
+					dcsr_cause <= wdata[8:6];
+					dcsr_prv <= wdata[1:0];
+				end
+			end
 			if (req_valid & mpcEn)
 				mpc <= wdata;
 			if (req_valid & mspEn)
@@ -2054,6 +3627,33 @@ module Csr (
 				mcontext6 <= wdata;
 			if (req_valid & mcontext7En)
 				mcontext7 <= wdata;
+				;
+			else begin
+				dcsr_cetrig <= wdata[18];
+				dcsr_pelp <= wdata[17];
+				dcsr_ebreakvs <= wdata[16];
+				dcsr_ebreakvu <= wdata[15];
+				dcsr_ebreakm <= wdata[14];
+				dcsr_ebreaks <= wdata[13];
+				dcsr_ebreaku <= wdata[12];
+				dcsr_stepie <= wdata[11];
+				dcsr_stopcount <= wdata[10];
+				dcsr_stoptime <= wdata[9];
+				dcsr_v <= wdata[5];
+				dcsr_mprven <= wdata[4];
+				dcsr_nmip <= wdata[3];
+				dcsr_step <= wdata[2];
+			end
+				dpc <= wdata;
+				dpc <= (newCause == 3'h4 ? io_dm_next_pc : io_dm_current_pc);
+			if (req_valid & dscratch0En)
+				dscratch0 <= wdata;
+			if (req_valid & dscratch1En)
+				dscratch1 <= wdata;
+			if (req_valid & tdata1En)
+				tdata1_data <= {4'h6, wdata[27], 14'h0000, wdata[12], 5'h00, wdata[6], 3'h0, wdata[2], 2'h0};
+			if (req_valid & tdata2En)
+				tdata2 <= wdata;
 			if (io_float_in_fflags_valid)
 				fflags <= io_float_in_fflags_bits | fflags;
 			else if (req_valid) begin
@@ -2068,8 +3668,10 @@ module Csr (
 				else if (frmEn)
 					frm <= wdata[2:0];
 			end
+			mstatus_mie <= (io_bru_in_mode_valid ? mstatus_mpie : ~io_bru_in_mcause_valid & (_GEN_0 ? wdata[3] : mstatus_mie));
+			mstatus_mpie <= io_bru_in_mode_valid | (io_bru_in_mcause_valid ? mstatus_mie : (_GEN_0 ? wdata[7] : mstatus_mpie));
 			if (req_valid & mieEn)
-				mie <= wdata[0];
+				mie <= {20'h00000, wdata[11:3] & 9'h111, 3'h0};
 			if (req_valid & mtvecEn)
 				mtvec <= wdata;
 			if (req_valid & mscratchEn)
@@ -2078,8 +3680,6 @@ module Csr (
 				mepc <= io_bru_in_mepc_bits;
 			else if (req_valid & mepcEn)
 				mepc <= wdata;
-			if (req_valid & mstatusEn)
-				mpp <= wdata[12:11];
 			mcycle <= (is_csr_write & (mcycleEn | mcyclehEn) ? {(mcyclehEn ? wdata : mcycle[63:32]), (mcycleEn ? wdata : mcycle[31:0])} : mcycle + 64'h0000000000000001);
 			minstret <= (is_csr_write & (minstretEn | minstrethEn) ? {(minstrethEn ? wdata : minstret[63:32]), (minstretEn ? wdata : minstret[31:0])} : minstret + {60'h000000000000000, io_counters_nRetired});
 		end
@@ -2095,13 +3695,16 @@ module Csr (
 	assign io_rd_valid = req_valid;
 	assign io_rd_bits_addr = req_bits_addr;
 	assign io_rd_bits_data = rdata;
-	assign io_bru_out_mode = mode;
 	assign io_bru_out_mepc = (mepcEn & req_valid ? wdata : mepc);
 	assign io_bru_out_mtvec = (mtvecEn & req_valid ? wdata : mtvec);
+	assign io_bru_out_interrupt = ((_interrupt_pending_T | msip_pending) & mstatus_mie) & (mode != 2'h2);
+	assign io_bru_out_interrupt_cause = (meip_pending ? 32'h8000000b : (msip_pending ? 32'h80000003 : (mtip_pending ? 32'h80000007 : 32'h00000000)));
 	assign io_float_out_frm = (frmEn & req_valid ? wdata[2:0] : frm);
 	assign io_halted = halted;
 	assign io_fault = fault;
 	assign io_wfi = wfi;
+	assign io_dm_single_step = trigger_enabled;
+	assign io_dm_dcsr_step = dcsr_step;
 endmodule
 module DispatchV2 (
 	clock,
@@ -2295,6 +3898,8 @@ module DispatchV2 (
 	io_float_valid,
 	io_float_bits_opcode,
 	io_float_bits_funct5,
+	io_float_bits_src_fmt,
+	io_float_bits_dst_fmt,
 	io_float_bits_rs3,
 	io_float_bits_rs2,
 	io_float_bits_rs1,
@@ -2312,6 +3917,7 @@ module DispatchV2 (
 	io_retirement_buffer_nSpace,
 	io_retirement_buffer_empty,
 	io_retirement_buffer_trap_pending,
+	io_single_step,
 	io_branch_0,
 	io_branch_1,
 	io_branch_2,
@@ -2512,6 +4118,8 @@ module DispatchV2 (
 	output wire io_float_valid;
 	output wire [2:0] io_float_bits_opcode;
 	output wire [4:0] io_float_bits_funct5;
+	output wire [2:0] io_float_bits_src_fmt;
+	output wire [2:0] io_float_bits_dst_fmt;
 	output wire [4:0] io_float_bits_rs3;
 	output wire [4:0] io_float_bits_rs2;
 	output wire [4:0] io_float_bits_rs1;
@@ -2529,6 +4137,7 @@ module DispatchV2 (
 	input [4:0] io_retirement_buffer_nSpace;
 	input io_retirement_buffer_empty;
 	input io_retirement_buffer_trap_pending;
+	input io_single_step;
 	output wire io_branch_0;
 	output wire io_branch_1;
 	output wire io_branch_2;
@@ -2626,6 +4235,10 @@ module DispatchV2 (
 	wire _decodedInsts_float_opcode_T_12 = io_inst_0_bits_inst[6:2] == 5'h12;
 	wire _decodedInsts_float_opcode_T_14 = io_inst_0_bits_inst[6:2] == 5'h13;
 	wire [2:0] decodedInsts_float_bits_opcode = (_decodedInsts_float_opcode_T_14 ? 3'h5 : (_decodedInsts_float_opcode_T_12 ? 3'h6 : (_decodedInsts_float_opcode_T_10 ? 3'h4 : (_decodedInsts_float_opcode_T_8 ? 3'h3 : (_decodedInsts_float_opcode_T_6 ? 3'h2 : {2'h0, _decodedInsts_float_opcode_T_4 & decodedInsts_float_load_store_rm_valid})))));
+	wire _decodedInsts_float_uses_rs2_T_15 = io_inst_0_bits_inst[31:27] == 5'h08;
+	wire _decodedInsts_float_fcvt_bf16_s_T_3 = io_inst_0_bits_inst[26:25] == 2'h2;
+	wire decodedInsts_float_fcvt_s_bf16 = (_decodedInsts_float_uses_rs2_T_15 & (io_inst_0_bits_inst[24:20] == 5'h08)) & _decodedInsts_float_fcvt_bf16_s_T_3;
+	wire decodedInsts_float_fcvt_bf16_s = (_decodedInsts_float_uses_rs2_T_15 & (io_inst_0_bits_inst[24:20] == 5'h09)) & _decodedInsts_float_fcvt_bf16_s_T_3;
 	wire _decodedInsts_float_uses_rs2_T_5 = io_inst_0_bits_inst[31:27] == 5'h1c;
 	wire _decodedInsts_float_uses_rs2_T_7 = io_inst_0_bits_inst[31:27] == 5'h18;
 	wire _decodedInsts_float_uses_rs2_T_2 = decodedInsts_float_bits_opcode == 3'h2;
@@ -2635,10 +4248,10 @@ module DispatchV2 (
 	wire decodedInsts_float_scalar_rs1 = _decodedInsts_float_uses_rs2_T_11 | _decodedInsts_float_uses_rs2_T_9;
 	wire [3:0] _decodedInsts_float_uses_rs3_T_4 = {decodedInsts_float_bits_opcode == 3'h6, decodedInsts_float_bits_opcode == 3'h5, decodedInsts_float_bits_opcode == 3'h4, decodedInsts_float_bits_opcode == 3'h3};
 	wire _decodedInsts_float_T_1 = decodedInsts_float_bits_opcode == 3'h1;
-	wire decodedInsts_float_uses_rs2 = _decodedInsts_float_T_1 | ((_decodedInsts_float_uses_rs2_T_2 & ~(((((io_inst_0_bits_inst[31:27] == 5'h0b) | _decodedInsts_float_uses_rs2_T_11) | _decodedInsts_float_uses_rs2_T_9) | _decodedInsts_float_uses_rs2_T_7) | _decodedInsts_float_uses_rs2_T_5)) & (io_inst_0_bits_inst[31:27] != 5'h1c));
+	wire decodedInsts_float_uses_rs2 = _decodedInsts_float_T_1 | ((_decodedInsts_float_uses_rs2_T_2 & ~(((((_decodedInsts_float_uses_rs2_T_15 | (io_inst_0_bits_inst[31:27] == 5'h0b)) | _decodedInsts_float_uses_rs2_T_11) | _decodedInsts_float_uses_rs2_T_9) | _decodedInsts_float_uses_rs2_T_7) | _decodedInsts_float_uses_rs2_T_5)) & (io_inst_0_bits_inst[31:27] != 5'h1c));
 	wire _decodedInsts_float_T = decodedInsts_float_bits_opcode == 3'h0;
 	wire decodedInsts_float_float_rs1 = ({_decodedInsts_float_T, _decodedInsts_float_T_1} == 2'h0) & ~decodedInsts_float_scalar_rs1;
-	wire decodedInsts_floatValid = ((((((_decodedInsts_float_opcode_T_14 | _decodedInsts_float_opcode_T_12) | _decodedInsts_float_opcode_T_10) | _decodedInsts_float_opcode_T_8) | _decodedInsts_float_opcode_T_6) | ((_decodedInsts_float_opcode_T_4 | (io_inst_0_bits_inst[6:2] == 5'h01)) & decodedInsts_float_load_store_rm_valid)) & ((_decodedInsts_float_T | _decodedInsts_float_T_1) | (io_inst_0_bits_inst[26:25] == 2'h0))) & ((~(|{decodedInsts_float_bits_opcode == 3'h5, decodedInsts_float_bits_opcode == 3'h6, decodedInsts_float_bits_opcode == 3'h4, decodedInsts_float_bits_opcode == 3'h3} | ((decodedInsts_float_bits_opcode == 3'h2) & ((((((io_inst_0_bits_inst[31:27] == 5'h00) | (io_inst_0_bits_inst[31:27] == 5'h01)) | (io_inst_0_bits_inst[31:27] == 5'h02)) | (io_inst_0_bits_inst[31:27] == 5'h03)) | (io_inst_0_bits_inst[31:27] == 5'h04)) | (io_inst_0_bits_inst[31:27] == 5'h1a)))) | (io_inst_0_bits_inst[14:12] < 3'h5)) | (&io_inst_0_bits_inst[14:12] & (io_csrFrm < 3'h5)));
+	wire decodedInsts_floatValid = ((((((_decodedInsts_float_opcode_T_14 | _decodedInsts_float_opcode_T_12) | _decodedInsts_float_opcode_T_10) | _decodedInsts_float_opcode_T_8) | _decodedInsts_float_opcode_T_6) | ((_decodedInsts_float_opcode_T_4 | (io_inst_0_bits_inst[6:2] == 5'h01)) & decodedInsts_float_load_store_rm_valid)) & ((((_decodedInsts_float_T | _decodedInsts_float_T_1) | (io_inst_0_bits_inst[26:25] == 2'h0)) | decodedInsts_float_fcvt_s_bf16) | decodedInsts_float_fcvt_bf16_s)) & ((~(|{decodedInsts_float_bits_opcode == 3'h5, decodedInsts_float_bits_opcode == 3'h6, decodedInsts_float_bits_opcode == 3'h4, decodedInsts_float_bits_opcode == 3'h3} | ((decodedInsts_float_bits_opcode == 3'h2) & ((((((io_inst_0_bits_inst[31:27] == 5'h00) | (io_inst_0_bits_inst[31:27] == 5'h01)) | (io_inst_0_bits_inst[31:27] == 5'h02)) | (io_inst_0_bits_inst[31:27] == 5'h03)) | (io_inst_0_bits_inst[31:27] == 5'h04)) | (io_inst_0_bits_inst[31:27] == 5'h1a)))) | (io_inst_0_bits_inst[14:12] < 3'h5)) | (&io_inst_0_bits_inst[14:12] & (io_csrFrm < 3'h5)));
 	wire [19:0] _decodedInsts_d_imm12_T_5 = {20 {io_inst_1_bits_inst[31]}};
 	wire decodedInsts_1_lui = io_inst_1_bits_inst[6:0] == 7'h37;
 	wire decodedInsts_1_auipc = io_inst_1_bits_inst[6:0] == 7'h17;
@@ -2829,8 +4442,8 @@ module DispatchV2 (
 	wire decodedInsts_3_zexth = _GEN_11 == 22'h020233;
 	wire decodedInsts_3_rori = _GEN_10 == 17'h0c293;
 	wire _bru_defaultSel_T = decodedInsts_0_jal | decodedInsts_0_jalr;
-	wire _slot0Interlock_T_36 = decodedInsts_0_fencei | decodedInsts_0_ebreak;
-	wire isJump_0 = ((((((_bru_defaultSel_T | decodedInsts_0_ecall) | decodedInsts_0_mpause) | decodedInsts_0_mret) | _slot0Interlock_T_36) | decodedInsts_0_wfi) | decodedInsts_0_flushat) | decodedInsts_0_flushall;
+	wire _slot0Interlock_T_48 = decodedInsts_0_fencei | decodedInsts_0_ebreak;
+	wire isJump_0 = ((((((_bru_defaultSel_T | decodedInsts_0_ecall) | decodedInsts_0_mpause) | decodedInsts_0_mret) | _slot0Interlock_T_48) | decodedInsts_0_wfi) | decodedInsts_0_flushat) | decodedInsts_0_flushall;
 	wire isJump_1 = decodedInsts_1_jal | decodedInsts_1_jalr;
 	wire isJump_2 = decodedInsts_2_jal | decodedInsts_2_jalr;
 	wire jumped_2 = isJump_0 | isJump_1;
@@ -2876,7 +4489,7 @@ module DispatchV2 (
 	wire _io_rs2Set_0_valid_T_1 = decodedInsts_0_csrrw | decodedInsts_0_csrrs;
 	wire _io_rs2Read_0_valid_T_34 = decodedInsts_0_mul | decodedInsts_0_mulh;
 	wire _io_rs2Read_0_valid_T_38 = decodedInsts_0_div | decodedInsts_0_divu;
-	wire _io_rs1Read_0_valid_T_56 = decodedInsts_floatValid & decodedInsts_float_scalar_rs1;
+	wire _io_rs1Read_0_valid_T_55 = decodedInsts_floatValid & decodedInsts_float_scalar_rs1;
 	wire _io_rs2Read_1_valid_T_6 = decodedInsts_1_add | decodedInsts_1_sub;
 	wire _io_rs2Set_1_valid_T_6 = decodedInsts_1_addi | decodedInsts_1_slti;
 	wire _io_rs2Set_1_valid_T_16 = decodedInsts_1_clz | decodedInsts_1_ctz;
@@ -2895,6 +4508,8 @@ module DispatchV2 (
 	wire isLsu_0 = ((((((((_rdMark_valid_T_5 | decodedInsts_0_lw) | decodedInsts_0_lbu) | decodedInsts_0_lhu) | _io_rs2Read_0_valid_T_25) | decodedInsts_0_sw) | decodedInsts_0_flushat) | decodedInsts_0_flushall) | (decodedInsts_floatValid & _rdMark_flt_valid_T_4)) | (decodedInsts_floatValid & _io_float_valid_T_3);
 	wire [3:0] _isLsuCount_T_1 = {3'h0, isLsu_0} + {3'h0, ((((_rdMark_valid_T_28 | decodedInsts_1_lw) | decodedInsts_1_lbu) | decodedInsts_1_lhu) | _io_rs2Read_1_valid_T_25) | decodedInsts_1_sw};
 	wire [3:0] _GEN_20 = {1'h0, io_lsuQueueCapacity};
+	wire coreIdle = ((io_scoreboard_regd == 32'h00000000) & (io_fscoreboard == 32'h00000000)) & ~io_lsuActive;
+	wire tryDispatch = ((((((((((((~io_halted & ~io_interlock) & io_inst_0_valid) & ({(((((((((((decodedInsts_0_jalr | _rdMark_valid_T_5) | decodedInsts_0_lw) | decodedInsts_0_lbu) | decodedInsts_0_lhu) | _io_rs2Read_0_valid_T_25) | decodedInsts_0_sw) | decodedInsts_0_flushat) | decodedInsts_0_flushall) | (decodedInsts_floatValid & _rdMark_flt_valid_T_4)) | (decodedInsts_floatValid & _io_float_valid_T_3) ? 32'h00000001 << decodedInsts_0_immcsr : 32'h00000000) | (_io_rs2Read_0_valid_T_25 | decodedInsts_0_sw ? 32'h00000001 << _GEN_13 : 32'h00000000)) & io_scoreboard_regd, ((((((((((((((((((((((((((((((((((((((((((((((((_io_rs2Read_0_valid_T_1 | decodedInsts_0_blt) | decodedInsts_0_bge) | decodedInsts_0_bltu) | decodedInsts_0_bgeu) | _io_rs2Read_0_valid_T_6) | decodedInsts_0_slt) | decodedInsts_0_sltu) | decodedInsts_0_xor) | decodedInsts_0_or) | decodedInsts_0_and) | decodedInsts_0_xnor) | decodedInsts_0_orn) | decodedInsts_0_andn) | decodedInsts_0_sll) | decodedInsts_0_srl) | decodedInsts_0_sra) | _io_rs2Set_0_valid_T_6) | decodedInsts_0_sltiu) | decodedInsts_0_xori) | decodedInsts_0_ori) | decodedInsts_0_andi) | decodedInsts_0_slli) | decodedInsts_0_srli) | decodedInsts_0_srai) | decodedInsts_0_rori) | _io_rs2Set_0_valid_T_16) | decodedInsts_0_cpop) | decodedInsts_0_sextb) | decodedInsts_0_sexth) | decodedInsts_0_zexth) | decodedInsts_0_orcb) | decodedInsts_0_rev8) | _io_rs2Read_0_valid_T_19) | decodedInsts_0_max) | decodedInsts_0_maxu) | decodedInsts_0_rol) | decodedInsts_0_ror) | _io_rs2Set_0_valid_T_1) | decodedInsts_0_csrrc) | _io_rs2Read_0_valid_T_34) | decodedInsts_0_mulhsu) | decodedInsts_0_mulhu) | _io_rs2Read_0_valid_T_38) | decodedInsts_0_rem) | decodedInsts_0_remu) | decodedInsts_0_jalr) | _io_rs1Read_0_valid_T_55 ? 32'h00000001 << decodedInsts_0_immcsr : 32'h00000000) | ((((((((((((((((((((((((((((((_io_rs2Read_0_valid_T_1 | decodedInsts_0_blt) | decodedInsts_0_bge) | decodedInsts_0_bltu) | decodedInsts_0_bgeu) | _io_rs2Read_0_valid_T_6) | decodedInsts_0_slt) | decodedInsts_0_sltu) | decodedInsts_0_xor) | decodedInsts_0_or) | decodedInsts_0_and) | decodedInsts_0_xnor) | decodedInsts_0_orn) | decodedInsts_0_andn) | decodedInsts_0_sll) | decodedInsts_0_srl) | decodedInsts_0_sra) | _io_rs2Read_0_valid_T_19) | decodedInsts_0_max) | decodedInsts_0_maxu) | decodedInsts_0_rol) | decodedInsts_0_ror) | _io_rs2Read_0_valid_T_25) | decodedInsts_0_sw) | ((_io_rs2Set_0_valid_T_1 | decodedInsts_0_csrrc) & ~io_inst_0_bits_inst[14])) | _io_rs2Read_0_valid_T_34) | decodedInsts_0_mulhsu) | decodedInsts_0_mulhu) | _io_rs2Read_0_valid_T_38) | decodedInsts_0_rem) | decodedInsts_0_remu ? 32'h00000001 << _GEN_13 : 32'h00000000)) & io_scoreboard_comb} == 64'h0000000000000000)) & ((rdScoreboard_0 & io_scoreboard_comb) == 32'h00000000)) & (((((decodedInsts_floatValid & decodedInsts_float_float_rs1 ? 32'h00000001 << decodedInsts_0_immcsr : 32'h00000000) | (decodedInsts_floatValid & decodedInsts_float_uses_rs2 ? 32'h00000001 << _GEN_13 : 32'h00000000)) | (decodedInsts_floatValid & |_decodedInsts_float_uses_rs3_T_4 ? 32'h00000001 << io_inst_0_bits_inst[31:27] : 32'h00000000)) & io_fscoreboard) == 32'h00000000)) & (((decodedInsts_floatValid & ~_writesFloatRd_T ? 32'h00000001 << _GEN_12 : 32'h00000000) & io_fscoreboard) == 32'h00000000)) & ~(((((_slot0Interlock_T_48 | decodedInsts_0_wfi) | decodedInsts_0_mpause) | decodedInsts_0_flushat) | decodedInsts_0_flushall) & io_lsuActive)) & |io_lsuQueueCapacity) & |io_retirement_buffer_nSpace) & ~io_retirement_buffer_trap_pending) & (~(_io_rs2Set_0_valid_T_1 | decodedInsts_0_csrrc) | io_retirement_buffer_empty)) & (~io_single_step | coreIdle)) & (~decodedInsts_0_mpause | coreIdle);
 	wire _alu_T_158 = (decodedInsts_0_auipc | decodedInsts_0_addi) | decodedInsts_0_add;
 	wire _alu_T_160 = decodedInsts_0_slti | decodedInsts_0_slt;
 	wire _alu_T_161 = decodedInsts_0_sltiu | decodedInsts_0_sltu;
@@ -2917,13 +4532,14 @@ module DispatchV2 (
 	wire _lsu_T_85 = (decodedInsts_floatValid & _rdMark_flt_valid_T_4) | (decodedInsts_floatValid & _io_float_valid_T_3);
 	wire io_lsu_0_valid_0 = tryDispatch & ((((((((((((decodedInsts_0_lb | decodedInsts_0_lh) | decodedInsts_0_lw) | decodedInsts_0_lbu) | decodedInsts_0_lhu) | decodedInsts_0_sb) | decodedInsts_0_sh) | decodedInsts_0_sw) | decodedInsts_0_wfi) | decodedInsts_0_fencei) | decodedInsts_0_flushat) | decodedInsts_0_flushall) | _lsu_T_85);
 	wire csr_valid = (decodedInsts_0_csrrw | decodedInsts_0_csrrs) | decodedInsts_0_csrrc;
-	wire csr_address_valid = (((((((((((((((((((((((((((((((((((((((((((((((((io_inst_0_bits_inst[31:20] == 12'h000) | (io_inst_0_bits_inst[31:20] == 12'h001)) | (io_inst_0_bits_inst[31:20] == 12'h002)) | (io_inst_0_bits_inst[31:20] == 12'h003)) | (io_inst_0_bits_inst[31:20] == 12'h008)) | (io_inst_0_bits_inst[31:20] == 12'h009)) | (io_inst_0_bits_inst[31:20] == 12'h00a)) | (io_inst_0_bits_inst[31:20] == 12'h300)) | (io_inst_0_bits_inst[31:20] == 12'h301)) | (io_inst_0_bits_inst[31:20] == 12'h304)) | (io_inst_0_bits_inst[31:20] == 12'h305)) | (io_inst_0_bits_inst[31:20] == 12'h340)) | (io_inst_0_bits_inst[31:20] == 12'h341)) | (io_inst_0_bits_inst[31:20] == 12'h342)) | (io_inst_0_bits_inst[31:20] == 12'h343)) | (io_inst_0_bits_inst[31:20] == 12'h7a0)) | (io_inst_0_bits_inst[31:20] == 12'h7a1)) | (io_inst_0_bits_inst[31:20] == 12'h7a2)) | (io_inst_0_bits_inst[31:20] == 12'h7a4)) | (io_inst_0_bits_inst[31:20] == 12'h7b0)) | (io_inst_0_bits_inst[31:20] == 12'h7b1)) | (io_inst_0_bits_inst[31:20] == 12'h7b2)) | (io_inst_0_bits_inst[31:20] == 12'h7b3)) | (io_inst_0_bits_inst[31:20] == 12'h7c0)) | (io_inst_0_bits_inst[31:20] == 12'h7c1)) | (io_inst_0_bits_inst[31:20] == 12'h7c2)) | (io_inst_0_bits_inst[31:20] == 12'h7c3)) | (io_inst_0_bits_inst[31:20] == 12'h7c4)) | (io_inst_0_bits_inst[31:20] == 12'h7c5)) | (io_inst_0_bits_inst[31:20] == 12'h7c6)) | (io_inst_0_bits_inst[31:20] == 12'h7c7)) | (io_inst_0_bits_inst[31:20] == 12'h7e0)) | (io_inst_0_bits_inst[31:20] == 12'h7e1)) | (io_inst_0_bits_inst[31:20] == 12'hb00)) | (io_inst_0_bits_inst[31:20] == 12'hb02)) | (io_inst_0_bits_inst[31:20] == 12'hb80)) | (io_inst_0_bits_inst[31:20] == 12'hb82)) | (io_inst_0_bits_inst[31:20] == 12'hc20)) | (io_inst_0_bits_inst[31:20] == 12'hc21)) | (io_inst_0_bits_inst[31:20] == 12'hc22)) | (io_inst_0_bits_inst[31:20] == 12'hf11)) | (io_inst_0_bits_inst[31:20] == 12'hf12)) | (io_inst_0_bits_inst[31:20] == 12'hf13)) | (io_inst_0_bits_inst[31:20] == 12'hf14)) | (io_inst_0_bits_inst[31:20] == 12'hfc0)) | (io_inst_0_bits_inst[31:20] == 12'hfc4)) | (io_inst_0_bits_inst[31:20] == 12'hfc8)) | (io_inst_0_bits_inst[31:20] == 12'hfcc)) | (io_inst_0_bits_inst[31:20] == 12'hfd0)) | (io_inst_0_bits_inst[31:20] == 12'hfd4);
+	wire csr_address_valid = ((((((((((((((((((((((((((((((((((((((((((((((((((io_inst_0_bits_inst[31:20] == 12'h000) | (io_inst_0_bits_inst[31:20] == 12'h001)) | (io_inst_0_bits_inst[31:20] == 12'h002)) | (io_inst_0_bits_inst[31:20] == 12'h003)) | (io_inst_0_bits_inst[31:20] == 12'h008)) | (io_inst_0_bits_inst[31:20] == 12'h009)) | (io_inst_0_bits_inst[31:20] == 12'h00a)) | (io_inst_0_bits_inst[31:20] == 12'h300)) | (io_inst_0_bits_inst[31:20] == 12'h301)) | (io_inst_0_bits_inst[31:20] == 12'h304)) | (io_inst_0_bits_inst[31:20] == 12'h305)) | (io_inst_0_bits_inst[31:20] == 12'h340)) | (io_inst_0_bits_inst[31:20] == 12'h341)) | (io_inst_0_bits_inst[31:20] == 12'h342)) | (io_inst_0_bits_inst[31:20] == 12'h343)) | (io_inst_0_bits_inst[31:20] == 12'h344)) | (io_inst_0_bits_inst[31:20] == 12'h7a0)) | (io_inst_0_bits_inst[31:20] == 12'h7a1)) | (io_inst_0_bits_inst[31:20] == 12'h7a2)) | (io_inst_0_bits_inst[31:20] == 12'h7a4)) | (io_inst_0_bits_inst[31:20] == 12'h7b0)) | (io_inst_0_bits_inst[31:20] == 12'h7b1)) | (io_inst_0_bits_inst[31:20] == 12'h7b2)) | (io_inst_0_bits_inst[31:20] == 12'h7b3)) | (io_inst_0_bits_inst[31:20] == 12'h7c0)) | (io_inst_0_bits_inst[31:20] == 12'h7c1)) | (io_inst_0_bits_inst[31:20] == 12'h7c2)) | (io_inst_0_bits_inst[31:20] == 12'h7c3)) | (io_inst_0_bits_inst[31:20] == 12'h7c4)) | (io_inst_0_bits_inst[31:20] == 12'h7c5)) | (io_inst_0_bits_inst[31:20] == 12'h7c6)) | (io_inst_0_bits_inst[31:20] == 12'h7c7)) | (io_inst_0_bits_inst[31:20] == 12'h7e0)) | (io_inst_0_bits_inst[31:20] == 12'h7e1)) | (io_inst_0_bits_inst[31:20] == 12'hb00)) | (io_inst_0_bits_inst[31:20] == 12'hb02)) | (io_inst_0_bits_inst[31:20] == 12'hb80)) | (io_inst_0_bits_inst[31:20] == 12'hb82)) | (io_inst_0_bits_inst[31:20] == 12'hc20)) | (io_inst_0_bits_inst[31:20] == 12'hc21)) | (io_inst_0_bits_inst[31:20] == 12'hc22)) | (io_inst_0_bits_inst[31:20] == 12'hf11)) | (io_inst_0_bits_inst[31:20] == 12'hf12)) | (io_inst_0_bits_inst[31:20] == 12'hf13)) | (io_inst_0_bits_inst[31:20] == 12'hf14)) | (io_inst_0_bits_inst[31:20] == 12'hfc0)) | (io_inst_0_bits_inst[31:20] == 12'hfc4)) | (io_inst_0_bits_inst[31:20] == 12'hfc8)) | (io_inst_0_bits_inst[31:20] == 12'hfcc)) | (io_inst_0_bits_inst[31:20] == 12'hfd0)) | (io_inst_0_bits_inst[31:20] == 12'hfd4);
 	wire io_csr_valid_0 = ((tryDispatch & csr_valid) & csr_address_valid) & io_float_ready;
 	wire io_float_valid_0 = (tryDispatch & decodedInsts_floatValid) & ~((decodedInsts_floatValid & _rdMark_flt_valid_T_4) | (decodedInsts_floatValid & _io_float_valid_T_3));
 	wire dispatched_3 = io_dvu_0_ready & io_dvu_0_valid_0;
 	wire dispatched_4 = io_lsu_0_ready & io_lsu_0_valid_0;
-	wire dispatched_8 = io_float_ready & io_float_valid_0;
-	wire tryDispatch_1 = (((((((((((lastReady_1 & ~io_halted) & ~io_interlock) & io_inst_1_valid) & ~isJump_0) & ({(((((((decodedInsts_1_jalr | _rdMark_valid_T_28) | decodedInsts_1_lw) | decodedInsts_1_lbu) | decodedInsts_1_lhu) | _io_rs2Read_1_valid_T_25) | decodedInsts_1_sw ? 32'h00000001 << _GEN_14 : 32'h00000000) | (_io_rs2Read_1_valid_T_25 | decodedInsts_1_sw ? 32'h00000001 << _GEN_15 : 32'h00000000)) & (rdScoreboard_0 | io_scoreboard_regd), ((((((((((((((((((((((((((((((((((((((((((_io_rs2Read_1_valid_T_1 | decodedInsts_1_blt) | decodedInsts_1_bge) | decodedInsts_1_bltu) | decodedInsts_1_bgeu) | _io_rs2Read_1_valid_T_6) | decodedInsts_1_slt) | decodedInsts_1_sltu) | decodedInsts_1_xor) | decodedInsts_1_or) | decodedInsts_1_and) | decodedInsts_1_xnor) | decodedInsts_1_orn) | decodedInsts_1_andn) | decodedInsts_1_sll) | decodedInsts_1_srl) | decodedInsts_1_sra) | _io_rs2Set_1_valid_T_6) | decodedInsts_1_sltiu) | decodedInsts_1_xori) | decodedInsts_1_ori) | decodedInsts_1_andi) | decodedInsts_1_slli) | decodedInsts_1_srli) | decodedInsts_1_srai) | decodedInsts_1_rori) | _io_rs2Set_1_valid_T_16) | decodedInsts_1_cpop) | decodedInsts_1_sextb) | decodedInsts_1_sexth) | decodedInsts_1_zexth) | decodedInsts_1_orcb) | decodedInsts_1_rev8) | _io_rs2Read_1_valid_T_19) | decodedInsts_1_max) | decodedInsts_1_maxu) | decodedInsts_1_rol) | decodedInsts_1_ror) | _io_rs2Read_1_valid_T_34) | decodedInsts_1_mulhsu) | decodedInsts_1_mulhu) | decodedInsts_1_jalr ? 32'h00000001 << _GEN_14 : 32'h00000000) | ((((((((((((((((((((((((((_io_rs2Read_1_valid_T_1 | decodedInsts_1_blt) | decodedInsts_1_bge) | decodedInsts_1_bltu) | decodedInsts_1_bgeu) | _io_rs2Read_1_valid_T_6) | decodedInsts_1_slt) | decodedInsts_1_sltu) | decodedInsts_1_xor) | decodedInsts_1_or) | decodedInsts_1_and) | decodedInsts_1_xnor) | decodedInsts_1_orn) | decodedInsts_1_andn) | decodedInsts_1_sll) | decodedInsts_1_srl) | decodedInsts_1_sra) | _io_rs2Read_1_valid_T_19) | decodedInsts_1_max) | decodedInsts_1_maxu) | decodedInsts_1_rol) | decodedInsts_1_ror) | _io_rs2Read_1_valid_T_25) | decodedInsts_1_sw) | _io_rs2Read_1_valid_T_34) | decodedInsts_1_mulhsu) | decodedInsts_1_mulhu ? 32'h00000001 << _GEN_15 : 32'h00000000)) & comb_1} == 64'h0000000000000000)) & ((rdScoreboard_1 & comb_1) == 32'h00000000)) & ~isBranch_0) & ~((((((_slot0Interlock_T_36 | decodedInsts_0_wfi) | decodedInsts_0_mpause) | decodedInsts_0_flushat) | decodedInsts_0_flushall) | _io_rs2Set_0_valid_T_1) | decodedInsts_0_csrrc)) & ({3'h0, isLsu_0} < _GEN_20)) & |{decodedInsts_1_lui, decodedInsts_1_auipc, decodedInsts_1_jal, decodedInsts_1_jalr, decodedInsts_1_beq, decodedInsts_1_bne, decodedInsts_1_blt, decodedInsts_1_bge, decodedInsts_1_bltu, decodedInsts_1_bgeu, decodedInsts_1_lb, decodedInsts_1_lh, decodedInsts_1_lw, decodedInsts_1_lbu, decodedInsts_1_lhu, decodedInsts_1_sb, decodedInsts_1_sh, decodedInsts_1_sw, decodedInsts_1_addi, decodedInsts_1_slti, decodedInsts_1_sltiu, decodedInsts_1_xori, decodedInsts_1_ori, decodedInsts_1_andi, decodedInsts_1_add, decodedInsts_1_sub, decodedInsts_1_slt, decodedInsts_1_sltu, decodedInsts_1_xor, decodedInsts_1_or, decodedInsts_1_and, decodedInsts_1_xnor, decodedInsts_1_orn, decodedInsts_1_andn, decodedInsts_1_slli, decodedInsts_1_srli, decodedInsts_1_srai, decodedInsts_1_sll, decodedInsts_1_srl, decodedInsts_1_sra, decodedInsts_1_mul, decodedInsts_1_mulh, decodedInsts_1_mulhsu, decodedInsts_1_mulhu, decodedInsts_1_clz, decodedInsts_1_ctz, decodedInsts_1_cpop, decodedInsts_1_min, decodedInsts_1_minu, decodedInsts_1_max, decodedInsts_1_maxu, decodedInsts_1_sextb, decodedInsts_1_sexth, decodedInsts_1_zexth, decodedInsts_1_rol, decodedInsts_1_ror, decodedInsts_1_orcb, decodedInsts_1_rev8, decodedInsts_1_rori}) & |io_retirement_buffer_nSpace[4:1]) & ~io_retirement_buffer_trap_pending;
+	wire dispatched_7 = io_float_ready & io_float_valid_0;
+	wire lastReady_1 = ((((((io_alu_0_valid_0 | io_bru_0_valid_0) | io_mlu_0_valid_0) | dispatched_3) | dispatched_4) | io_csr_valid_0) | (tryDispatch & decodedInsts_0_fence)) | dispatched_7;
+	wire tryDispatch_1 = ((((((((((((lastReady_1 & ~io_halted) & ~io_interlock) & io_inst_1_valid) & ~isJump_0) & ({(((((((decodedInsts_1_jalr | _rdMark_valid_T_28) | decodedInsts_1_lw) | decodedInsts_1_lbu) | decodedInsts_1_lhu) | _io_rs2Read_1_valid_T_25) | decodedInsts_1_sw ? 32'h00000001 << _GEN_14 : 32'h00000000) | (_io_rs2Read_1_valid_T_25 | decodedInsts_1_sw ? 32'h00000001 << _GEN_15 : 32'h00000000)) & (rdScoreboard_0 | io_scoreboard_regd), ((((((((((((((((((((((((((((((((((((((((((_io_rs2Read_1_valid_T_1 | decodedInsts_1_blt) | decodedInsts_1_bge) | decodedInsts_1_bltu) | decodedInsts_1_bgeu) | _io_rs2Read_1_valid_T_6) | decodedInsts_1_slt) | decodedInsts_1_sltu) | decodedInsts_1_xor) | decodedInsts_1_or) | decodedInsts_1_and) | decodedInsts_1_xnor) | decodedInsts_1_orn) | decodedInsts_1_andn) | decodedInsts_1_sll) | decodedInsts_1_srl) | decodedInsts_1_sra) | _io_rs2Set_1_valid_T_6) | decodedInsts_1_sltiu) | decodedInsts_1_xori) | decodedInsts_1_ori) | decodedInsts_1_andi) | decodedInsts_1_slli) | decodedInsts_1_srli) | decodedInsts_1_srai) | decodedInsts_1_rori) | _io_rs2Set_1_valid_T_16) | decodedInsts_1_cpop) | decodedInsts_1_sextb) | decodedInsts_1_sexth) | decodedInsts_1_zexth) | decodedInsts_1_orcb) | decodedInsts_1_rev8) | _io_rs2Read_1_valid_T_19) | decodedInsts_1_max) | decodedInsts_1_maxu) | decodedInsts_1_rol) | decodedInsts_1_ror) | _io_rs2Read_1_valid_T_34) | decodedInsts_1_mulhsu) | decodedInsts_1_mulhu) | decodedInsts_1_jalr ? 32'h00000001 << _GEN_14 : 32'h00000000) | ((((((((((((((((((((((((((_io_rs2Read_1_valid_T_1 | decodedInsts_1_blt) | decodedInsts_1_bge) | decodedInsts_1_bltu) | decodedInsts_1_bgeu) | _io_rs2Read_1_valid_T_6) | decodedInsts_1_slt) | decodedInsts_1_sltu) | decodedInsts_1_xor) | decodedInsts_1_or) | decodedInsts_1_and) | decodedInsts_1_xnor) | decodedInsts_1_orn) | decodedInsts_1_andn) | decodedInsts_1_sll) | decodedInsts_1_srl) | decodedInsts_1_sra) | _io_rs2Read_1_valid_T_19) | decodedInsts_1_max) | decodedInsts_1_maxu) | decodedInsts_1_rol) | decodedInsts_1_ror) | _io_rs2Read_1_valid_T_25) | decodedInsts_1_sw) | _io_rs2Read_1_valid_T_34) | decodedInsts_1_mulhsu) | decodedInsts_1_mulhu ? 32'h00000001 << _GEN_15 : 32'h00000000)) & comb_1} == 64'h0000000000000000)) & ((rdScoreboard_1 & comb_1) == 32'h00000000)) & ~isBranch_0) & ~(((((((_slot0Interlock_T_48 | decodedInsts_0_wfi) | decodedInsts_0_mpause) | decodedInsts_0_flushat) | decodedInsts_0_flushall) | _io_rs2Set_0_valid_T_1) | decodedInsts_0_csrrc) | decodedInsts_floatValid)) & ({3'h0, isLsu_0} < _GEN_20)) & |{decodedInsts_1_lui, decodedInsts_1_auipc, decodedInsts_1_jal, decodedInsts_1_jalr, decodedInsts_1_beq, decodedInsts_1_bne, decodedInsts_1_blt, decodedInsts_1_bge, decodedInsts_1_bltu, decodedInsts_1_bgeu, decodedInsts_1_lb, decodedInsts_1_lh, decodedInsts_1_lw, decodedInsts_1_lbu, decodedInsts_1_lhu, decodedInsts_1_sb, decodedInsts_1_sh, decodedInsts_1_sw, decodedInsts_1_addi, decodedInsts_1_slti, decodedInsts_1_sltiu, decodedInsts_1_xori, decodedInsts_1_ori, decodedInsts_1_andi, decodedInsts_1_add, decodedInsts_1_sub, decodedInsts_1_slt, decodedInsts_1_sltu, decodedInsts_1_xor, decodedInsts_1_or, decodedInsts_1_and, decodedInsts_1_xnor, decodedInsts_1_orn, decodedInsts_1_andn, decodedInsts_1_slli, decodedInsts_1_srli, decodedInsts_1_srai, decodedInsts_1_sll, decodedInsts_1_srl, decodedInsts_1_sra, decodedInsts_1_mul, decodedInsts_1_mulh, decodedInsts_1_mulhsu, decodedInsts_1_mulhu, decodedInsts_1_clz, decodedInsts_1_ctz, decodedInsts_1_cpop, decodedInsts_1_min, decodedInsts_1_minu, decodedInsts_1_max, decodedInsts_1_maxu, decodedInsts_1_sextb, decodedInsts_1_sexth, decodedInsts_1_zexth, decodedInsts_1_rol, decodedInsts_1_ror, decodedInsts_1_orcb, decodedInsts_1_rev8, decodedInsts_1_rori}) & |io_retirement_buffer_nSpace[4:1]) & ~io_retirement_buffer_trap_pending) & ~io_single_step;
 	wire _alu_T_376 = (decodedInsts_1_auipc | decodedInsts_1_addi) | decodedInsts_1_add;
 	wire _alu_T_378 = decodedInsts_1_slti | decodedInsts_1_slt;
 	wire _alu_T_379 = decodedInsts_1_sltiu | decodedInsts_1_sltu;
@@ -2946,7 +4562,7 @@ module DispatchV2 (
 	wire dispatched_2_1 = io_mlu_1_ready & io_mlu_1_valid_0;
 	wire dispatched_4_1 = io_lsu_1_ready & io_lsu_1_valid_0;
 	wire lastReady_2 = ((io_alu_1_valid_0 | io_bru_1_valid_0) | dispatched_2_1) | dispatched_4_1;
-	wire tryDispatch_2 = (((((((((((lastReady_2 & ~io_halted) & ~io_interlock) & io_inst_2_valid) & ~jumped_2) & ({(((((((decodedInsts_2_jalr | _rdMark_valid_T_49) | decodedInsts_2_lw) | decodedInsts_2_lbu) | decodedInsts_2_lhu) | _io_rs2Read_2_valid_T_25) | decodedInsts_2_sw ? 32'h00000001 << _GEN_16 : 32'h00000000) | (_io_rs2Read_2_valid_T_25 | decodedInsts_2_sw ? 32'h00000001 << _GEN_17 : 32'h00000000)) & (scoreboardScan_2 | io_scoreboard_regd), ((((((((((((((((((((((((((((((((((((((((((_io_rs2Read_2_valid_T_1 | decodedInsts_2_blt) | decodedInsts_2_bge) | decodedInsts_2_bltu) | decodedInsts_2_bgeu) | _io_rs2Read_2_valid_T_6) | decodedInsts_2_slt) | decodedInsts_2_sltu) | decodedInsts_2_xor) | decodedInsts_2_or) | decodedInsts_2_and) | decodedInsts_2_xnor) | decodedInsts_2_orn) | decodedInsts_2_andn) | decodedInsts_2_sll) | decodedInsts_2_srl) | decodedInsts_2_sra) | _io_rs2Set_2_valid_T_6) | decodedInsts_2_sltiu) | decodedInsts_2_xori) | decodedInsts_2_ori) | decodedInsts_2_andi) | decodedInsts_2_slli) | decodedInsts_2_srli) | decodedInsts_2_srai) | decodedInsts_2_rori) | _io_rs2Set_2_valid_T_16) | decodedInsts_2_cpop) | decodedInsts_2_sextb) | decodedInsts_2_sexth) | decodedInsts_2_zexth) | decodedInsts_2_orcb) | decodedInsts_2_rev8) | _io_rs2Read_2_valid_T_19) | decodedInsts_2_max) | decodedInsts_2_maxu) | decodedInsts_2_rol) | decodedInsts_2_ror) | _io_rs2Read_2_valid_T_34) | decodedInsts_2_mulhsu) | decodedInsts_2_mulhu) | decodedInsts_2_jalr ? 32'h00000001 << _GEN_16 : 32'h00000000) | ((((((((((((((((((((((((((_io_rs2Read_2_valid_T_1 | decodedInsts_2_blt) | decodedInsts_2_bge) | decodedInsts_2_bltu) | decodedInsts_2_bgeu) | _io_rs2Read_2_valid_T_6) | decodedInsts_2_slt) | decodedInsts_2_sltu) | decodedInsts_2_xor) | decodedInsts_2_or) | decodedInsts_2_and) | decodedInsts_2_xnor) | decodedInsts_2_orn) | decodedInsts_2_andn) | decodedInsts_2_sll) | decodedInsts_2_srl) | decodedInsts_2_sra) | _io_rs2Read_2_valid_T_19) | decodedInsts_2_max) | decodedInsts_2_maxu) | decodedInsts_2_rol) | decodedInsts_2_ror) | _io_rs2Read_2_valid_T_25) | decodedInsts_2_sw) | _io_rs2Read_2_valid_T_34) | decodedInsts_2_mulhsu) | decodedInsts_2_mulhu ? 32'h00000001 << _GEN_17 : 32'h00000000)) & comb_2} == 64'h0000000000000000)) & ((rdScoreboard_2 & comb_2) == 32'h00000000)) & ~branched_2) & ~((((((_slot0Interlock_T_36 | decodedInsts_0_wfi) | decodedInsts_0_mpause) | decodedInsts_0_flushat) | decodedInsts_0_flushall) | _io_rs2Set_0_valid_T_1) | decodedInsts_0_csrrc)) & (_isLsuCount_T_1 < _GEN_20)) & |{decodedInsts_2_lui, decodedInsts_2_auipc, decodedInsts_2_jal, decodedInsts_2_jalr, decodedInsts_2_beq, decodedInsts_2_bne, decodedInsts_2_blt, decodedInsts_2_bge, decodedInsts_2_bltu, decodedInsts_2_bgeu, decodedInsts_2_lb, decodedInsts_2_lh, decodedInsts_2_lw, decodedInsts_2_lbu, decodedInsts_2_lhu, decodedInsts_2_sb, decodedInsts_2_sh, decodedInsts_2_sw, decodedInsts_2_addi, decodedInsts_2_slti, decodedInsts_2_sltiu, decodedInsts_2_xori, decodedInsts_2_ori, decodedInsts_2_andi, decodedInsts_2_add, decodedInsts_2_sub, decodedInsts_2_slt, decodedInsts_2_sltu, decodedInsts_2_xor, decodedInsts_2_or, decodedInsts_2_and, decodedInsts_2_xnor, decodedInsts_2_orn, decodedInsts_2_andn, decodedInsts_2_slli, decodedInsts_2_srli, decodedInsts_2_srai, decodedInsts_2_sll, decodedInsts_2_srl, decodedInsts_2_sra, decodedInsts_2_mul, decodedInsts_2_mulh, decodedInsts_2_mulhsu, decodedInsts_2_mulhu, decodedInsts_2_clz, decodedInsts_2_ctz, decodedInsts_2_cpop, decodedInsts_2_min, decodedInsts_2_minu, decodedInsts_2_max, decodedInsts_2_maxu, decodedInsts_2_sextb, decodedInsts_2_sexth, decodedInsts_2_zexth, decodedInsts_2_rol, decodedInsts_2_ror, decodedInsts_2_orcb, decodedInsts_2_rev8, decodedInsts_2_rori}) & (io_retirement_buffer_nSpace > 5'h02)) & ~io_retirement_buffer_trap_pending;
+	wire tryDispatch_2 = ((((((((((((lastReady_2 & ~io_halted) & ~io_interlock) & io_inst_2_valid) & ~jumped_2) & ({(((((((decodedInsts_2_jalr | _rdMark_valid_T_49) | decodedInsts_2_lw) | decodedInsts_2_lbu) | decodedInsts_2_lhu) | _io_rs2Read_2_valid_T_25) | decodedInsts_2_sw ? 32'h00000001 << _GEN_16 : 32'h00000000) | (_io_rs2Read_2_valid_T_25 | decodedInsts_2_sw ? 32'h00000001 << _GEN_17 : 32'h00000000)) & (scoreboardScan_2 | io_scoreboard_regd), ((((((((((((((((((((((((((((((((((((((((((_io_rs2Read_2_valid_T_1 | decodedInsts_2_blt) | decodedInsts_2_bge) | decodedInsts_2_bltu) | decodedInsts_2_bgeu) | _io_rs2Read_2_valid_T_6) | decodedInsts_2_slt) | decodedInsts_2_sltu) | decodedInsts_2_xor) | decodedInsts_2_or) | decodedInsts_2_and) | decodedInsts_2_xnor) | decodedInsts_2_orn) | decodedInsts_2_andn) | decodedInsts_2_sll) | decodedInsts_2_srl) | decodedInsts_2_sra) | _io_rs2Set_2_valid_T_6) | decodedInsts_2_sltiu) | decodedInsts_2_xori) | decodedInsts_2_ori) | decodedInsts_2_andi) | decodedInsts_2_slli) | decodedInsts_2_srli) | decodedInsts_2_srai) | decodedInsts_2_rori) | _io_rs2Set_2_valid_T_16) | decodedInsts_2_cpop) | decodedInsts_2_sextb) | decodedInsts_2_sexth) | decodedInsts_2_zexth) | decodedInsts_2_orcb) | decodedInsts_2_rev8) | _io_rs2Read_2_valid_T_19) | decodedInsts_2_max) | decodedInsts_2_maxu) | decodedInsts_2_rol) | decodedInsts_2_ror) | _io_rs2Read_2_valid_T_34) | decodedInsts_2_mulhsu) | decodedInsts_2_mulhu) | decodedInsts_2_jalr ? 32'h00000001 << _GEN_16 : 32'h00000000) | ((((((((((((((((((((((((((_io_rs2Read_2_valid_T_1 | decodedInsts_2_blt) | decodedInsts_2_bge) | decodedInsts_2_bltu) | decodedInsts_2_bgeu) | _io_rs2Read_2_valid_T_6) | decodedInsts_2_slt) | decodedInsts_2_sltu) | decodedInsts_2_xor) | decodedInsts_2_or) | decodedInsts_2_and) | decodedInsts_2_xnor) | decodedInsts_2_orn) | decodedInsts_2_andn) | decodedInsts_2_sll) | decodedInsts_2_srl) | decodedInsts_2_sra) | _io_rs2Read_2_valid_T_19) | decodedInsts_2_max) | decodedInsts_2_maxu) | decodedInsts_2_rol) | decodedInsts_2_ror) | _io_rs2Read_2_valid_T_25) | decodedInsts_2_sw) | _io_rs2Read_2_valid_T_34) | decodedInsts_2_mulhsu) | decodedInsts_2_mulhu ? 32'h00000001 << _GEN_17 : 32'h00000000)) & comb_2} == 64'h0000000000000000)) & ((rdScoreboard_2 & comb_2) == 32'h00000000)) & ~branched_2) & ~(((((((_slot0Interlock_T_48 | decodedInsts_0_wfi) | decodedInsts_0_mpause) | decodedInsts_0_flushat) | decodedInsts_0_flushall) | _io_rs2Set_0_valid_T_1) | decodedInsts_0_csrrc) | decodedInsts_floatValid)) & (_isLsuCount_T_1 < _GEN_20)) & |{decodedInsts_2_lui, decodedInsts_2_auipc, decodedInsts_2_jal, decodedInsts_2_jalr, decodedInsts_2_beq, decodedInsts_2_bne, decodedInsts_2_blt, decodedInsts_2_bge, decodedInsts_2_bltu, decodedInsts_2_bgeu, decodedInsts_2_lb, decodedInsts_2_lh, decodedInsts_2_lw, decodedInsts_2_lbu, decodedInsts_2_lhu, decodedInsts_2_sb, decodedInsts_2_sh, decodedInsts_2_sw, decodedInsts_2_addi, decodedInsts_2_slti, decodedInsts_2_sltiu, decodedInsts_2_xori, decodedInsts_2_ori, decodedInsts_2_andi, decodedInsts_2_add, decodedInsts_2_sub, decodedInsts_2_slt, decodedInsts_2_sltu, decodedInsts_2_xor, decodedInsts_2_or, decodedInsts_2_and, decodedInsts_2_xnor, decodedInsts_2_orn, decodedInsts_2_andn, decodedInsts_2_slli, decodedInsts_2_srli, decodedInsts_2_srai, decodedInsts_2_sll, decodedInsts_2_srl, decodedInsts_2_sra, decodedInsts_2_mul, decodedInsts_2_mulh, decodedInsts_2_mulhsu, decodedInsts_2_mulhu, decodedInsts_2_clz, decodedInsts_2_ctz, decodedInsts_2_cpop, decodedInsts_2_min, decodedInsts_2_minu, decodedInsts_2_max, decodedInsts_2_maxu, decodedInsts_2_sextb, decodedInsts_2_sexth, decodedInsts_2_zexth, decodedInsts_2_rol, decodedInsts_2_ror, decodedInsts_2_orcb, decodedInsts_2_rev8, decodedInsts_2_rori}) & (io_retirement_buffer_nSpace > 5'h02)) & ~io_retirement_buffer_trap_pending) & ~io_single_step;
 	wire _alu_T_594 = (decodedInsts_2_auipc | decodedInsts_2_addi) | decodedInsts_2_add;
 	wire _alu_T_596 = decodedInsts_2_slti | decodedInsts_2_slt;
 	wire _alu_T_597 = decodedInsts_2_sltiu | decodedInsts_2_sltu;
@@ -2969,7 +4585,7 @@ module DispatchV2 (
 	wire dispatched_2_2 = io_mlu_2_ready & io_mlu_2_valid_0;
 	wire dispatched_4_2 = io_lsu_2_ready & io_lsu_2_valid_0;
 	wire lastReady_3 = ((io_alu_2_valid_0 | io_bru_2_valid_0) | dispatched_2_2) | dispatched_4_2;
-	wire tryDispatch_3 = (((((((((((lastReady_3 & ~io_halted) & ~io_interlock) & io_inst_3_valid) & ~(jumped_2 | isJump_2)) & ({(((((((decodedInsts_3_jalr | _rdMark_valid_T_70) | decodedInsts_3_lw) | decodedInsts_3_lbu) | decodedInsts_3_lhu) | _io_rs2Read_3_valid_T_25) | decodedInsts_3_sw ? 32'h00000001 << _GEN_18 : 32'h00000000) | (_io_rs2Read_3_valid_T_25 | decodedInsts_3_sw ? 32'h00000001 << _GEN_19 : 32'h00000000)) & (scoreboardScan_3 | io_scoreboard_regd), ((((((((((((((((((((((((((((((((((((((((((_io_rs2Read_3_valid_T_1 | decodedInsts_3_blt) | decodedInsts_3_bge) | decodedInsts_3_bltu) | decodedInsts_3_bgeu) | _io_rs2Read_3_valid_T_6) | decodedInsts_3_slt) | decodedInsts_3_sltu) | decodedInsts_3_xor) | decodedInsts_3_or) | decodedInsts_3_and) | decodedInsts_3_xnor) | decodedInsts_3_orn) | decodedInsts_3_andn) | decodedInsts_3_sll) | decodedInsts_3_srl) | decodedInsts_3_sra) | _io_rs2Set_3_valid_T_6) | decodedInsts_3_sltiu) | decodedInsts_3_xori) | decodedInsts_3_ori) | decodedInsts_3_andi) | decodedInsts_3_slli) | decodedInsts_3_srli) | decodedInsts_3_srai) | decodedInsts_3_rori) | _io_rs2Set_3_valid_T_16) | decodedInsts_3_cpop) | decodedInsts_3_sextb) | decodedInsts_3_sexth) | decodedInsts_3_zexth) | decodedInsts_3_orcb) | decodedInsts_3_rev8) | _io_rs2Read_3_valid_T_19) | decodedInsts_3_max) | decodedInsts_3_maxu) | decodedInsts_3_rol) | decodedInsts_3_ror) | _io_rs2Read_3_valid_T_34) | decodedInsts_3_mulhsu) | decodedInsts_3_mulhu) | decodedInsts_3_jalr ? 32'h00000001 << _GEN_18 : 32'h00000000) | ((((((((((((((((((((((((((_io_rs2Read_3_valid_T_1 | decodedInsts_3_blt) | decodedInsts_3_bge) | decodedInsts_3_bltu) | decodedInsts_3_bgeu) | _io_rs2Read_3_valid_T_6) | decodedInsts_3_slt) | decodedInsts_3_sltu) | decodedInsts_3_xor) | decodedInsts_3_or) | decodedInsts_3_and) | decodedInsts_3_xnor) | decodedInsts_3_orn) | decodedInsts_3_andn) | decodedInsts_3_sll) | decodedInsts_3_srl) | decodedInsts_3_sra) | _io_rs2Read_3_valid_T_19) | decodedInsts_3_max) | decodedInsts_3_maxu) | decodedInsts_3_rol) | decodedInsts_3_ror) | _io_rs2Read_3_valid_T_25) | decodedInsts_3_sw) | _io_rs2Read_3_valid_T_34) | decodedInsts_3_mulhsu) | decodedInsts_3_mulhu ? 32'h00000001 << _GEN_19 : 32'h00000000)) & comb_3} == 64'h0000000000000000)) & ((((((((_io_rs2Read_3_valid_T_25 | decodedInsts_3_sw) | _io_rs2Read_3_valid_T_1) | decodedInsts_3_blt) | decodedInsts_3_bge) | decodedInsts_3_bltu) | decodedInsts_3_bgeu ? 32'h00000000 : 32'h00000001 << io_inst_3_bits_inst[11:7]) & comb_3) == 32'h00000000)) & ~(branched_2 | isBranch_2)) & ~((((((_slot0Interlock_T_36 | decodedInsts_0_wfi) | decodedInsts_0_mpause) | decodedInsts_0_flushat) | decodedInsts_0_flushall) | _io_rs2Set_0_valid_T_1) | decodedInsts_0_csrrc)) & ((_isLsuCount_T_1 + {3'h0, ((((_rdMark_valid_T_49 | decodedInsts_2_lw) | decodedInsts_2_lbu) | decodedInsts_2_lhu) | _io_rs2Read_2_valid_T_25) | decodedInsts_2_sw}) < _GEN_20)) & |{decodedInsts_3_lui, decodedInsts_3_auipc, decodedInsts_3_jal, decodedInsts_3_jalr, decodedInsts_3_beq, decodedInsts_3_bne, decodedInsts_3_blt, decodedInsts_3_bge, decodedInsts_3_bltu, decodedInsts_3_bgeu, decodedInsts_3_lb, decodedInsts_3_lh, decodedInsts_3_lw, decodedInsts_3_lbu, decodedInsts_3_lhu, decodedInsts_3_sb, decodedInsts_3_sh, decodedInsts_3_sw, decodedInsts_3_addi, decodedInsts_3_slti, decodedInsts_3_sltiu, decodedInsts_3_xori, decodedInsts_3_ori, decodedInsts_3_andi, decodedInsts_3_add, decodedInsts_3_sub, decodedInsts_3_slt, decodedInsts_3_sltu, decodedInsts_3_xor, decodedInsts_3_or, decodedInsts_3_and, decodedInsts_3_xnor, decodedInsts_3_orn, decodedInsts_3_andn, decodedInsts_3_slli, decodedInsts_3_srli, decodedInsts_3_srai, decodedInsts_3_sll, decodedInsts_3_srl, decodedInsts_3_sra, decodedInsts_3_mul, decodedInsts_3_mulh, decodedInsts_3_mulhsu, decodedInsts_3_mulhu, decodedInsts_3_clz, decodedInsts_3_ctz, decodedInsts_3_cpop, decodedInsts_3_min, decodedInsts_3_minu, decodedInsts_3_max, decodedInsts_3_maxu, decodedInsts_3_sextb, decodedInsts_3_sexth, decodedInsts_3_zexth, decodedInsts_3_rol, decodedInsts_3_ror, decodedInsts_3_orcb, decodedInsts_3_rev8, decodedInsts_3_rori}) & |io_retirement_buffer_nSpace[4:2]) & ~io_retirement_buffer_trap_pending;
+	wire tryDispatch_3 = ((((((((((((lastReady_3 & ~io_halted) & ~io_interlock) & io_inst_3_valid) & ~(jumped_2 | isJump_2)) & ({(((((((decodedInsts_3_jalr | _rdMark_valid_T_70) | decodedInsts_3_lw) | decodedInsts_3_lbu) | decodedInsts_3_lhu) | _io_rs2Read_3_valid_T_25) | decodedInsts_3_sw ? 32'h00000001 << _GEN_18 : 32'h00000000) | (_io_rs2Read_3_valid_T_25 | decodedInsts_3_sw ? 32'h00000001 << _GEN_19 : 32'h00000000)) & (scoreboardScan_3 | io_scoreboard_regd), ((((((((((((((((((((((((((((((((((((((((((_io_rs2Read_3_valid_T_1 | decodedInsts_3_blt) | decodedInsts_3_bge) | decodedInsts_3_bltu) | decodedInsts_3_bgeu) | _io_rs2Read_3_valid_T_6) | decodedInsts_3_slt) | decodedInsts_3_sltu) | decodedInsts_3_xor) | decodedInsts_3_or) | decodedInsts_3_and) | decodedInsts_3_xnor) | decodedInsts_3_orn) | decodedInsts_3_andn) | decodedInsts_3_sll) | decodedInsts_3_srl) | decodedInsts_3_sra) | _io_rs2Set_3_valid_T_6) | decodedInsts_3_sltiu) | decodedInsts_3_xori) | decodedInsts_3_ori) | decodedInsts_3_andi) | decodedInsts_3_slli) | decodedInsts_3_srli) | decodedInsts_3_srai) | decodedInsts_3_rori) | _io_rs2Set_3_valid_T_16) | decodedInsts_3_cpop) | decodedInsts_3_sextb) | decodedInsts_3_sexth) | decodedInsts_3_zexth) | decodedInsts_3_orcb) | decodedInsts_3_rev8) | _io_rs2Read_3_valid_T_19) | decodedInsts_3_max) | decodedInsts_3_maxu) | decodedInsts_3_rol) | decodedInsts_3_ror) | _io_rs2Read_3_valid_T_34) | decodedInsts_3_mulhsu) | decodedInsts_3_mulhu) | decodedInsts_3_jalr ? 32'h00000001 << _GEN_18 : 32'h00000000) | ((((((((((((((((((((((((((_io_rs2Read_3_valid_T_1 | decodedInsts_3_blt) | decodedInsts_3_bge) | decodedInsts_3_bltu) | decodedInsts_3_bgeu) | _io_rs2Read_3_valid_T_6) | decodedInsts_3_slt) | decodedInsts_3_sltu) | decodedInsts_3_xor) | decodedInsts_3_or) | decodedInsts_3_and) | decodedInsts_3_xnor) | decodedInsts_3_orn) | decodedInsts_3_andn) | decodedInsts_3_sll) | decodedInsts_3_srl) | decodedInsts_3_sra) | _io_rs2Read_3_valid_T_19) | decodedInsts_3_max) | decodedInsts_3_maxu) | decodedInsts_3_rol) | decodedInsts_3_ror) | _io_rs2Read_3_valid_T_25) | decodedInsts_3_sw) | _io_rs2Read_3_valid_T_34) | decodedInsts_3_mulhsu) | decodedInsts_3_mulhu ? 32'h00000001 << _GEN_19 : 32'h00000000)) & comb_3} == 64'h0000000000000000)) & ((((((((_io_rs2Read_3_valid_T_25 | decodedInsts_3_sw) | _io_rs2Read_3_valid_T_1) | decodedInsts_3_blt) | decodedInsts_3_bge) | decodedInsts_3_bltu) | decodedInsts_3_bgeu ? 32'h00000000 : 32'h00000001 << io_inst_3_bits_inst[11:7]) & comb_3) == 32'h00000000)) & ~(branched_2 | isBranch_2)) & ~(((((((_slot0Interlock_T_48 | decodedInsts_0_wfi) | decodedInsts_0_mpause) | decodedInsts_0_flushat) | decodedInsts_0_flushall) | _io_rs2Set_0_valid_T_1) | decodedInsts_0_csrrc) | decodedInsts_floatValid)) & ((_isLsuCount_T_1 + {3'h0, ((((_rdMark_valid_T_49 | decodedInsts_2_lw) | decodedInsts_2_lbu) | decodedInsts_2_lhu) | _io_rs2Read_2_valid_T_25) | decodedInsts_2_sw}) < _GEN_20)) & |{decodedInsts_3_lui, decodedInsts_3_auipc, decodedInsts_3_jal, decodedInsts_3_jalr, decodedInsts_3_beq, decodedInsts_3_bne, decodedInsts_3_blt, decodedInsts_3_bge, decodedInsts_3_bltu, decodedInsts_3_bgeu, decodedInsts_3_lb, decodedInsts_3_lh, decodedInsts_3_lw, decodedInsts_3_lbu, decodedInsts_3_lhu, decodedInsts_3_sb, decodedInsts_3_sh, decodedInsts_3_sw, decodedInsts_3_addi, decodedInsts_3_slti, decodedInsts_3_sltiu, decodedInsts_3_xori, decodedInsts_3_ori, decodedInsts_3_andi, decodedInsts_3_add, decodedInsts_3_sub, decodedInsts_3_slt, decodedInsts_3_sltu, decodedInsts_3_xor, decodedInsts_3_or, decodedInsts_3_and, decodedInsts_3_xnor, decodedInsts_3_orn, decodedInsts_3_andn, decodedInsts_3_slli, decodedInsts_3_srli, decodedInsts_3_srai, decodedInsts_3_sll, decodedInsts_3_srl, decodedInsts_3_sra, decodedInsts_3_mul, decodedInsts_3_mulh, decodedInsts_3_mulhsu, decodedInsts_3_mulhu, decodedInsts_3_clz, decodedInsts_3_ctz, decodedInsts_3_cpop, decodedInsts_3_min, decodedInsts_3_minu, decodedInsts_3_max, decodedInsts_3_maxu, decodedInsts_3_sextb, decodedInsts_3_sexth, decodedInsts_3_zexth, decodedInsts_3_rol, decodedInsts_3_ror, decodedInsts_3_orcb, decodedInsts_3_rev8, decodedInsts_3_rori}) & |io_retirement_buffer_nSpace[4:2]) & ~io_retirement_buffer_trap_pending) & ~io_single_step;
 	wire _alu_T_812 = (decodedInsts_3_auipc | decodedInsts_3_addi) | decodedInsts_3_add;
 	wire _alu_T_814 = decodedInsts_3_slti | decodedInsts_3_slt;
 	wire _alu_T_815 = decodedInsts_3_sltiu | decodedInsts_3_sltu;
@@ -2992,10 +4608,10 @@ module DispatchV2 (
 	wire dispatched_2_3 = io_mlu_3_ready & io_mlu_3_valid_0;
 	wire dispatched_4_3 = io_lsu_3_ready & io_lsu_3_valid_0;
 	wire lastReady_4 = ((io_alu_3_valid_0 | io_bru_3_valid_0) | dispatched_2_3) | dispatched_4_3;
-	wire _io_rs2Set_0_valid_T = lastReady_1 & io_inst_0_valid;
-	wire _io_rs2Set_1_valid_T = lastReady_2 & io_inst_1_valid;
-	wire _io_rs2Set_2_valid_T = lastReady_3 & io_inst_2_valid;
-	wire _io_rs2Set_3_valid_T = lastReady_4 & io_inst_3_valid;
+	wire _io_frs1Read_0_valid_T = lastReady_1 & io_inst_0_valid;
+	wire _io_frs1Read_1_valid_T = lastReady_2 & io_inst_1_valid;
+	wire _io_frs1Read_2_valid_T = lastReady_3 & io_inst_2_valid;
+	wire _io_frs1Read_3_valid_T = lastReady_4 & io_inst_3_valid;
 	assign io_csrFault_0 = (csr_valid & ~csr_address_valid) & tryDispatch;
 	assign io_jalFault_0 = jalFault;
 	assign io_jalFault_1 = jalFault_1;
@@ -3009,6 +4625,7 @@ module DispatchV2 (
 	assign io_bxxFault_1 = bxxFault_1;
 	assign io_bxxFault_2 = bxxFault_2;
 	assign io_bxxFault_3 = bxxFault_3;
+	assign io_undefFault_0 = io_inst_0_valid & ({decodedInsts_0_lui, decodedInsts_0_auipc, decodedInsts_0_jal, decodedInsts_0_jalr, decodedInsts_0_beq, decodedInsts_0_bne, decodedInsts_0_blt, decodedInsts_0_bge, decodedInsts_0_bltu, decodedInsts_0_bgeu, decodedInsts_0_csrrw, decodedInsts_0_csrrs, decodedInsts_0_csrrc, decodedInsts_0_lb, decodedInsts_0_lh, decodedInsts_0_lw, decodedInsts_0_lbu, decodedInsts_0_lhu, decodedInsts_0_sb, decodedInsts_0_sh, decodedInsts_0_sw, decodedInsts_0_fence, decodedInsts_0_addi, decodedInsts_0_slti, decodedInsts_0_sltiu, decodedInsts_0_xori, decodedInsts_0_ori, decodedInsts_0_andi, decodedInsts_0_add, decodedInsts_0_sub, decodedInsts_0_slt, decodedInsts_0_sltu, decodedInsts_0_xor, decodedInsts_0_or, decodedInsts_0_and, decodedInsts_0_xnor, decodedInsts_0_orn, decodedInsts_0_andn, decodedInsts_0_slli, decodedInsts_0_srli, decodedInsts_0_srai, decodedInsts_0_sll, decodedInsts_0_srl, decodedInsts_0_sra, decodedInsts_0_mul, decodedInsts_0_mulh, decodedInsts_0_mulhsu, decodedInsts_0_mulhu, decodedInsts_0_div, decodedInsts_0_divu, decodedInsts_0_rem, decodedInsts_0_remu, decodedInsts_0_clz, decodedInsts_0_ctz, decodedInsts_0_cpop, decodedInsts_0_min, decodedInsts_0_minu, decodedInsts_0_max, decodedInsts_0_maxu, decodedInsts_0_sextb, decodedInsts_0_sexth, decodedInsts_0_zexth, decodedInsts_0_rol, decodedInsts_0_ror, decodedInsts_0_orcb, decodedInsts_0_rev8, decodedInsts_0_rori, decodedInsts_0_ebreak, decodedInsts_0_ecall, decodedInsts_0_wfi, decodedInsts_0_mpause, decodedInsts_0_mret, decodedInsts_0_fencei, decodedInsts_0_flushat, decodedInsts_0_flushall, decodedInsts_floatValid} == 76'h0000000000000000000);
 	assign io_bruTarget_0 = _bru_target_T_2;
 	assign io_bruTarget_1 = _bru_target_T_5;
 	assign io_bruTarget_2 = _bru_target_T_8;
@@ -3017,37 +4634,39 @@ module DispatchV2 (
 	assign io_inst_1_ready = lastReady_2;
 	assign io_inst_2_ready = lastReady_3;
 	assign io_inst_3_ready = lastReady_4;
+	assign io_rs1Read_0_valid = _io_frs1Read_0_valid_T & (((((((((((((((((((((((((((((((((((((((((((((((_io_rs2Read_0_valid_T_1 | decodedInsts_0_blt) | decodedInsts_0_bge) | decodedInsts_0_bltu) | decodedInsts_0_bgeu) | _io_rs2Read_0_valid_T_6) | decodedInsts_0_slt) | decodedInsts_0_sltu) | decodedInsts_0_xor) | decodedInsts_0_or) | decodedInsts_0_and) | decodedInsts_0_xnor) | decodedInsts_0_orn) | decodedInsts_0_andn) | decodedInsts_0_sll) | decodedInsts_0_srl) | decodedInsts_0_sra) | _io_rs2Set_0_valid_T_6) | decodedInsts_0_sltiu) | decodedInsts_0_xori) | decodedInsts_0_ori) | decodedInsts_0_andi) | decodedInsts_0_slli) | decodedInsts_0_srli) | decodedInsts_0_srai) | decodedInsts_0_rori) | _io_rs2Set_0_valid_T_16) | decodedInsts_0_cpop) | decodedInsts_0_sextb) | decodedInsts_0_sexth) | decodedInsts_0_zexth) | decodedInsts_0_orcb) | decodedInsts_0_rev8) | _io_rs2Read_0_valid_T_19) | decodedInsts_0_max) | decodedInsts_0_maxu) | decodedInsts_0_rol) | decodedInsts_0_ror) | _io_rs2Set_0_valid_T_1) | decodedInsts_0_csrrc) | _io_rs2Read_0_valid_T_34) | decodedInsts_0_mulhsu) | decodedInsts_0_mulhu) | _io_rs2Read_0_valid_T_38) | decodedInsts_0_rem) | decodedInsts_0_remu) | decodedInsts_0_jalr) | _io_rs1Read_0_valid_T_55);
 	assign io_rs1Read_0_addr = (io_inst_0_bits_inst[0] ? io_inst_0_bits_inst[19:15] : {4'h0, io_inst_0_bits_inst[27]});
-	assign io_rs1Read_1_valid = _io_rs2Set_1_valid_T & (((((((((((((((((((((((((((((((((((((((((_io_rs2Read_1_valid_T_1 | decodedInsts_1_blt) | decodedInsts_1_bge) | decodedInsts_1_bltu) | decodedInsts_1_bgeu) | _io_rs2Read_1_valid_T_6) | decodedInsts_1_slt) | decodedInsts_1_sltu) | decodedInsts_1_xor) | decodedInsts_1_or) | decodedInsts_1_and) | decodedInsts_1_xnor) | decodedInsts_1_orn) | decodedInsts_1_andn) | decodedInsts_1_sll) | decodedInsts_1_srl) | decodedInsts_1_sra) | _io_rs2Set_1_valid_T_6) | decodedInsts_1_sltiu) | decodedInsts_1_xori) | decodedInsts_1_ori) | decodedInsts_1_andi) | decodedInsts_1_slli) | decodedInsts_1_srli) | decodedInsts_1_srai) | decodedInsts_1_rori) | _io_rs2Set_1_valid_T_16) | decodedInsts_1_cpop) | decodedInsts_1_sextb) | decodedInsts_1_sexth) | decodedInsts_1_zexth) | decodedInsts_1_orcb) | decodedInsts_1_rev8) | _io_rs2Read_1_valid_T_19) | decodedInsts_1_max) | decodedInsts_1_maxu) | decodedInsts_1_rol) | decodedInsts_1_ror) | _io_rs2Read_1_valid_T_34) | decodedInsts_1_mulhsu) | decodedInsts_1_mulhu) | decodedInsts_1_jalr);
+	assign io_rs1Read_1_valid = _io_frs1Read_1_valid_T & (((((((((((((((((((((((((((((((((((((((((_io_rs2Read_1_valid_T_1 | decodedInsts_1_blt) | decodedInsts_1_bge) | decodedInsts_1_bltu) | decodedInsts_1_bgeu) | _io_rs2Read_1_valid_T_6) | decodedInsts_1_slt) | decodedInsts_1_sltu) | decodedInsts_1_xor) | decodedInsts_1_or) | decodedInsts_1_and) | decodedInsts_1_xnor) | decodedInsts_1_orn) | decodedInsts_1_andn) | decodedInsts_1_sll) | decodedInsts_1_srl) | decodedInsts_1_sra) | _io_rs2Set_1_valid_T_6) | decodedInsts_1_sltiu) | decodedInsts_1_xori) | decodedInsts_1_ori) | decodedInsts_1_andi) | decodedInsts_1_slli) | decodedInsts_1_srli) | decodedInsts_1_srai) | decodedInsts_1_rori) | _io_rs2Set_1_valid_T_16) | decodedInsts_1_cpop) | decodedInsts_1_sextb) | decodedInsts_1_sexth) | decodedInsts_1_zexth) | decodedInsts_1_orcb) | decodedInsts_1_rev8) | _io_rs2Read_1_valid_T_19) | decodedInsts_1_max) | decodedInsts_1_maxu) | decodedInsts_1_rol) | decodedInsts_1_ror) | _io_rs2Read_1_valid_T_34) | decodedInsts_1_mulhsu) | decodedInsts_1_mulhu) | decodedInsts_1_jalr);
 	assign io_rs1Read_1_addr = (io_inst_1_bits_inst[0] ? io_inst_1_bits_inst[19:15] : {4'h0, io_inst_1_bits_inst[28]});
-	assign io_rs1Read_2_valid = _io_rs2Set_2_valid_T & (((((((((((((((((((((((((((((((((((((((((_io_rs2Read_2_valid_T_1 | decodedInsts_2_blt) | decodedInsts_2_bge) | decodedInsts_2_bltu) | decodedInsts_2_bgeu) | _io_rs2Read_2_valid_T_6) | decodedInsts_2_slt) | decodedInsts_2_sltu) | decodedInsts_2_xor) | decodedInsts_2_or) | decodedInsts_2_and) | decodedInsts_2_xnor) | decodedInsts_2_orn) | decodedInsts_2_andn) | decodedInsts_2_sll) | decodedInsts_2_srl) | decodedInsts_2_sra) | _io_rs2Set_2_valid_T_6) | decodedInsts_2_sltiu) | decodedInsts_2_xori) | decodedInsts_2_ori) | decodedInsts_2_andi) | decodedInsts_2_slli) | decodedInsts_2_srli) | decodedInsts_2_srai) | decodedInsts_2_rori) | _io_rs2Set_2_valid_T_16) | decodedInsts_2_cpop) | decodedInsts_2_sextb) | decodedInsts_2_sexth) | decodedInsts_2_zexth) | decodedInsts_2_orcb) | decodedInsts_2_rev8) | _io_rs2Read_2_valid_T_19) | decodedInsts_2_max) | decodedInsts_2_maxu) | decodedInsts_2_rol) | decodedInsts_2_ror) | _io_rs2Read_2_valid_T_34) | decodedInsts_2_mulhsu) | decodedInsts_2_mulhu) | decodedInsts_2_jalr);
+	assign io_rs1Read_2_valid = _io_frs1Read_2_valid_T & (((((((((((((((((((((((((((((((((((((((((_io_rs2Read_2_valid_T_1 | decodedInsts_2_blt) | decodedInsts_2_bge) | decodedInsts_2_bltu) | decodedInsts_2_bgeu) | _io_rs2Read_2_valid_T_6) | decodedInsts_2_slt) | decodedInsts_2_sltu) | decodedInsts_2_xor) | decodedInsts_2_or) | decodedInsts_2_and) | decodedInsts_2_xnor) | decodedInsts_2_orn) | decodedInsts_2_andn) | decodedInsts_2_sll) | decodedInsts_2_srl) | decodedInsts_2_sra) | _io_rs2Set_2_valid_T_6) | decodedInsts_2_sltiu) | decodedInsts_2_xori) | decodedInsts_2_ori) | decodedInsts_2_andi) | decodedInsts_2_slli) | decodedInsts_2_srli) | decodedInsts_2_srai) | decodedInsts_2_rori) | _io_rs2Set_2_valid_T_16) | decodedInsts_2_cpop) | decodedInsts_2_sextb) | decodedInsts_2_sexth) | decodedInsts_2_zexth) | decodedInsts_2_orcb) | decodedInsts_2_rev8) | _io_rs2Read_2_valid_T_19) | decodedInsts_2_max) | decodedInsts_2_maxu) | decodedInsts_2_rol) | decodedInsts_2_ror) | _io_rs2Read_2_valid_T_34) | decodedInsts_2_mulhsu) | decodedInsts_2_mulhu) | decodedInsts_2_jalr);
 	assign io_rs1Read_2_addr = (io_inst_2_bits_inst[0] ? io_inst_2_bits_inst[19:15] : {4'h0, io_inst_2_bits_inst[29]});
-	assign io_rs1Read_3_valid = _io_rs2Set_3_valid_T & (((((((((((((((((((((((((((((((((((((((((_io_rs2Read_3_valid_T_1 | decodedInsts_3_blt) | decodedInsts_3_bge) | decodedInsts_3_bltu) | decodedInsts_3_bgeu) | _io_rs2Read_3_valid_T_6) | decodedInsts_3_slt) | decodedInsts_3_sltu) | decodedInsts_3_xor) | decodedInsts_3_or) | decodedInsts_3_and) | decodedInsts_3_xnor) | decodedInsts_3_orn) | decodedInsts_3_andn) | decodedInsts_3_sll) | decodedInsts_3_srl) | decodedInsts_3_sra) | _io_rs2Set_3_valid_T_6) | decodedInsts_3_sltiu) | decodedInsts_3_xori) | decodedInsts_3_ori) | decodedInsts_3_andi) | decodedInsts_3_slli) | decodedInsts_3_srli) | decodedInsts_3_srai) | decodedInsts_3_rori) | _io_rs2Set_3_valid_T_16) | decodedInsts_3_cpop) | decodedInsts_3_sextb) | decodedInsts_3_sexth) | decodedInsts_3_zexth) | decodedInsts_3_orcb) | decodedInsts_3_rev8) | _io_rs2Read_3_valid_T_19) | decodedInsts_3_max) | decodedInsts_3_maxu) | decodedInsts_3_rol) | decodedInsts_3_ror) | _io_rs2Read_3_valid_T_34) | decodedInsts_3_mulhsu) | decodedInsts_3_mulhu) | decodedInsts_3_jalr);
+	assign io_rs1Read_3_valid = _io_frs1Read_3_valid_T & (((((((((((((((((((((((((((((((((((((((((_io_rs2Read_3_valid_T_1 | decodedInsts_3_blt) | decodedInsts_3_bge) | decodedInsts_3_bltu) | decodedInsts_3_bgeu) | _io_rs2Read_3_valid_T_6) | decodedInsts_3_slt) | decodedInsts_3_sltu) | decodedInsts_3_xor) | decodedInsts_3_or) | decodedInsts_3_and) | decodedInsts_3_xnor) | decodedInsts_3_orn) | decodedInsts_3_andn) | decodedInsts_3_sll) | decodedInsts_3_srl) | decodedInsts_3_sra) | _io_rs2Set_3_valid_T_6) | decodedInsts_3_sltiu) | decodedInsts_3_xori) | decodedInsts_3_ori) | decodedInsts_3_andi) | decodedInsts_3_slli) | decodedInsts_3_srli) | decodedInsts_3_srai) | decodedInsts_3_rori) | _io_rs2Set_3_valid_T_16) | decodedInsts_3_cpop) | decodedInsts_3_sextb) | decodedInsts_3_sexth) | decodedInsts_3_zexth) | decodedInsts_3_orcb) | decodedInsts_3_rev8) | _io_rs2Read_3_valid_T_19) | decodedInsts_3_max) | decodedInsts_3_maxu) | decodedInsts_3_rol) | decodedInsts_3_ror) | _io_rs2Read_3_valid_T_34) | decodedInsts_3_mulhsu) | decodedInsts_3_mulhu) | decodedInsts_3_jalr);
 	assign io_rs1Read_3_addr = (io_inst_3_bits_inst[0] ? io_inst_3_bits_inst[19:15] : {4'h0, io_inst_3_bits_inst[30]});
-	assign io_rs1Set_0_valid = _io_rs2Set_0_valid_T & (decodedInsts_0_auipc | ((_io_rs2Set_0_valid_T_1 | decodedInsts_0_csrrc) & io_inst_0_bits_inst[14]));
+	assign io_rs1Set_0_valid = _io_frs1Read_0_valid_T & (decodedInsts_0_auipc | ((_io_rs2Set_0_valid_T_1 | decodedInsts_0_csrrc) & io_inst_0_bits_inst[14]));
 	assign io_rs1Set_0_value = (_io_rs2Set_0_valid_T_1 | decodedInsts_0_csrrc ? decodedInsts_0_immcsr : io_inst_0_bits_addr);
-	assign io_rs1Set_1_valid = _io_rs2Set_1_valid_T & decodedInsts_1_auipc;
+	assign io_rs1Set_1_valid = _io_frs1Read_1_valid_T & decodedInsts_1_auipc;
 	assign io_rs1Set_1_value = io_inst_1_bits_addr;
-	assign io_rs1Set_2_valid = _io_rs2Set_2_valid_T & decodedInsts_2_auipc;
+	assign io_rs1Set_2_valid = _io_frs1Read_2_valid_T & decodedInsts_2_auipc;
 	assign io_rs1Set_2_value = io_inst_2_bits_addr;
-	assign io_rs1Set_3_valid = _io_rs2Set_3_valid_T & decodedInsts_3_auipc;
+	assign io_rs1Set_3_valid = _io_frs1Read_3_valid_T & decodedInsts_3_auipc;
 	assign io_rs1Set_3_value = io_inst_3_bits_addr;
+	assign io_rs2Read_0_valid = _io_frs1Read_0_valid_T & ((((((((((((((((((((((((((((((_io_rs2Read_0_valid_T_1 | decodedInsts_0_blt) | decodedInsts_0_bge) | decodedInsts_0_bltu) | decodedInsts_0_bgeu) | _io_rs2Read_0_valid_T_6) | decodedInsts_0_slt) | decodedInsts_0_sltu) | decodedInsts_0_xor) | decodedInsts_0_or) | decodedInsts_0_and) | decodedInsts_0_xnor) | decodedInsts_0_orn) | decodedInsts_0_andn) | decodedInsts_0_sll) | decodedInsts_0_srl) | decodedInsts_0_sra) | _io_rs2Read_0_valid_T_19) | decodedInsts_0_max) | decodedInsts_0_maxu) | decodedInsts_0_rol) | decodedInsts_0_ror) | _io_rs2Read_0_valid_T_25) | decodedInsts_0_sw) | ((_io_rs2Set_0_valid_T_1 | decodedInsts_0_csrrc) & ~io_inst_0_bits_inst[14])) | _io_rs2Read_0_valid_T_34) | decodedInsts_0_mulhsu) | decodedInsts_0_mulhu) | _io_rs2Read_0_valid_T_38) | decodedInsts_0_rem) | decodedInsts_0_remu);
 	assign io_rs2Read_0_addr = io_inst_0_bits_inst[24:20];
-	assign io_rs2Read_1_valid = _io_rs2Set_1_valid_T & ((((((((((((((((((((((((((_io_rs2Read_1_valid_T_1 | decodedInsts_1_blt) | decodedInsts_1_bge) | decodedInsts_1_bltu) | decodedInsts_1_bgeu) | _io_rs2Read_1_valid_T_6) | decodedInsts_1_slt) | decodedInsts_1_sltu) | decodedInsts_1_xor) | decodedInsts_1_or) | decodedInsts_1_and) | decodedInsts_1_xnor) | decodedInsts_1_orn) | decodedInsts_1_andn) | decodedInsts_1_sll) | decodedInsts_1_srl) | decodedInsts_1_sra) | _io_rs2Read_1_valid_T_19) | decodedInsts_1_max) | decodedInsts_1_maxu) | decodedInsts_1_rol) | decodedInsts_1_ror) | _io_rs2Read_1_valid_T_25) | decodedInsts_1_sw) | _io_rs2Read_1_valid_T_34) | decodedInsts_1_mulhsu) | decodedInsts_1_mulhu);
+	assign io_rs2Read_1_valid = _io_frs1Read_1_valid_T & ((((((((((((((((((((((((((_io_rs2Read_1_valid_T_1 | decodedInsts_1_blt) | decodedInsts_1_bge) | decodedInsts_1_bltu) | decodedInsts_1_bgeu) | _io_rs2Read_1_valid_T_6) | decodedInsts_1_slt) | decodedInsts_1_sltu) | decodedInsts_1_xor) | decodedInsts_1_or) | decodedInsts_1_and) | decodedInsts_1_xnor) | decodedInsts_1_orn) | decodedInsts_1_andn) | decodedInsts_1_sll) | decodedInsts_1_srl) | decodedInsts_1_sra) | _io_rs2Read_1_valid_T_19) | decodedInsts_1_max) | decodedInsts_1_maxu) | decodedInsts_1_rol) | decodedInsts_1_ror) | _io_rs2Read_1_valid_T_25) | decodedInsts_1_sw) | _io_rs2Read_1_valid_T_34) | decodedInsts_1_mulhsu) | decodedInsts_1_mulhu);
 	assign io_rs2Read_1_addr = io_inst_1_bits_inst[24:20];
-	assign io_rs2Read_2_valid = _io_rs2Set_2_valid_T & ((((((((((((((((((((((((((_io_rs2Read_2_valid_T_1 | decodedInsts_2_blt) | decodedInsts_2_bge) | decodedInsts_2_bltu) | decodedInsts_2_bgeu) | _io_rs2Read_2_valid_T_6) | decodedInsts_2_slt) | decodedInsts_2_sltu) | decodedInsts_2_xor) | decodedInsts_2_or) | decodedInsts_2_and) | decodedInsts_2_xnor) | decodedInsts_2_orn) | decodedInsts_2_andn) | decodedInsts_2_sll) | decodedInsts_2_srl) | decodedInsts_2_sra) | _io_rs2Read_2_valid_T_19) | decodedInsts_2_max) | decodedInsts_2_maxu) | decodedInsts_2_rol) | decodedInsts_2_ror) | _io_rs2Read_2_valid_T_25) | decodedInsts_2_sw) | _io_rs2Read_2_valid_T_34) | decodedInsts_2_mulhsu) | decodedInsts_2_mulhu);
+	assign io_rs2Read_2_valid = _io_frs1Read_2_valid_T & ((((((((((((((((((((((((((_io_rs2Read_2_valid_T_1 | decodedInsts_2_blt) | decodedInsts_2_bge) | decodedInsts_2_bltu) | decodedInsts_2_bgeu) | _io_rs2Read_2_valid_T_6) | decodedInsts_2_slt) | decodedInsts_2_sltu) | decodedInsts_2_xor) | decodedInsts_2_or) | decodedInsts_2_and) | decodedInsts_2_xnor) | decodedInsts_2_orn) | decodedInsts_2_andn) | decodedInsts_2_sll) | decodedInsts_2_srl) | decodedInsts_2_sra) | _io_rs2Read_2_valid_T_19) | decodedInsts_2_max) | decodedInsts_2_maxu) | decodedInsts_2_rol) | decodedInsts_2_ror) | _io_rs2Read_2_valid_T_25) | decodedInsts_2_sw) | _io_rs2Read_2_valid_T_34) | decodedInsts_2_mulhsu) | decodedInsts_2_mulhu);
 	assign io_rs2Read_2_addr = io_inst_2_bits_inst[24:20];
-	assign io_rs2Read_3_valid = _io_rs2Set_3_valid_T & ((((((((((((((((((((((((((_io_rs2Read_3_valid_T_1 | decodedInsts_3_blt) | decodedInsts_3_bge) | decodedInsts_3_bltu) | decodedInsts_3_bgeu) | _io_rs2Read_3_valid_T_6) | decodedInsts_3_slt) | decodedInsts_3_sltu) | decodedInsts_3_xor) | decodedInsts_3_or) | decodedInsts_3_and) | decodedInsts_3_xnor) | decodedInsts_3_orn) | decodedInsts_3_andn) | decodedInsts_3_sll) | decodedInsts_3_srl) | decodedInsts_3_sra) | _io_rs2Read_3_valid_T_19) | decodedInsts_3_max) | decodedInsts_3_maxu) | decodedInsts_3_rol) | decodedInsts_3_ror) | _io_rs2Read_3_valid_T_25) | decodedInsts_3_sw) | _io_rs2Read_3_valid_T_34) | decodedInsts_3_mulhsu) | decodedInsts_3_mulhu);
+	assign io_rs2Read_3_valid = _io_frs1Read_3_valid_T & ((((((((((((((((((((((((((_io_rs2Read_3_valid_T_1 | decodedInsts_3_blt) | decodedInsts_3_bge) | decodedInsts_3_bltu) | decodedInsts_3_bgeu) | _io_rs2Read_3_valid_T_6) | decodedInsts_3_slt) | decodedInsts_3_sltu) | decodedInsts_3_xor) | decodedInsts_3_or) | decodedInsts_3_and) | decodedInsts_3_xnor) | decodedInsts_3_orn) | decodedInsts_3_andn) | decodedInsts_3_sll) | decodedInsts_3_srl) | decodedInsts_3_sra) | _io_rs2Read_3_valid_T_19) | decodedInsts_3_max) | decodedInsts_3_maxu) | decodedInsts_3_rol) | decodedInsts_3_ror) | _io_rs2Read_3_valid_T_25) | decodedInsts_3_sw) | _io_rs2Read_3_valid_T_34) | decodedInsts_3_mulhsu) | decodedInsts_3_mulhu);
 	assign io_rs2Read_3_addr = io_inst_3_bits_inst[24:20];
-	assign io_rs2Set_0_valid = _io_rs2Set_0_valid_T & ((((((((((((((((((decodedInsts_0_auipc | ((_io_rs2Set_0_valid_T_1 | decodedInsts_0_csrrc) & io_inst_0_bits_inst[14])) | _io_rs2Set_0_valid_T_6) | decodedInsts_0_sltiu) | decodedInsts_0_xori) | decodedInsts_0_ori) | decodedInsts_0_andi) | decodedInsts_0_slli) | decodedInsts_0_srli) | decodedInsts_0_srai) | decodedInsts_0_rori) | _io_rs2Set_0_valid_T_16) | decodedInsts_0_cpop) | decodedInsts_0_sextb) | decodedInsts_0_sexth) | decodedInsts_0_zexth) | decodedInsts_0_orcb) | decodedInsts_0_rev8) | decodedInsts_0_lui);
+	assign io_rs2Set_0_valid = _io_frs1Read_0_valid_T & ((((((((((((((((((decodedInsts_0_auipc | ((_io_rs2Set_0_valid_T_1 | decodedInsts_0_csrrc) & io_inst_0_bits_inst[14])) | _io_rs2Set_0_valid_T_6) | decodedInsts_0_sltiu) | decodedInsts_0_xori) | decodedInsts_0_ori) | decodedInsts_0_andi) | decodedInsts_0_slli) | decodedInsts_0_srli) | decodedInsts_0_srai) | decodedInsts_0_rori) | _io_rs2Set_0_valid_T_16) | decodedInsts_0_cpop) | decodedInsts_0_sextb) | decodedInsts_0_sexth) | decodedInsts_0_zexth) | decodedInsts_0_orcb) | decodedInsts_0_rev8) | decodedInsts_0_lui);
 	assign io_rs2Set_0_value = (decodedInsts_0_auipc | decodedInsts_0_lui ? {io_inst_0_bits_inst[31:12], 12'h000} : {_decodedInsts_d_imm12_T_1, io_inst_0_bits_inst[31:20]});
-	assign io_rs2Set_1_valid = _io_rs2Set_1_valid_T & (((((((((((((((((decodedInsts_1_auipc | _io_rs2Set_1_valid_T_6) | decodedInsts_1_sltiu) | decodedInsts_1_xori) | decodedInsts_1_ori) | decodedInsts_1_andi) | decodedInsts_1_slli) | decodedInsts_1_srli) | decodedInsts_1_srai) | decodedInsts_1_rori) | _io_rs2Set_1_valid_T_16) | decodedInsts_1_cpop) | decodedInsts_1_sextb) | decodedInsts_1_sexth) | decodedInsts_1_zexth) | decodedInsts_1_orcb) | decodedInsts_1_rev8) | decodedInsts_1_lui);
+	assign io_rs2Set_1_valid = _io_frs1Read_1_valid_T & (((((((((((((((((decodedInsts_1_auipc | _io_rs2Set_1_valid_T_6) | decodedInsts_1_sltiu) | decodedInsts_1_xori) | decodedInsts_1_ori) | decodedInsts_1_andi) | decodedInsts_1_slli) | decodedInsts_1_srli) | decodedInsts_1_srai) | decodedInsts_1_rori) | _io_rs2Set_1_valid_T_16) | decodedInsts_1_cpop) | decodedInsts_1_sextb) | decodedInsts_1_sexth) | decodedInsts_1_zexth) | decodedInsts_1_orcb) | decodedInsts_1_rev8) | decodedInsts_1_lui);
 	assign io_rs2Set_1_value = (decodedInsts_1_auipc | decodedInsts_1_lui ? {io_inst_1_bits_inst[31:12], 12'h000} : {_decodedInsts_d_imm12_T_5, io_inst_1_bits_inst[31:20]});
-	assign io_rs2Set_2_valid = _io_rs2Set_2_valid_T & (((((((((((((((((decodedInsts_2_auipc | _io_rs2Set_2_valid_T_6) | decodedInsts_2_sltiu) | decodedInsts_2_xori) | decodedInsts_2_ori) | decodedInsts_2_andi) | decodedInsts_2_slli) | decodedInsts_2_srli) | decodedInsts_2_srai) | decodedInsts_2_rori) | _io_rs2Set_2_valid_T_16) | decodedInsts_2_cpop) | decodedInsts_2_sextb) | decodedInsts_2_sexth) | decodedInsts_2_zexth) | decodedInsts_2_orcb) | decodedInsts_2_rev8) | decodedInsts_2_lui);
+	assign io_rs2Set_2_valid = _io_frs1Read_2_valid_T & (((((((((((((((((decodedInsts_2_auipc | _io_rs2Set_2_valid_T_6) | decodedInsts_2_sltiu) | decodedInsts_2_xori) | decodedInsts_2_ori) | decodedInsts_2_andi) | decodedInsts_2_slli) | decodedInsts_2_srli) | decodedInsts_2_srai) | decodedInsts_2_rori) | _io_rs2Set_2_valid_T_16) | decodedInsts_2_cpop) | decodedInsts_2_sextb) | decodedInsts_2_sexth) | decodedInsts_2_zexth) | decodedInsts_2_orcb) | decodedInsts_2_rev8) | decodedInsts_2_lui);
 	assign io_rs2Set_2_value = (decodedInsts_2_auipc | decodedInsts_2_lui ? {io_inst_2_bits_inst[31:12], 12'h000} : {_decodedInsts_d_imm12_T_9, io_inst_2_bits_inst[31:20]});
-	assign io_rs2Set_3_valid = _io_rs2Set_3_valid_T & (((((((((((((((((decodedInsts_3_auipc | _io_rs2Set_3_valid_T_6) | decodedInsts_3_sltiu) | decodedInsts_3_xori) | decodedInsts_3_ori) | decodedInsts_3_andi) | decodedInsts_3_slli) | decodedInsts_3_srli) | decodedInsts_3_srai) | decodedInsts_3_rori) | _io_rs2Set_3_valid_T_16) | decodedInsts_3_cpop) | decodedInsts_3_sextb) | decodedInsts_3_sexth) | decodedInsts_3_zexth) | decodedInsts_3_orcb) | decodedInsts_3_rev8) | decodedInsts_3_lui);
+	assign io_rs2Set_3_valid = _io_frs1Read_3_valid_T & (((((((((((((((((decodedInsts_3_auipc | _io_rs2Set_3_valid_T_6) | decodedInsts_3_sltiu) | decodedInsts_3_xori) | decodedInsts_3_ori) | decodedInsts_3_andi) | decodedInsts_3_slli) | decodedInsts_3_srli) | decodedInsts_3_srai) | decodedInsts_3_rori) | _io_rs2Set_3_valid_T_16) | decodedInsts_3_cpop) | decodedInsts_3_sextb) | decodedInsts_3_sexth) | decodedInsts_3_zexth) | decodedInsts_3_orcb) | decodedInsts_3_rev8) | decodedInsts_3_lui);
 	assign io_rs2Set_3_value = (decodedInsts_3_auipc | decodedInsts_3_lui ? {io_inst_3_bits_inst[31:12], 12'h000} : {_decodedInsts_d_imm12_T_13, io_inst_3_bits_inst[31:20]});
-	assign io_rdMark_0_valid = (((((io_alu_0_valid_0 | io_mlu_0_valid_0) | dispatched_3) | (dispatched_4 & (((_rdMark_valid_T_5 | decodedInsts_0_lw) | decodedInsts_0_lbu) | decodedInsts_0_lhu))) | io_csr_valid_0) | (dispatched_8 & decodedInsts_float_scalar_rd)) | ((io_bru_0_valid_0 & |{_bru_T_67 == 4'h1, _bru_T_67 == 4'h0}) & |io_inst_0_bits_inst[11:7]);
+	assign io_rdMark_0_valid = (((((io_alu_0_valid_0 | io_mlu_0_valid_0) | dispatched_3) | (dispatched_4 & (((_rdMark_valid_T_5 | decodedInsts_0_lw) | decodedInsts_0_lbu) | decodedInsts_0_lhu))) | io_csr_valid_0) | (dispatched_7 & decodedInsts_float_scalar_rd)) | ((io_bru_0_valid_0 & |{_bru_T_67 == 4'h1, _bru_T_67 == 4'h0}) & |io_inst_0_bits_inst[11:7]);
 	assign io_rdMark_0_addr = io_inst_0_bits_inst[11:7];
 	assign io_rdMark_1_valid = ((io_alu_1_valid_0 | dispatched_2_1) | (dispatched_4_1 & (((_rdMark_valid_T_28 | decodedInsts_1_lw) | decodedInsts_1_lbu) | decodedInsts_1_lhu))) | ((io_bru_1_valid_0 & |{_bru_T_163[2:0] == 3'h1, _bru_T_163[2:0] == 3'h0}) & |io_inst_1_bits_inst[11:7]);
 	assign io_rdMark_1_addr = io_inst_1_bits_inst[11:7];
@@ -3064,7 +4683,7 @@ module DispatchV2 (
 	assign io_busRead_2_immed = {_decodedInsts_d_imm12_T_9, io_inst_2_bits_inst[31:25], ((io_inst_2_bits_inst[6:3] == 4'h4) & (&io_inst_2_bits_inst[1:0]) ? io_inst_2_bits_inst[11:7] : io_inst_2_bits_inst[24:20])};
 	assign io_busRead_3_bypass = (io_inst_3_bits_inst[31:25] == 7'h00) & (~io_inst_3_bits_inst[5] | io_inst_3_bits_inst[6] ? io_inst_3_bits_inst[24:20] == 5'h00 : io_inst_3_bits_inst[11:7] == 5'h00);
 	assign io_busRead_3_immed = {_decodedInsts_d_imm12_T_13, io_inst_3_bits_inst[31:25], ((io_inst_3_bits_inst[6:3] == 4'h4) & (&io_inst_3_bits_inst[1:0]) ? io_inst_3_bits_inst[11:7] : io_inst_3_bits_inst[24:20])};
-	assign io_rdMark_flt_valid = (dispatched_8 & ~decodedInsts_float_scalar_rd) | ((dispatched_4 & decodedInsts_floatValid) & _rdMark_flt_valid_T_4);
+	assign io_rdMark_flt_valid = (dispatched_7 & ~decodedInsts_float_scalar_rd) | ((dispatched_4 & decodedInsts_floatValid) & _rdMark_flt_valid_T_4);
 	assign io_rdMark_flt_addr = io_inst_0_bits_inst[11:7];
 	assign io_alu_0_valid = io_alu_0_valid_0;
 	assign io_alu_0_bits_addr = io_inst_0_bits_inst[11:7];
@@ -3145,6 +4764,8 @@ module DispatchV2 (
 	assign io_float_valid = io_float_valid_0;
 	assign io_float_bits_opcode = decodedInsts_float_bits_opcode;
 	assign io_float_bits_funct5 = io_inst_0_bits_inst[31:27];
+	assign io_float_bits_src_fmt = (decodedInsts_float_fcvt_bf16_s ? 3'h0 : {decodedInsts_float_fcvt_s_bf16, 2'h0});
+	assign io_float_bits_dst_fmt = {decodedInsts_float_fcvt_bf16_s, 2'h0};
 	assign io_float_bits_rs3 = io_inst_0_bits_inst[31:27];
 	assign io_float_bits_rs2 = io_inst_0_bits_inst[24:20];
 	assign io_float_bits_rs1 = io_inst_0_bits_inst[19:15];
@@ -5657,7 +7278,6 @@ module Bru (
 	io_req_bits_target,
 	io_req_bits_link,
 	io_csr_in_mode_valid,
-	io_csr_in_mode_bits,
 	io_csr_in_mcause_valid,
 	io_csr_in_mcause_bits,
 	io_csr_in_mepc_valid,
@@ -5667,9 +7287,10 @@ module Bru (
 	io_csr_in_halt,
 	io_csr_in_fault,
 	io_csr_in_wfi,
-	io_csr_out_mode,
 	io_csr_out_mepc,
 	io_csr_out_mtvec,
+	io_csr_out_interrupt,
+	io_csr_out_interrupt_cause,
 	io_rs1_valid,
 	io_rs1_data,
 	io_rs2_valid,
@@ -5679,6 +7300,8 @@ module Bru (
 	io_rd_bits_data,
 	io_taken_valid,
 	io_taken_value,
+	io_actually_taken,
+	io_real_target,
 	io_target_data,
 	io_interlock,
 	io_fault_manager_valid,
@@ -5695,7 +7318,6 @@ module Bru (
 	input [31:0] io_req_bits_target;
 	input [4:0] io_req_bits_link;
 	output wire io_csr_in_mode_valid;
-	output wire [1:0] io_csr_in_mode_bits;
 	output wire io_csr_in_mcause_valid;
 	output wire [31:0] io_csr_in_mcause_bits;
 	output wire io_csr_in_mepc_valid;
@@ -5705,9 +7327,10 @@ module Bru (
 	output wire io_csr_in_halt;
 	output wire io_csr_in_fault;
 	output wire io_csr_in_wfi;
-	input [1:0] io_csr_out_mode;
 	input [31:0] io_csr_out_mepc;
 	input [31:0] io_csr_out_mtvec;
+	input io_csr_out_interrupt;
+	input [31:0] io_csr_out_interrupt_cause;
 	input io_rs1_valid;
 	input [31:0] io_rs1_data;
 	input io_rs2_valid;
@@ -5717,35 +7340,43 @@ module Bru (
 	output wire [31:0] io_rd_bits_data;
 	output wire io_taken_valid;
 	output wire [31:0] io_taken_value;
+	output wire io_actually_taken;
+	output wire [31:0] io_real_target;
 	input [31:0] io_target_data;
 	output wire io_interlock;
 	input io_fault_manager_valid;
 	input [31:0] io_fault_manager_bits_mepc;
 	input [31:0] io_fault_manager_bits_mtval;
 	input [31:0] io_fault_manager_bits_mcause;
-	wire io_csr_in_fault_0;
 	reg stateReg_valid;
 	reg stateReg_bits_fwd;
 	reg [3:0] stateReg_bits_op;
 	reg [31:0] stateReg_bits_target;
+	reg [31:0] stateReg_bits_originalTarget;
 	reg stateReg_bits_linkValid;
 	reg [4:0] stateReg_bits_linkAddr;
 	reg [31:0] stateReg_bits_linkData;
 	reg [31:0] stateReg_bits_pcEx;
-	wire _io_csr_in_fault_T = io_csr_out_mode == 2'h0;
-	wire _io_csr_in_mcause_bits_T_4 = io_csr_out_mode == 2'h1;
-	wire _ignore_T_2 = stateReg_bits_op == 4'h8;
+	wire [31:0] mtvec = {io_csr_out_mtvec[31:2], 2'h0};
+	wire [31:0] _io_real_target_T_1 = io_target_data & 32'hfffffffe;
+	wire eq = io_rs1_data == io_rs2_data;
+	wire neq = io_rs1_data != io_rs2_data;
+	wire lt = $signed(io_rs1_data) < $signed(io_rs2_data);
+	wire ge = $signed(io_rs1_data) >= $signed(io_rs2_data);
+	wire ltu = io_rs1_data < io_rs2_data;
+	wire geu = io_rs1_data >= io_rs2_data;
 	wire _ignore_T_3 = stateReg_bits_op == 4'h9;
-	wire _ignore_T_4 = stateReg_bits_op == 4'ha;
 	wire _ignore_T_5 = stateReg_bits_op == 4'hb;
+	wire _ignore_T_2 = stateReg_bits_op == 4'h8;
 	wire _ignore_T_7 = stateReg_bits_op == 4'hd;
-	wire usageFault = stateReg_valid & (_io_csr_in_mcause_bits_T_4 ? |{_ignore_T_5, _ignore_T_4} : _ignore_T_2);
-	assign io_csr_in_fault_0 = usageFault & _io_csr_in_fault_T;
+	wire interrupt_taken = (stateReg_valid & io_csr_out_interrupt) & ({_ignore_T_7, _ignore_T_2, _ignore_T_5, _ignore_T_3} == 4'h0);
+	wire pipeline0Taken = (((stateReg_bits_op == 4'hc) | (stateReg_bits_op == 4'hb)) | ((stateReg_bits_op != 4'ha) & (stateReg_bits_op == 4'h9))) | interrupt_taken;
+	wire _ignore_T_1 = stateReg_bits_op == 4'h1;
+	wire _ignore_T_4 = stateReg_bits_op == 4'ha;
+	wire usageFault = stateReg_valid & _ignore_T_2;
 	wire _ignore_T_6 = stateReg_bits_op == 4'hc;
 	wire [31:0] nextState_linkData = io_req_bits_pc + 32'h00000004;
 	wire _nextState_target_T = io_req_bits_op == 4'h1;
-	wire [31:0] mtvec = {io_csr_out_mtvec[31:2], 2'h0};
-	wire _pipeline0Target_call_T = io_req_bits_op == 4'hb;
 	wire stateRegValid = io_req_valid | io_fault_manager_valid;
 	always @(posedge clock or posedge reset)
 		if (reset) begin
@@ -5753,6 +7384,7 @@ module Bru (
 			stateReg_bits_fwd <= 1'h0;
 			stateReg_bits_op <= 4'h0;
 			stateReg_bits_target <= 32'h00000000;
+			stateReg_bits_originalTarget <= 32'h00000000;
 			stateReg_bits_linkValid <= 1'h0;
 			stateReg_bits_linkAddr <= 5'h00;
 			stateReg_bits_linkData <= 32'h00000000;
@@ -5763,29 +7395,31 @@ module Bru (
 			if (stateRegValid) begin
 				stateReg_bits_fwd <= io_req_valid & io_req_bits_fwd;
 				stateReg_bits_op <= (io_fault_manager_valid ? 4'hd : io_req_bits_op);
-				stateReg_bits_target <= (io_fault_manager_valid ? mtvec : (io_req_bits_fwd ? nextState_linkData : (_nextState_target_T ? io_target_data & 32'hfffffffe : (io_req_bits_op == 4'h9 ? mtvec : (|{_pipeline0Target_call_T & _io_csr_in_fault_T, _pipeline0Target_call_T & _io_csr_in_mcause_bits_T_4, io_req_bits_op == 4'ha, io_req_bits_op == 4'h8} ? io_csr_out_mepc : (io_req_bits_op == 4'hc ? nextState_linkData : io_req_bits_target))))));
+				stateReg_bits_target <= (io_fault_manager_valid ? mtvec : (io_req_bits_fwd ? nextState_linkData : (_nextState_target_T ? _io_real_target_T_1 : (io_req_bits_op == 4'h9 ? mtvec : (io_req_bits_op == 4'hb ? io_csr_out_mepc : (io_req_bits_op == 4'hc ? nextState_linkData : io_req_bits_target))))));
+				stateReg_bits_originalTarget <= io_req_bits_target;
 				stateReg_bits_linkValid <= (io_req_valid & |io_req_bits_link) & |{_nextState_target_T, io_req_bits_op == 4'h0};
 				stateReg_bits_linkAddr <= io_req_bits_link;
 				stateReg_bits_linkData <= nextState_linkData;
 				stateReg_bits_pcEx <= io_req_bits_pc;
 			end
 		end
-	assign io_csr_in_mode_valid = stateReg_valid & (_io_csr_in_mcause_bits_T_4 ? |{_ignore_T_7, _ignore_T_5, _ignore_T_4, _ignore_T_3, _ignore_T_2} : _ignore_T_5);
-	assign io_csr_in_mode_bits = {1'h0, ~(_ignore_T_5 & _io_csr_in_fault_T)};
-	assign io_csr_in_mcause_valid = (stateReg_valid & ((usageFault | _ignore_T_3) | (_io_csr_in_mcause_bits_T_4 & _ignore_T_2))) | io_fault_manager_valid;
-	assign io_csr_in_mcause_bits = (io_fault_manager_valid ? io_fault_manager_bits_mcause : {27'h0000000, (_ignore_T_3 & _io_csr_in_fault_T ? 5'h0b : (_ignore_T_3 & _io_csr_in_mcause_bits_T_4 ? 5'h08 : (_ignore_T_2 ? 5'h03 : (usageFault ? 5'h19 : 5'h00))))});
-	assign io_csr_in_mepc_valid = (stateReg_valid & _ignore_T_3) | io_fault_manager_valid;
+	assign io_csr_in_mode_valid = stateReg_valid & _ignore_T_5;
+	assign io_csr_in_mcause_valid = ((stateReg_valid & (usageFault | _ignore_T_3)) | interrupt_taken) | io_fault_manager_valid;
+	assign io_csr_in_mcause_bits = (io_fault_manager_valid ? io_fault_manager_bits_mcause : (_ignore_T_3 ? 32'h0000000b : (usageFault ? 32'h00000019 : (interrupt_taken ? io_csr_out_interrupt_cause : 32'h00000000))));
+	assign io_csr_in_mepc_valid = ((stateReg_valid & _ignore_T_3) | interrupt_taken) | io_fault_manager_valid;
 	assign io_csr_in_mepc_bits = (io_fault_manager_valid ? io_fault_manager_bits_mepc : stateReg_bits_pcEx);
 	assign io_csr_in_mtval_valid = usageFault | io_fault_manager_valid;
 	assign io_csr_in_mtval_bits = (io_fault_manager_valid ? io_fault_manager_bits_mtval : stateReg_bits_pcEx);
-	assign io_csr_in_halt = ((stateReg_valid & _ignore_T_4) & _io_csr_in_fault_T) | io_csr_in_fault_0;
-	assign io_csr_in_fault = io_csr_in_fault_0;
+	assign io_csr_in_halt = (stateReg_valid & _ignore_T_4) | usageFault;
+	assign io_csr_in_fault = usageFault;
 	assign io_csr_in_wfi = stateReg_valid & _ignore_T_6;
 	assign io_rd_valid = stateReg_valid & stateReg_bits_linkValid;
 	assign io_rd_bits_addr = stateReg_bits_linkAddr;
 	assign io_rd_bits_data = stateReg_bits_linkData;
-	assign io_taken_valid = stateReg_valid & ((stateReg_bits_op == 4'hd) | (stateReg_bits_op == 4'h7 ? (io_rs1_data >= io_rs2_data) != stateReg_bits_fwd : (stateReg_bits_op == 4'h6 ? (io_rs1_data < io_rs2_data) != stateReg_bits_fwd : (stateReg_bits_op == 4'h5 ? ($signed(io_rs1_data) >= $signed(io_rs2_data)) != stateReg_bits_fwd : (stateReg_bits_op == 4'h4 ? ($signed(io_rs1_data) < $signed(io_rs2_data)) != stateReg_bits_fwd : (stateReg_bits_op == 4'h3 ? (io_rs1_data != io_rs2_data) != stateReg_bits_fwd : (stateReg_bits_op == 4'h2 ? (io_rs1_data == io_rs2_data) != stateReg_bits_fwd : ((stateReg_bits_op == 4'h1) | ~(|stateReg_bits_op) ? ~stateReg_bits_fwd : (stateReg_bits_op == 4'hc) | (stateReg_bits_op == 4'hb ? _io_csr_in_fault_T : (stateReg_bits_op == 4'ha ? _io_csr_in_mcause_bits_T_4 : (stateReg_bits_op == 4'h9) | ((stateReg_bits_op == 4'h8) & _io_csr_in_mcause_bits_T_4)))))))))));
-	assign io_taken_value = stateReg_bits_target;
+	assign io_taken_valid = stateReg_valid & ((interrupt_taken | (stateReg_bits_op == 4'hd)) | (stateReg_bits_op == 4'h7 ? geu != stateReg_bits_fwd : (stateReg_bits_op == 4'h6 ? ltu != stateReg_bits_fwd : (stateReg_bits_op == 4'h5 ? ge != stateReg_bits_fwd : (stateReg_bits_op == 4'h4 ? lt != stateReg_bits_fwd : (stateReg_bits_op == 4'h3 ? neq != stateReg_bits_fwd : (stateReg_bits_op == 4'h2 ? eq != stateReg_bits_fwd : ((stateReg_bits_op == 4'h1) | ~(|stateReg_bits_op) ? ~stateReg_bits_fwd : pipeline0Taken))))))));
+	assign io_taken_value = (interrupt_taken ? mtvec : stateReg_bits_target);
+	assign io_actually_taken = stateReg_valid & ((stateReg_bits_op == 4'hd) | (stateReg_bits_op == 4'h7 ? geu : (stateReg_bits_op == 4'h6 ? ltu : (stateReg_bits_op == 4'h5 ? ge : (stateReg_bits_op == 4'h4 ? lt : (stateReg_bits_op == 4'h3 ? neq : (stateReg_bits_op == 4'h2 ? eq : ((stateReg_bits_op == 4'h1) | ~(|stateReg_bits_op)) | pipeline0Taken)))))));
+	assign io_real_target = (stateReg_bits_fwd ? (_ignore_T_1 ? _io_real_target_T_1 : stateReg_bits_originalTarget) : stateReg_bits_target);
 	assign io_interlock = stateReg_valid & |{_ignore_T_7, _ignore_T_5, _ignore_T_4, _ignore_T_3, _ignore_T_2};
 endmodule
 module Bru_1 (
@@ -6225,12 +7859,52 @@ module Dvu (
 	assign io_rd_bits_addr = addr2;
 	assign io_rd_bits_data = (divide2 ? (signed2d ? ~divide + 32'h00000001 : divide) : (signed2r ? ~remain + 32'h00000001 : remain));
 endmodule
+module Arbiter2_CsrCmd (
+	io_in_0_valid,
+	io_in_0_bits_addr,
+	io_in_0_bits_index,
+	io_in_0_bits_rs1,
+	io_in_0_bits_op,
+	io_in_1_valid,
+	io_in_1_bits_addr,
+	io_in_1_bits_index,
+	io_in_1_bits_rs1,
+	io_in_1_bits_op,
+	io_out_valid,
+	io_out_bits_addr,
+	io_out_bits_index,
+	io_out_bits_rs1,
+	io_out_bits_op
+);
+	input io_in_0_valid;
+	input [4:0] io_in_0_bits_addr;
+	input [11:0] io_in_0_bits_index;
+	input [4:0] io_in_0_bits_rs1;
+	input [1:0] io_in_0_bits_op;
+	input io_in_1_valid;
+	input [4:0] io_in_1_bits_addr;
+	input [11:0] io_in_1_bits_index;
+	input [4:0] io_in_1_bits_rs1;
+	input [1:0] io_in_1_bits_op;
+	output wire io_out_valid;
+	output wire [4:0] io_out_bits_addr;
+	output wire [11:0] io_out_bits_index;
+	output wire [4:0] io_out_bits_rs1;
+	output wire [1:0] io_out_bits_op;
+	assign io_out_valid = io_in_0_valid | io_in_1_valid;
+	assign io_out_bits_addr = (io_in_0_valid ? io_in_0_bits_addr : io_in_1_bits_addr);
+	assign io_out_bits_index = (io_in_0_valid ? io_in_0_bits_index : io_in_1_bits_index);
+	assign io_out_bits_rs1 = (io_in_0_valid ? io_in_0_bits_rs1 : io_in_1_bits_rs1);
+	assign io_out_bits_op = (io_in_0_valid ? io_in_0_bits_op : io_in_1_bits_op);
+endmodule
 module Queue1_FloatInstruction (
 	clock,
 	reset,
 	io_enq_valid,
 	io_enq_bits_opcode,
 	io_enq_bits_funct5,
+	io_enq_bits_src_fmt,
+	io_enq_bits_dst_fmt,
 	io_enq_bits_rs3,
 	io_enq_bits_rs2,
 	io_enq_bits_rs1,
@@ -6247,6 +7921,8 @@ module Queue1_FloatInstruction (
 	io_deq_valid,
 	io_deq_bits_opcode,
 	io_deq_bits_funct5,
+	io_deq_bits_src_fmt,
+	io_deq_bits_dst_fmt,
 	io_deq_bits_rs3,
 	io_deq_bits_rs2,
 	io_deq_bits_rs1,
@@ -6260,6 +7936,8 @@ module Queue1_FloatInstruction (
 	input io_enq_valid;
 	input [2:0] io_enq_bits_opcode;
 	input [4:0] io_enq_bits_funct5;
+	input [2:0] io_enq_bits_src_fmt;
+	input [2:0] io_enq_bits_dst_fmt;
 	input [4:0] io_enq_bits_rs3;
 	input [4:0] io_enq_bits_rs2;
 	input [4:0] io_enq_bits_rs1;
@@ -6276,6 +7954,8 @@ module Queue1_FloatInstruction (
 	output wire io_deq_valid;
 	output wire [2:0] io_deq_bits_opcode;
 	output wire [4:0] io_deq_bits_funct5;
+	output wire [2:0] io_deq_bits_src_fmt;
+	output wire [2:0] io_deq_bits_dst_fmt;
 	output wire [4:0] io_deq_bits_rs3;
 	output wire [4:0] io_deq_bits_rs2;
 	output wire [4:0] io_deq_bits_rs1;
@@ -6283,7 +7963,7 @@ module Queue1_FloatInstruction (
 	output wire io_deq_bits_scalar_rd;
 	output wire [4:0] io_deq_bits_rd;
 	output wire io_count;
-	reg [99:0] ram;
+	reg [105:0] ram;
 	wire io_enq_ready;
 	reg full;
 	wire do_enq = io_enq_ready & io_enq_valid;
@@ -6295,10 +7975,12 @@ module Queue1_FloatInstruction (
 			full <= do_enq;
 	always @(posedge clock)
 		if (do_enq)
-			ram <= {io_enq_bits_opcode, io_enq_bits_funct5, io_enq_bits_rs3, io_enq_bits_rs2, io_enq_bits_rs1, io_enq_bits_rm, io_enq_bits_inst, io_enq_bits_pc, io_enq_bits_scalar_rd, io_enq_bits_scalar_rs1, io_enq_bits_float_rs1, io_enq_bits_rd, io_enq_bits_uses_rs3, io_enq_bits_uses_rs2};
+			ram <= {io_enq_bits_opcode, io_enq_bits_funct5, io_enq_bits_src_fmt, io_enq_bits_dst_fmt, io_enq_bits_rs3, io_enq_bits_rs2, io_enq_bits_rs1, io_enq_bits_rm, io_enq_bits_inst, io_enq_bits_pc, io_enq_bits_scalar_rd, io_enq_bits_scalar_rs1, io_enq_bits_float_rs1, io_enq_bits_rd, io_enq_bits_uses_rs3, io_enq_bits_uses_rs2};
 	assign io_deq_valid = full;
-	assign io_deq_bits_opcode = ram[99:97];
-	assign io_deq_bits_funct5 = ram[96:92];
+	assign io_deq_bits_opcode = ram[105:103];
+	assign io_deq_bits_funct5 = ram[102:98];
+	assign io_deq_bits_src_fmt = ram[97:95];
+	assign io_deq_bits_dst_fmt = ram[94:92];
 	assign io_deq_bits_rs3 = ram[91:87];
 	assign io_deq_bits_rs2 = ram[86:82];
 	assign io_deq_bits_rs1 = ram[81:77];
@@ -6398,6 +8080,8 @@ module FloatCore (
 	io_inst_valid,
 	io_inst_bits_opcode,
 	io_inst_bits_funct5,
+	io_inst_bits_src_fmt,
+	io_inst_bits_dst_fmt,
 	io_inst_bits_rs3,
 	io_inst_bits_rs2,
 	io_inst_bits_rs1,
@@ -6453,6 +8137,8 @@ module FloatCore (
 	input io_inst_valid;
 	input [2:0] io_inst_bits_opcode;
 	input [4:0] io_inst_bits_funct5;
+	input [2:0] io_inst_bits_src_fmt;
+	input [2:0] io_inst_bits_dst_fmt;
 	input [4:0] io_inst_bits_rs3;
 	input [4:0] io_inst_bits_rs2;
 	input [4:0] io_inst_bits_rs1;
@@ -6516,6 +8202,8 @@ module FloatCore (
 	wire _instQueue_io_deq_valid;
 	wire [2:0] _instQueue_io_deq_bits_opcode;
 	wire [4:0] _instQueue_io_deq_bits_funct5;
+	wire [2:0] _instQueue_io_deq_bits_src_fmt;
+	wire [2:0] _instQueue_io_deq_bits_dst_fmt;
 	wire [4:0] _instQueue_io_deq_bits_rs3;
 	wire [4:0] _instQueue_io_deq_bits_rs2;
 	wire [4:0] _instQueue_io_deq_bits_rs1;
@@ -6527,7 +8215,7 @@ module FloatCore (
 	wire _opfp_mod_T_8 = _instQueue_io_deq_bits_funct5 == 5'h18;
 	wire _fmv_x_w_T_2 = _instQueue_io_deq_bits_funct5 == 5'h1c;
 	wire _opfp_mod_T_10 = _instQueue_io_deq_bits_funct5 == 5'h1a;
-	wire [3:0] opfp_operation = (_opfp_mod_T_10 ? 4'hc : (_fmv_x_w_T_2 ? 4'h9 : (_instQueue_io_deq_bits_funct5 == 5'h14 ? 4'h8 : (_opfp_mod_T_8 ? 4'hb : {1'h0, (_instQueue_io_deq_bits_funct5 == 5'h05 ? 3'h7 : (_opfp_mod_T_6 ? 3'h6 : (_instQueue_io_deq_bits_funct5 == 5'h0b ? 3'h5 : (_instQueue_io_deq_bits_funct5 == 5'h03 ? 3'h4 : {2'h1, _instQueue_io_deq_bits_funct5 == 5'h02}))))}))));
+	wire [3:0] opfp_operation = (_instQueue_io_deq_bits_funct5 == 5'h08 ? 4'ha : (_opfp_mod_T_10 ? 4'hc : (_fmv_x_w_T_2 ? 4'h9 : (_instQueue_io_deq_bits_funct5 == 5'h14 ? 4'h8 : (_opfp_mod_T_8 ? 4'hb : {1'h0, (_instQueue_io_deq_bits_funct5 == 5'h05 ? 3'h7 : (_opfp_mod_T_6 ? 3'h6 : (_instQueue_io_deq_bits_funct5 == 5'h0b ? 3'h5 : (_instQueue_io_deq_bits_funct5 == 5'h03 ? 3'h4 : {2'h1, _instQueue_io_deq_bits_funct5 == 5'h02}))))})))));
 	wire [31:0] _GEN = {20'h21100, opfp_operation, 8'hf2};
 	wire [3:0] op_i = _GEN[_instQueue_io_deq_bits_opcode * 4+:4];
 	wire _read_port_2_valid_T = op_i == 4'h0;
@@ -6559,6 +8247,8 @@ module FloatCore (
 		.io_enq_valid(io_inst_valid),
 		.io_enq_bits_opcode(io_inst_bits_opcode),
 		.io_enq_bits_funct5(io_inst_bits_funct5),
+		.io_enq_bits_src_fmt(io_inst_bits_src_fmt),
+		.io_enq_bits_dst_fmt(io_inst_bits_dst_fmt),
 		.io_enq_bits_rs3(io_inst_bits_rs3),
 		.io_enq_bits_rs2(io_inst_bits_rs2),
 		.io_enq_bits_rs1(io_inst_bits_rs1),
@@ -6575,6 +8265,8 @@ module FloatCore (
 		.io_deq_valid(_instQueue_io_deq_valid),
 		.io_deq_bits_opcode(_instQueue_io_deq_bits_opcode),
 		.io_deq_bits_funct5(_instQueue_io_deq_bits_funct5),
+		.io_deq_bits_src_fmt(_instQueue_io_deq_bits_src_fmt),
+		.io_deq_bits_dst_fmt(_instQueue_io_deq_bits_dst_fmt),
 		.io_deq_bits_rs3(_instQueue_io_deq_bits_rs3),
 		.io_deq_bits_rs2(_instQueue_io_deq_bits_rs2),
 		.io_deq_bits_rs1(_instQueue_io_deq_bits_rs1),
@@ -6594,6 +8286,8 @@ module FloatCore (
 		.op_i(op_i),
 		.op_mod_i((_instQueue_io_deq_bits_opcode != 3'h6) & (((_instQueue_io_deq_bits_opcode == 3'h5) | (_instQueue_io_deq_bits_opcode == 3'h4)) | (((_instQueue_io_deq_bits_opcode != 3'h3) & (_instQueue_io_deq_bits_opcode == 3'h2)) & (_opfp_mod_T_10 | _opfp_mod_T_8 ? _instQueue_io_deq_bits_rs2[0] : _opfp_mod_T_6 | (_instQueue_io_deq_bits_funct5 == 5'h01))))),
 		.rnd_mode_i((inst_rm_valid & (&_instQueue_io_deq_bits_rm) ? io_csr_out_frm : _instQueue_io_deq_bits_rm)),
+		.src_fmt_i(_instQueue_io_deq_bits_src_fmt),
+		.dst_fmt_i(_instQueue_io_deq_bits_dst_fmt),
 		.flush_i(1'h0),
 		.out_valid_o(_floatCoreWrapper_out_valid_o),
 		.out_ready_i(_floatCoreWrapper_io_out_ready_i_T_4),
@@ -6621,7 +8315,7 @@ module FloatCore (
 	assign io_inst_ready = ~_instQueue_io_count;
 	assign io_read_ports_0_valid = (op_i != 4'h2) & _instQueue_io_deq_valid;
 	assign io_read_ports_0_addr = _instQueue_io_deq_bits_rs1;
-	assign io_read_ports_1_valid = (|{_read_port_2_valid_T_1, _read_port_2_valid_T} | (_fmv_w_x_T & ({_floatCoreWrapper_io_operands_i_0_T_1, opfp_operation == 4'hb, opfp_operation == 4'h9, opfp_operation == 4'h5} == 4'h0))) & _instQueue_io_deq_valid;
+	assign io_read_ports_1_valid = (|{_read_port_2_valid_T_1, _read_port_2_valid_T} | (_fmv_w_x_T & ({opfp_operation == 4'ha, _floatCoreWrapper_io_operands_i_0_T_1, opfp_operation == 4'hb, opfp_operation == 4'h9, opfp_operation == 4'h5} == 5'h00))) & _instQueue_io_deq_valid;
 	assign io_read_ports_1_addr = (_op2_addr_T ? _instQueue_io_deq_bits_rs1 : _instQueue_io_deq_bits_rs2);
 	assign io_read_ports_2_valid = (|{_read_port_2_valid_T_1, _read_port_2_valid_T} | (_fmv_w_x_T & (opfp_operation == 4'h2))) & _instQueue_io_deq_valid;
 	assign io_read_ports_2_addr = (_op2_addr_T ? _instQueue_io_deq_bits_rs2 : _instQueue_io_deq_bits_rs3);
@@ -6666,6 +8360,7 @@ module FRegfile (
 	io_write_ports_1_data_mantissa,
 	io_write_ports_1_data_exponent,
 	io_write_ports_1_data_sign,
+	io_dm_write_valid,
 	io_scoreboard_set,
 	io_scoreboard,
 	io_busPort_data_0,
@@ -6698,6 +8393,7 @@ module FRegfile (
 	input [22:0] io_write_ports_1_data_mantissa;
 	input [7:0] io_write_ports_1_data_exponent;
 	input io_write_ports_1_data_sign;
+	input io_dm_write_valid;
 	input [31:0] io_scoreboard_set;
 	output wire [31:0] io_scoreboard;
 	output wire [31:0] io_busPort_data_0;
@@ -7099,7 +8795,7 @@ module FRegfile (
 				fregfile_31_sign <= (valid_0_31 ? io_write_ports_0_data_sign : io_write_ports_1_data_sign);
 			end
 			scoreboard <= (scoreboard & ~scoreboard_clr) | io_scoreboard_set;
-			scoreboard_error <= (scoreboard & scoreboard_clr) != scoreboard_clr;
+			scoreboard_error <= ((scoreboard & scoreboard_clr) != scoreboard_clr) & ~io_dm_write_valid;
 		end
 	assign io_read_ports_0_data_mantissa = (io_read_ports_0_valid ? _GEN[io_read_ports_0_addr * 23+:23] : 23'h000000);
 	assign io_read_ports_0_data_exponent = (io_read_ports_0_valid ? _GEN_0[io_read_ports_0_addr * 8+:8] : 8'h00);
@@ -7113,7 +8809,7 @@ module FRegfile (
 	assign io_scoreboard = scoreboard;
 	assign io_busPort_data_0 = {_GEN_1[io_busPortAddr], _GEN_0[io_busPortAddr * 8+:8], _GEN[io_busPortAddr * 23+:23]};
 endmodule
-module Arbiter3_RegfileWriteDataIO (
+module Arbiter4_RegfileWriteDataIO (
 	io_in_0_valid,
 	io_in_0_bits_addr,
 	io_in_0_bits_data,
@@ -7125,6 +8821,10 @@ module Arbiter3_RegfileWriteDataIO (
 	io_in_2_valid,
 	io_in_2_bits_addr,
 	io_in_2_bits_data,
+	io_in_3_ready,
+	io_in_3_valid,
+	io_in_3_bits_addr,
+	io_in_3_bits_data,
 	io_out_valid,
 	io_out_bits_addr,
 	io_out_bits_data
@@ -7140,15 +8840,21 @@ module Arbiter3_RegfileWriteDataIO (
 	input io_in_2_valid;
 	input [4:0] io_in_2_bits_addr;
 	input [31:0] io_in_2_bits_data;
+	output wire io_in_3_ready;
+	input io_in_3_valid;
+	input [4:0] io_in_3_bits_addr;
+	input [31:0] io_in_3_bits_data;
 	output wire io_out_valid;
 	output wire [4:0] io_out_bits_addr;
 	output wire [31:0] io_out_bits_data;
-	wire _io_out_valid_T = io_in_0_valid | io_in_1_valid;
+	wire _grant_T = io_in_0_valid | io_in_1_valid;
+	wire _io_out_valid_T = _grant_T | io_in_2_valid;
 	assign io_in_1_ready = ~io_in_0_valid;
-	assign io_in_2_ready = ~_io_out_valid_T;
-	assign io_out_valid = _io_out_valid_T | io_in_2_valid;
-	assign io_out_bits_addr = (io_in_0_valid ? io_in_0_bits_addr : (io_in_1_valid ? io_in_1_bits_addr : io_in_2_bits_addr));
-	assign io_out_bits_data = (io_in_0_valid ? io_in_0_bits_data : (io_in_1_valid ? io_in_1_bits_data : io_in_2_bits_data));
+	assign io_in_2_ready = ~_grant_T;
+	assign io_in_3_ready = ~_io_out_valid_T;
+	assign io_out_valid = _io_out_valid_T | io_in_3_valid;
+	assign io_out_bits_addr = (io_in_0_valid ? io_in_0_bits_addr : (io_in_1_valid ? io_in_1_bits_addr : (io_in_2_valid ? io_in_2_bits_addr : io_in_3_bits_addr)));
+	assign io_out_bits_data = (io_in_0_valid ? io_in_0_bits_data : (io_in_1_valid ? io_in_1_bits_data : (io_in_2_valid ? io_in_2_bits_data : io_in_3_bits_data)));
 endmodule
 module SCore (
 	clock,
@@ -7167,7 +8873,35 @@ module SCore (
 	io_fault,
 	io_wfi,
 	io_irq,
+	io_dm_resume_req,
+	io_dm_csr_valid,
+	io_dm_csr_bits_addr,
+	io_dm_csr_bits_index,
+	io_dm_csr_bits_rs1,
+	io_dm_csr_bits_op,
+	io_dm_csr_rs1,
+	io_dm_csr_rd_valid,
+	io_dm_csr_rd_bits,
+	io_dm_scalar_rd_ready,
+	io_dm_scalar_rd_valid,
+	io_dm_scalar_rd_bits_addr,
+	io_dm_scalar_rd_bits_data,
+	io_dm_scalar_rs_idx,
+	io_dm_scalar_rs_data,
+	io_dm_float_rd_valid,
+	io_dm_float_rd_addr,
+	io_dm_float_rd_data_mantissa,
+	io_dm_float_rd_data_exponent,
+	io_dm_float_rd_data_sign,
+	io_dm_float_rs_valid,
+	io_dm_float_rs_addr,
+	io_dm_float_rs_data_mantissa,
+	io_dm_float_rs_data_exponent,
+	io_dm_float_rs_data_sign,
+	io_timer_irq,
+	io_software_irq,
 	io_ibus_valid,
+	io_ibus_ready,
 	io_ibus_addr,
 	io_ibus_rdata,
 	io_ibus_fault_valid,
@@ -7207,7 +8941,35 @@ module SCore (
 	output wire io_fault;
 	output wire io_wfi;
 	input io_irq;
+	input io_dm_resume_req;
+	input io_dm_csr_valid;
+	input [4:0] io_dm_csr_bits_addr;
+	input [11:0] io_dm_csr_bits_index;
+	input [4:0] io_dm_csr_bits_rs1;
+	input [1:0] io_dm_csr_bits_op;
+	input [31:0] io_dm_csr_rs1;
+	output wire io_dm_csr_rd_valid;
+	output wire [31:0] io_dm_csr_rd_bits;
+	output wire io_dm_scalar_rd_ready;
+	input io_dm_scalar_rd_valid;
+	input [4:0] io_dm_scalar_rd_bits_addr;
+	input [31:0] io_dm_scalar_rd_bits_data;
+	input [4:0] io_dm_scalar_rs_idx;
+	output wire [31:0] io_dm_scalar_rs_data;
+	input io_dm_float_rd_valid;
+	input [4:0] io_dm_float_rd_addr;
+	input [22:0] io_dm_float_rd_data_mantissa;
+	input [7:0] io_dm_float_rd_data_exponent;
+	input io_dm_float_rd_data_sign;
+	input io_dm_float_rs_valid;
+	input [4:0] io_dm_float_rs_addr;
+	output wire [22:0] io_dm_float_rs_data_mantissa;
+	output wire [7:0] io_dm_float_rs_data_exponent;
+	output wire io_dm_float_rs_data_sign;
+	input io_timer_irq;
+	input io_software_irq;
 	output wire io_ibus_valid;
+	input io_ibus_ready;
 	output wire [31:0] io_ibus_addr;
 	input [127:0] io_ibus_rdata;
 	input io_ibus_fault_valid;
@@ -7268,6 +9030,11 @@ module SCore (
 	wire [31:0] _floatCore_io_scalar_rd_bits_data;
 	wire _floatCore_io_csr_in_fflags_valid;
 	wire [4:0] _floatCore_io_csr_in_fflags_bits;
+	wire _csrReqArbiter_io_out_valid;
+	wire [4:0] _csrReqArbiter_io_out_bits_addr;
+	wire [11:0] _csrReqArbiter_io_out_bits_index;
+	wire [4:0] _csrReqArbiter_io_out_bits_rs1;
+	wire [1:0] _csrReqArbiter_io_out_bits_op;
 	wire _dvu_io_req_ready;
 	wire _dvu_io_rd_valid;
 	wire [4:0] _dvu_io_rd_bits_addr;
@@ -7294,7 +9061,6 @@ module SCore (
 	wire _bru_1_io_taken_valid;
 	wire [31:0] _bru_1_io_taken_value;
 	wire _bru_0_io_csr_in_mode_valid;
-	wire [1:0] _bru_0_io_csr_in_mode_bits;
 	wire _bru_0_io_csr_in_mcause_valid;
 	wire [31:0] _bru_0_io_csr_in_mcause_bits;
 	wire _bru_0_io_csr_in_mepc_valid;
@@ -7309,6 +9075,8 @@ module SCore (
 	wire [31:0] _bru_0_io_rd_bits_data;
 	wire _bru_0_io_taken_valid;
 	wire [31:0] _bru_0_io_taken_value;
+	wire _bru_0_io_actually_taken;
+	wire [31:0] _bru_0_io_real_target;
 	wire _bru_0_io_interlock;
 	wire _alu_3_io_rd_valid;
 	wire [4:0] _alu_3_io_rd_bits_addr;
@@ -7510,6 +9278,8 @@ module SCore (
 	wire _dispatch_io_float_valid;
 	wire [2:0] _dispatch_io_float_bits_opcode;
 	wire [4:0] _dispatch_io_float_bits_funct5;
+	wire [2:0] _dispatch_io_float_bits_src_fmt;
+	wire [2:0] _dispatch_io_float_bits_dst_fmt;
 	wire [4:0] _dispatch_io_float_bits_rs3;
 	wire [4:0] _dispatch_io_float_bits_rs2;
 	wire [4:0] _dispatch_io_float_bits_rs1;
@@ -7535,12 +9305,15 @@ module SCore (
 	wire _csr_io_rd_valid;
 	wire [4:0] _csr_io_rd_bits_addr;
 	wire [31:0] _csr_io_rd_bits_data;
-	wire [1:0] _csr_io_bru_out_mode;
 	wire [31:0] _csr_io_bru_out_mepc;
 	wire [31:0] _csr_io_bru_out_mtvec;
+	wire _csr_io_bru_out_interrupt;
+	wire [31:0] _csr_io_bru_out_interrupt_cause;
 	wire [2:0] _csr_io_float_out_frm;
 	wire _csr_io_halted;
 	wire _csr_io_wfi;
+	wire _csr_io_dm_single_step;
+	wire _csr_io_dm_dcsr_step;
 	wire _fetch_io_ibus_valid;
 	wire [31:0] _fetch_io_ibus_addr;
 	wire _fetch_io_inst_lanes_0_valid;
@@ -7594,6 +9367,8 @@ module SCore (
 	wire [31:0] _regfile_io_scoreboard_comb;
 	wire _isBranching_T = _bru_0_io_taken_valid | _bru_1_io_taken_valid;
 	wire branchTaken = (_isBranching_T | _bru_2_io_taken_valid) | _bru_3_io_taken_valid;
+	reg csr_io_rs1_REG;
+	reg stepTriggeredReg;
 	wire regfile_io_writeData_0_valid = (_csr_io_rd_valid | _alu_0_io_rd_valid) | _bru_0_io_rd_valid;
 	wire [4:0] regfile_io_writeData_0_bits_addr = ((_csr_io_rd_valid ? _csr_io_rd_bits_addr : 5'h00) | (_alu_0_io_rd_valid ? _alu_0_io_rd_bits_addr : 5'h00)) | (_bru_0_io_rd_valid ? _bru_0_io_rd_bits_addr : 5'h00);
 	wire [31:0] regfile_io_writeData_0_bits_data = ((_csr_io_rd_valid ? _csr_io_rd_bits_data : 32'h00000000) | (_alu_0_io_rd_valid ? _alu_0_io_rd_bits_data : 32'h00000000)) | (_bru_0_io_rd_valid ? _bru_0_io_rd_bits_data : 32'h00000000);
@@ -7606,7 +9381,24 @@ module SCore (
 	wire regfile_io_writeData_3_valid = _alu_3_io_rd_valid | _bru_3_io_rd_valid;
 	wire [4:0] regfile_io_writeData_3_bits_addr = (_alu_3_io_rd_valid ? _alu_3_io_rd_bits_addr : 5'h00) | (_bru_3_io_rd_valid ? _bru_3_io_rd_bits_addr : 5'h00);
 	wire [31:0] regfile_io_writeData_3_bits_data = (_alu_3_io_rd_valid ? _alu_3_io_rd_bits_data : 32'h00000000) | (_bru_3_io_rd_valid ? _bru_3_io_rd_bits_data : 32'h00000000);
+	wire fRegfile_io_write_ports_0_valid = io_dm_float_rd_valid | _floatCore_io_write_ports_0_valid;
+	wire [4:0] fRegfile_io_write_ports_0_addr = (io_dm_float_rd_valid ? io_dm_float_rd_addr : (_floatCore_io_write_ports_0_valid ? _floatCore_io_write_ports_0_addr : 5'h00));
+	wire [22:0] fRegfile_io_write_ports_0_data_mantissa = (io_dm_float_rd_valid ? io_dm_float_rd_data_mantissa : (_floatCore_io_write_ports_0_valid ? _floatCore_io_write_ports_0_data_mantissa : 23'h000000));
+	wire [7:0] fRegfile_io_write_ports_0_data_exponent = (io_dm_float_rd_valid ? io_dm_float_rd_data_exponent : (_floatCore_io_write_ports_0_valid ? _floatCore_io_write_ports_0_data_exponent : 8'h00));
+	wire fRegfile_io_write_ports_0_data_sign = (io_dm_float_rd_valid ? io_dm_float_rd_data_sign : _floatCore_io_write_ports_0_valid & _floatCore_io_write_ports_0_data_sign);
 	wire writeMask_2 = _bru_0_io_taken_valid | _bru_1_io_taken_valid;
+	always @(posedge clock or posedge reset)
+		if (reset) begin
+			csr_io_rs1_REG <= 1'h0;
+			stepTriggeredReg <= 1'h0;
+		end
+		else begin
+			csr_io_rs1_REG <= _dispatch_io_csr_valid;
+			
+			
+			
+			
+		end
 	Regfile regfile(
 		.clock(clock),
 		.reset(reset),
@@ -7717,7 +9509,7 @@ module SCore (
 		.reset(reset),
 		.io_csr_value_0(io_csr_in_value_0),
 		.io_ibus_valid(_fetch_io_ibus_valid),
-		.io_ibus_ready(~_lsu_io_ibus_valid),
+		.io_ibus_ready(~_lsu_io_ibus_valid & io_ibus_ready),
 		.io_ibus_addr(_fetch_io_ibus_addr),
 		.io_ibus_rdata(io_ibus_rdata),
 		.io_ibus_fault_valid(~_lsu_io_ibus_valid & io_ibus_fault_valid),
@@ -7768,18 +9560,17 @@ module SCore (
 		.io_csr_out_value_6(io_csr_out_value_6),
 		.io_csr_out_value_7(io_csr_out_value_7),
 		.io_csr_out_value_8(io_csr_out_value_8),
-		.io_req_valid(_dispatch_io_csr_valid),
-		.io_req_bits_addr(_dispatch_io_csr_bits_addr),
-		.io_req_bits_index(_dispatch_io_csr_bits_index),
-		.io_req_bits_rs1(_dispatch_io_csr_bits_rs1),
-		.io_req_bits_op(_dispatch_io_csr_bits_op),
-		.io_rs1_valid(_regfile_io_readData_0_valid),
-		.io_rs1_data(_regfile_io_readData_0_data),
+		.io_req_valid(_csrReqArbiter_io_out_valid),
+		.io_req_bits_addr(_csrReqArbiter_io_out_bits_addr),
+		.io_req_bits_index(_csrReqArbiter_io_out_bits_index),
+		.io_req_bits_rs1(_csrReqArbiter_io_out_bits_rs1),
+		.io_req_bits_op(_csrReqArbiter_io_out_bits_op),
+		.io_rs1_valid(~csr_io_rs1_REG | _regfile_io_readData_0_valid),
+		.io_rs1_data((csr_io_rs1_REG ? _regfile_io_readData_0_data : io_dm_csr_rs1)),
 		.io_rd_valid(_csr_io_rd_valid),
 		.io_rd_bits_addr(_csr_io_rd_bits_addr),
 		.io_rd_bits_data(_csr_io_rd_bits_data),
 		.io_bru_in_mode_valid(_bru_0_io_csr_in_mode_valid),
-		.io_bru_in_mode_bits(_bru_0_io_csr_in_mode_bits),
 		.io_bru_in_mcause_valid(_bru_0_io_csr_in_mcause_valid),
 		.io_bru_in_mcause_bits(_bru_0_io_csr_in_mcause_bits),
 		.io_bru_in_mepc_valid(_bru_0_io_csr_in_mepc_valid),
@@ -7789,9 +9580,10 @@ module SCore (
 		.io_bru_in_halt(_bru_0_io_csr_in_halt),
 		.io_bru_in_fault(_bru_0_io_csr_in_fault),
 		.io_bru_in_wfi(_bru_0_io_csr_in_wfi),
-		.io_bru_out_mode(_csr_io_bru_out_mode),
 		.io_bru_out_mepc(_csr_io_bru_out_mepc),
 		.io_bru_out_mtvec(_csr_io_bru_out_mtvec),
+		.io_bru_out_interrupt(_csr_io_bru_out_interrupt),
+		.io_bru_out_interrupt_cause(_csr_io_bru_out_interrupt_cause),
 		.io_float_in_fflags_valid(_floatCore_io_csr_in_fflags_valid),
 		.io_float_in_fflags_bits(_floatCore_io_csr_in_fflags_bits),
 		.io_float_out_frm(_csr_io_float_out_frm),
@@ -7799,12 +9591,18 @@ module SCore (
 		.io_halted(_csr_io_halted),
 		.io_fault(io_fault),
 		.io_wfi(_csr_io_wfi),
-		.io_irq(io_irq)
+		.io_irq(io_irq),
+		.io_dm_resume_req(io_dm_resume_req),
+		.io_dm_single_step(_csr_io_dm_single_step),
+		.io_dm_dcsr_step(_csr_io_dm_dcsr_step),
+		.io_dm_current_pc(_fetch_io_inst_lanes_0_bits_addr),
+		.io_dm_next_pc((_bru_0_io_actually_taken ? _bru_0_io_real_target : _fetch_io_inst_lanes_0_bits_addr)),
+		.io_timer_irq(io_timer_irq),
+		.io_software_irq(io_software_irq)
 	);
 	DispatchV2 dispatch(
 		.clock(clock),
 		.reset(reset),
-		.io_halted(_csr_io_halted | _csr_io_wfi),
 		.io_lsuActive(_lsu_io_active),
 		.io_scoreboard_regd(_regfile_io_scoreboard_regd),
 		.io_scoreboard_comb(_regfile_io_scoreboard_comb),
@@ -7993,6 +9791,8 @@ module SCore (
 		.io_float_valid(_dispatch_io_float_valid),
 		.io_float_bits_opcode(_dispatch_io_float_bits_opcode),
 		.io_float_bits_funct5(_dispatch_io_float_bits_funct5),
+		.io_float_bits_src_fmt(_dispatch_io_float_bits_src_fmt),
+		.io_float_bits_dst_fmt(_dispatch_io_float_bits_dst_fmt),
 		.io_float_bits_rs3(_dispatch_io_float_bits_rs3),
 		.io_float_bits_rs2(_dispatch_io_float_bits_rs2),
 		.io_float_bits_rs1(_dispatch_io_float_bits_rs1),
@@ -8010,6 +9810,7 @@ module SCore (
 		.io_retirement_buffer_nSpace(_retirement_buffer_io_nSpace[4:0]),
 		.io_retirement_buffer_empty(_retirement_buffer_io_empty),
 		.io_retirement_buffer_trap_pending(_retirement_buffer_io_trapPending),
+		.io_single_step(_csr_io_dm_single_step | _csr_io_dm_dcsr_step),
 		.io_branch_0(_dispatch_io_branch_0),
 		.io_branch_1(_dispatch_io_branch_1),
 		.io_branch_2(_dispatch_io_branch_2),
@@ -8062,7 +9863,7 @@ module SCore (
 		.io_rd_flt_bits_addr(_lsu_io_rd_flt_bits_addr),
 		.io_rd_flt_bits_data(_lsu_io_rd_flt_bits_data),
 		.io_ibus_valid(_lsu_io_ibus_valid),
-		.io_ibus_ready(_lsu_io_ibus_valid),
+		.io_ibus_ready(_lsu_io_ibus_valid & io_ibus_ready),
 		.io_ibus_addr(_lsu_io_ibus_addr),
 		.io_ibus_rdata(io_ibus_rdata),
 		.io_dbus_valid(_lsu_io_dbus_valid),
@@ -8199,8 +10000,8 @@ module SCore (
 		.io_writeDataScalar_5_bits_addr(_lsu_io_rd_bits_addr),
 		.io_writeAddrFloat_valid(_dispatch_io_rdMark_flt_valid),
 		.io_writeAddrFloat_addr(_dispatch_io_rdMark_flt_addr),
-		.io_writeDataFloat_0_valid(_floatCore_io_write_ports_0_valid),
-		.io_writeDataFloat_0_bits_addr(_floatCore_io_write_ports_0_addr),
+		.io_writeDataFloat_0_valid(fRegfile_io_write_ports_0_valid),
+		.io_writeDataFloat_0_bits_addr(fRegfile_io_write_ports_0_addr),
 		.io_writeDataFloat_1_valid(_floatCore_io_write_ports_1_valid),
 		.io_writeDataFloat_1_bits_addr(_floatCore_io_write_ports_1_addr),
 		.io_fault_valid(_fault_manager_io_out_valid),
@@ -8278,7 +10079,6 @@ module SCore (
 		.io_req_bits_target(_dispatch_io_bru_0_bits_target),
 		.io_req_bits_link(_dispatch_io_bru_0_bits_link),
 		.io_csr_in_mode_valid(_bru_0_io_csr_in_mode_valid),
-		.io_csr_in_mode_bits(_bru_0_io_csr_in_mode_bits),
 		.io_csr_in_mcause_valid(_bru_0_io_csr_in_mcause_valid),
 		.io_csr_in_mcause_bits(_bru_0_io_csr_in_mcause_bits),
 		.io_csr_in_mepc_valid(_bru_0_io_csr_in_mepc_valid),
@@ -8288,9 +10088,10 @@ module SCore (
 		.io_csr_in_halt(_bru_0_io_csr_in_halt),
 		.io_csr_in_fault(_bru_0_io_csr_in_fault),
 		.io_csr_in_wfi(_bru_0_io_csr_in_wfi),
-		.io_csr_out_mode(_csr_io_bru_out_mode),
 		.io_csr_out_mepc(_csr_io_bru_out_mepc),
 		.io_csr_out_mtvec(_csr_io_bru_out_mtvec),
+		.io_csr_out_interrupt(_csr_io_bru_out_interrupt),
+		.io_csr_out_interrupt_cause(_csr_io_bru_out_interrupt_cause),
 		.io_rs1_valid(_regfile_io_readData_0_valid),
 		.io_rs1_data(_regfile_io_readData_0_data),
 		.io_rs2_valid(_regfile_io_readData_1_valid),
@@ -8300,6 +10101,8 @@ module SCore (
 		.io_rd_bits_data(_bru_0_io_rd_bits_data),
 		.io_taken_valid(_bru_0_io_taken_valid),
 		.io_taken_value(_bru_0_io_taken_value),
+		.io_actually_taken(_bru_0_io_actually_taken),
+		.io_real_target(_bru_0_io_real_target),
 		.io_target_data(_regfile_io_target_0_data),
 		.io_interlock(_bru_0_io_interlock),
 		.io_fault_manager_valid(_fault_manager_io_out_valid),
@@ -8419,6 +10222,23 @@ module SCore (
 		.io_rd_bits_addr(_dvu_io_rd_bits_addr),
 		.io_rd_bits_data(_dvu_io_rd_bits_data)
 	);
+	Arbiter2_CsrCmd csrReqArbiter(
+		.io_in_0_valid(_dispatch_io_csr_valid),
+		.io_in_0_bits_addr(_dispatch_io_csr_bits_addr),
+		.io_in_0_bits_index(_dispatch_io_csr_bits_index),
+		.io_in_0_bits_rs1(_dispatch_io_csr_bits_rs1),
+		.io_in_0_bits_op(_dispatch_io_csr_bits_op),
+		.io_in_1_valid(io_dm_csr_valid),
+		.io_in_1_bits_addr(io_dm_csr_bits_addr),
+		.io_in_1_bits_index(io_dm_csr_bits_index),
+		.io_in_1_bits_rs1(io_dm_csr_bits_rs1),
+		.io_in_1_bits_op(io_dm_csr_bits_op),
+		.io_out_valid(_csrReqArbiter_io_out_valid),
+		.io_out_bits_addr(_csrReqArbiter_io_out_bits_addr),
+		.io_out_bits_index(_csrReqArbiter_io_out_bits_index),
+		.io_out_bits_rs1(_csrReqArbiter_io_out_bits_rs1),
+		.io_out_bits_op(_csrReqArbiter_io_out_bits_op)
+	);
 	FloatCore floatCore(
 		.clock(clock),
 		.reset(reset),
@@ -8426,6 +10246,8 @@ module SCore (
 		.io_inst_valid(_dispatch_io_float_valid),
 		.io_inst_bits_opcode(_dispatch_io_float_bits_opcode),
 		.io_inst_bits_funct5(_dispatch_io_float_bits_funct5),
+		.io_inst_bits_src_fmt(_dispatch_io_float_bits_src_fmt),
+		.io_inst_bits_dst_fmt(_dispatch_io_float_bits_dst_fmt),
 		.io_inst_bits_rs3(_dispatch_io_float_bits_rs3),
 		.io_inst_bits_rs2(_dispatch_io_float_bits_rs2),
 		.io_inst_bits_rs1(_dispatch_io_float_bits_rs1),
@@ -8478,8 +10300,8 @@ module SCore (
 	FRegfile fRegfile(
 		.clock(clock),
 		.reset(reset),
-		.io_read_ports_0_valid(_floatCore_io_read_ports_0_valid),
-		.io_read_ports_0_addr(_floatCore_io_read_ports_0_addr),
+		.io_read_ports_0_valid(io_dm_float_rs_valid | _floatCore_io_read_ports_0_valid),
+		.io_read_ports_0_addr((io_dm_float_rs_valid ? io_dm_float_rs_addr : (_floatCore_io_read_ports_0_valid ? _floatCore_io_read_ports_0_addr : 5'h00))),
 		.io_read_ports_0_data_mantissa(_fRegfile_io_read_ports_0_data_mantissa),
 		.io_read_ports_0_data_exponent(_fRegfile_io_read_ports_0_data_exponent),
 		.io_read_ports_0_data_sign(_fRegfile_io_read_ports_0_data_sign),
@@ -8493,22 +10315,23 @@ module SCore (
 		.io_read_ports_2_data_mantissa(_fRegfile_io_read_ports_2_data_mantissa),
 		.io_read_ports_2_data_exponent(_fRegfile_io_read_ports_2_data_exponent),
 		.io_read_ports_2_data_sign(_fRegfile_io_read_ports_2_data_sign),
-		.io_write_ports_0_valid(_floatCore_io_write_ports_0_valid),
-		.io_write_ports_0_addr(_floatCore_io_write_ports_0_addr),
-		.io_write_ports_0_data_mantissa(_floatCore_io_write_ports_0_data_mantissa),
-		.io_write_ports_0_data_exponent(_floatCore_io_write_ports_0_data_exponent),
-		.io_write_ports_0_data_sign(_floatCore_io_write_ports_0_data_sign),
+		.io_write_ports_0_valid(fRegfile_io_write_ports_0_valid),
+		.io_write_ports_0_addr(fRegfile_io_write_ports_0_addr),
+		.io_write_ports_0_data_mantissa(fRegfile_io_write_ports_0_data_mantissa),
+		.io_write_ports_0_data_exponent(fRegfile_io_write_ports_0_data_exponent),
+		.io_write_ports_0_data_sign(fRegfile_io_write_ports_0_data_sign),
 		.io_write_ports_1_valid(_floatCore_io_write_ports_1_valid),
 		.io_write_ports_1_addr(_floatCore_io_write_ports_1_addr),
 		.io_write_ports_1_data_mantissa(_floatCore_io_write_ports_1_data_mantissa),
 		.io_write_ports_1_data_exponent(_floatCore_io_write_ports_1_data_exponent),
 		.io_write_ports_1_data_sign(_floatCore_io_write_ports_1_data_sign),
+		.io_dm_write_valid(io_dm_float_rd_valid),
 		.io_scoreboard_set((_dispatch_io_rdMark_flt_valid ? 32'h00000001 << _dispatch_io_rdMark_flt_addr : 32'h00000000)),
 		.io_scoreboard(_fRegfile_io_scoreboard),
 		.io_busPort_data_0(_fRegfile_io_busPort_data_0),
 		.io_busPortAddr(_dispatch_io_fbusPortAddr)
 	);
-	Arbiter3_RegfileWriteDataIO arb(
+	Arbiter4_RegfileWriteDataIO arb(
 		.io_in_0_valid(_mlu_io_rd_valid),
 		.io_in_0_bits_addr(_mlu_io_rd_bits_addr),
 		.io_in_0_bits_data(_mlu_io_rd_bits_data),
@@ -8520,6 +10343,10 @@ module SCore (
 		.io_in_2_valid(_floatCore_io_scalar_rd_valid),
 		.io_in_2_bits_addr(_floatCore_io_scalar_rd_bits_addr),
 		.io_in_2_bits_data(_floatCore_io_scalar_rd_bits_data),
+		.io_in_3_ready(io_dm_scalar_rd_ready),
+		.io_in_3_valid(io_dm_scalar_rd_valid),
+		.io_in_3_bits_addr(io_dm_scalar_rd_bits_addr),
+		.io_in_3_bits_data(io_dm_scalar_rd_bits_data),
 		.io_out_valid(_arb_io_out_valid),
 		.io_out_bits_addr(_arb_io_out_bits_addr),
 		.io_out_bits_data(_arb_io_out_bits_data)
@@ -8527,6 +10354,11 @@ module SCore (
 	assign io_csr_out_value_4 = _csr_io_csr_out_value_4;
 	assign io_halted = _csr_io_halted;
 	assign io_wfi = _csr_io_wfi;
+	assign io_dm_csr_rd_valid = _csr_io_rd_valid;
+	assign io_dm_csr_rd_bits = _csr_io_rd_bits_data;
+	assign io_dm_float_rs_data_mantissa = _fRegfile_io_read_ports_0_data_mantissa;
+	assign io_dm_float_rs_data_exponent = _fRegfile_io_read_ports_0_data_exponent;
+	assign io_dm_float_rs_data_sign = _fRegfile_io_read_ports_0_data_sign;
 	assign io_ibus_valid = (_lsu_io_ibus_valid ? _lsu_io_ibus_valid : _fetch_io_ibus_valid);
 	assign io_ibus_addr = (_lsu_io_ibus_valid ? _lsu_io_ibus_addr : _fetch_io_ibus_addr);
 	assign io_dbus_valid = _lsu_io_dbus_valid;
@@ -8551,7 +10383,35 @@ module CoreMini (
 	io_fault,
 	io_wfi,
 	io_irq,
+	io_timer_irq,
+	io_software_irq,
+	io_dm_resume_req,
+	io_dm_csr_valid,
+	io_dm_csr_bits_addr,
+	io_dm_csr_bits_index,
+	io_dm_csr_bits_rs1,
+	io_dm_csr_bits_op,
+	io_dm_csr_rs1,
+	io_dm_csr_rd_valid,
+	io_dm_csr_rd_bits,
+	io_dm_scalar_rd_ready,
+	io_dm_scalar_rd_valid,
+	io_dm_scalar_rd_bits_addr,
+	io_dm_scalar_rd_bits_data,
+	io_dm_scalar_rs_idx,
+	io_dm_scalar_rs_data,
+	io_dm_float_rd_valid,
+	io_dm_float_rd_addr,
+	io_dm_float_rd_data_mantissa,
+	io_dm_float_rd_data_exponent,
+	io_dm_float_rd_data_sign,
+	io_dm_float_rs_valid,
+	io_dm_float_rs_addr,
+	io_dm_float_rs_data_mantissa,
+	io_dm_float_rs_data_exponent,
+	io_dm_float_rs_data_sign,
 	io_ibus_valid,
+	io_ibus_ready,
 	io_ibus_addr,
 	io_ibus_rdata,
 	io_ibus_fault_valid,
@@ -8591,7 +10451,35 @@ module CoreMini (
 	output wire io_fault;
 	output wire io_wfi;
 	input io_irq;
+	input io_timer_irq;
+	input io_software_irq;
+	input io_dm_resume_req;
+	input io_dm_csr_valid;
+	input [4:0] io_dm_csr_bits_addr;
+	input [11:0] io_dm_csr_bits_index;
+	input [4:0] io_dm_csr_bits_rs1;
+	input [1:0] io_dm_csr_bits_op;
+	input [31:0] io_dm_csr_rs1;
+	output wire io_dm_csr_rd_valid;
+	output wire [31:0] io_dm_csr_rd_bits;
+	output wire io_dm_scalar_rd_ready;
+	input io_dm_scalar_rd_valid;
+	input [4:0] io_dm_scalar_rd_bits_addr;
+	input [31:0] io_dm_scalar_rd_bits_data;
+	input [4:0] io_dm_scalar_rs_idx;
+	output wire [31:0] io_dm_scalar_rs_data;
+	input io_dm_float_rd_valid;
+	input [4:0] io_dm_float_rd_addr;
+	input [22:0] io_dm_float_rd_data_mantissa;
+	input [7:0] io_dm_float_rd_data_exponent;
+	input io_dm_float_rd_data_sign;
+	input io_dm_float_rs_valid;
+	input [4:0] io_dm_float_rs_addr;
+	output wire [22:0] io_dm_float_rs_data_mantissa;
+	output wire [7:0] io_dm_float_rs_data_exponent;
+	output wire io_dm_float_rs_data_sign;
 	output wire io_ibus_valid;
+	input io_ibus_ready;
 	output wire [31:0] io_ibus_addr;
 	input [127:0] io_ibus_rdata;
 	input io_ibus_fault_valid;
@@ -8631,7 +10519,35 @@ module CoreMini (
 		.io_fault(io_fault),
 		.io_wfi(io_wfi),
 		.io_irq(io_irq),
+		.io_dm_resume_req(io_dm_resume_req),
+		.io_dm_csr_valid(io_dm_csr_valid),
+		.io_dm_csr_bits_addr(io_dm_csr_bits_addr),
+		.io_dm_csr_bits_index(io_dm_csr_bits_index),
+		.io_dm_csr_bits_rs1(io_dm_csr_bits_rs1),
+		.io_dm_csr_bits_op(io_dm_csr_bits_op),
+		.io_dm_csr_rs1(io_dm_csr_rs1),
+		.io_dm_csr_rd_valid(io_dm_csr_rd_valid),
+		.io_dm_csr_rd_bits(io_dm_csr_rd_bits),
+		.io_dm_scalar_rd_ready(io_dm_scalar_rd_ready),
+		.io_dm_scalar_rd_valid(io_dm_scalar_rd_valid),
+		.io_dm_scalar_rd_bits_addr(io_dm_scalar_rd_bits_addr),
+		.io_dm_scalar_rd_bits_data(io_dm_scalar_rd_bits_data),
+		.io_dm_scalar_rs_idx(io_dm_scalar_rs_idx),
+		.io_dm_scalar_rs_data(io_dm_scalar_rs_data),
+		.io_dm_float_rd_valid(io_dm_float_rd_valid),
+		.io_dm_float_rd_addr(io_dm_float_rd_addr),
+		.io_dm_float_rd_data_mantissa(io_dm_float_rd_data_mantissa),
+		.io_dm_float_rd_data_exponent(io_dm_float_rd_data_exponent),
+		.io_dm_float_rd_data_sign(io_dm_float_rd_data_sign),
+		.io_dm_float_rs_valid(io_dm_float_rs_valid),
+		.io_dm_float_rs_addr(io_dm_float_rs_addr),
+		.io_dm_float_rs_data_mantissa(io_dm_float_rs_data_mantissa),
+		.io_dm_float_rs_data_exponent(io_dm_float_rs_data_exponent),
+		.io_dm_float_rs_data_sign(io_dm_float_rs_data_sign),
+		.io_timer_irq(io_timer_irq),
+		.io_software_irq(io_software_irq),
 		.io_ibus_valid(io_ibus_valid),
+		.io_ibus_ready(io_ibus_ready),
 		.io_ibus_addr(io_ibus_addr),
 		.io_ibus_rdata(io_ibus_rdata),
 		.io_ibus_fault_valid(io_ibus_fault_valid),
@@ -8672,14 +10588,18 @@ module SRAM_512x128 (
 	input [127:0] io_wdata;
 	input [15:0] io_wmask;
 	output wire [127:0] io_rdata;
-	Sram_512x128 sramModules_0(
+	Sram #(
+		.GLOBAL_BASE_ADDR(0),
+		.NUM_ENTRIES(512)
+	) sramModules_0(
 		.clock(clock),
 		.enable(io_enable),
 		.write(io_write),
 		.addr(io_addr),
 		.wdata(io_wdata),
 		.wmask(io_wmask),
-		.rdata(io_rdata)
+		.rdata(io_rdata),
+		.rvalid()
 	);
 endmodule
 module TCM128 (
@@ -9001,6 +10921,14 @@ module FabricArbiter (
 	io_source_1_writeDataAddr_bits,
 	io_source_1_writeDataBits,
 	io_source_1_writeDataStrb,
+	io_source_2_readDataAddr_valid,
+	io_source_2_readDataAddr_bits,
+	io_source_2_readData_valid,
+	io_source_2_readData_bits,
+	io_source_2_writeDataAddr_valid,
+	io_source_2_writeDataAddr_bits,
+	io_source_2_writeDataBits,
+	io_source_2_writeDataStrb,
 	io_fabricBusy_1,
 	io_port_readDataAddr_valid,
 	io_port_readDataAddr_bits,
@@ -9028,6 +10956,14 @@ module FabricArbiter (
 	input [31:0] io_source_1_writeDataAddr_bits;
 	input [127:0] io_source_1_writeDataBits;
 	input [15:0] io_source_1_writeDataStrb;
+	input io_source_2_readDataAddr_valid;
+	input [31:0] io_source_2_readDataAddr_bits;
+	output wire io_source_2_readData_valid;
+	output wire [127:0] io_source_2_readData_bits;
+	input io_source_2_writeDataAddr_valid;
+	input [31:0] io_source_2_writeDataAddr_bits;
+	input [127:0] io_source_2_writeDataBits;
+	input [15:0] io_source_2_writeDataStrb;
 	output wire io_fabricBusy_1;
 	output wire io_port_readDataAddr_valid;
 	output wire [31:0] io_port_readDataAddr_bits;
@@ -9039,16 +10975,80 @@ module FabricArbiter (
 	output wire [15:0] io_port_writeDataStrb;
 	wire sourceValid_0 = io_source_0_readDataAddr_valid | io_source_0_writeDataAddr_valid;
 	wire sourceValid_1 = io_source_1_readDataAddr_valid | io_source_1_writeDataAddr_valid;
+	wire sourceValid_2 = io_source_2_readDataAddr_valid | io_source_2_writeDataAddr_valid;
 	assign io_source_0_readData_bits = io_port_readData_bits;
 	assign io_source_1_readData_valid = io_port_readData_valid;
 	assign io_source_1_readData_bits = io_port_readData_bits;
+	assign io_source_2_readData_valid = io_port_readData_valid;
+	assign io_source_2_readData_bits = io_port_readData_bits;
 	assign io_fabricBusy_1 = sourceValid_0;
-	assign io_port_readDataAddr_valid = (sourceValid_0 ? io_source_0_readDataAddr_valid : sourceValid_1 & io_source_1_readDataAddr_valid);
-	assign io_port_readDataAddr_bits = (sourceValid_0 ? io_source_0_readDataAddr_bits : (sourceValid_1 ? io_source_1_readDataAddr_bits : 32'h00000000));
-	assign io_port_writeDataAddr_valid = (sourceValid_0 ? io_source_0_writeDataAddr_valid : sourceValid_1 & io_source_1_writeDataAddr_valid);
-	assign io_port_writeDataAddr_bits = (sourceValid_0 ? io_source_0_writeDataAddr_bits : (sourceValid_1 ? io_source_1_writeDataAddr_bits : 32'h00000000));
-	assign io_port_writeDataBits = (sourceValid_0 ? io_source_0_writeDataBits : (sourceValid_1 ? io_source_1_writeDataBits : 128'h00000000000000000000000000000000));
-	assign io_port_writeDataStrb = (sourceValid_0 ? io_source_0_writeDataStrb : (sourceValid_1 ? io_source_1_writeDataStrb : 16'h0000));
+	assign io_port_readDataAddr_valid = (sourceValid_0 ? io_source_0_readDataAddr_valid : (sourceValid_1 ? io_source_1_readDataAddr_valid : sourceValid_2 & io_source_2_readDataAddr_valid));
+	assign io_port_readDataAddr_bits = (sourceValid_0 ? io_source_0_readDataAddr_bits : (sourceValid_1 ? io_source_1_readDataAddr_bits : (sourceValid_2 ? io_source_2_readDataAddr_bits : 32'h00000000)));
+	assign io_port_writeDataAddr_valid = (sourceValid_0 ? io_source_0_writeDataAddr_valid : (sourceValid_1 ? io_source_1_writeDataAddr_valid : sourceValid_2 & io_source_2_writeDataAddr_valid));
+	assign io_port_writeDataAddr_bits = (sourceValid_0 ? io_source_0_writeDataAddr_bits : (sourceValid_1 ? io_source_1_writeDataAddr_bits : (sourceValid_2 ? io_source_2_writeDataAddr_bits : 32'h00000000)));
+	assign io_port_writeDataBits = (sourceValid_0 ? io_source_0_writeDataBits : (sourceValid_1 ? io_source_1_writeDataBits : (sourceValid_2 ? io_source_2_writeDataBits : 128'h00000000000000000000000000000000)));
+	assign io_port_writeDataStrb = (sourceValid_0 ? io_source_0_writeDataStrb : (sourceValid_1 ? io_source_1_writeDataStrb : (sourceValid_2 ? io_source_2_writeDataStrb : 16'h0000)));
+endmodule
+module IBus2Axi (
+	clock,
+	reset,
+	io_ibus_valid,
+	io_ibus_ready,
+	io_ibus_addr,
+	io_ibus_rdata,
+	io_ibus_fault_valid,
+	io_axi_addr_ready,
+	io_axi_addr_valid,
+	io_axi_addr_bits_addr,
+	io_axi_data_valid,
+	io_axi_data_bits_data,
+	io_axi_data_bits_resp
+);
+	input clock;
+	input reset;
+	input io_ibus_valid;
+	output wire io_ibus_ready;
+	input [31:0] io_ibus_addr;
+	output wire [127:0] io_ibus_rdata;
+	output wire io_ibus_fault_valid;
+	input io_axi_addr_ready;
+	output wire io_axi_addr_valid;
+	output wire [31:0] io_axi_addr_bits_addr;
+	input io_axi_data_valid;
+	input [127:0] io_axi_data_bits_data;
+	input [1:0] io_axi_data_bits_resp;
+	reg sraddrActive;
+	reg [31:0] saddrReg;
+	reg [127:0] sdata;
+	reg [1:0] sresp;
+	reg sdataValid;
+	wire [31:0] saddr = {io_ibus_addr[31:4], 4'h0};
+	wire io_ibus_ready_0 = ((io_axi_data_valid & sraddrActive) | sdataValid) & (saddr == saddrReg);
+	wire io_axi_addr_valid_0 = (io_ibus_valid & ~sraddrActive) & (~sdataValid | (saddr != saddrReg));
+	wire _saddrReg_T = io_axi_addr_ready & io_axi_addr_valid_0;
+	always @(posedge clock or posedge reset)
+		if (reset) begin
+			sraddrActive <= 1'h0;
+			saddrReg <= 32'h00000000;
+			sdata <= 128'h00000000000000000000000000000000;
+			sresp <= 2'h0;
+			sdataValid <= 1'h0;
+		end
+		else begin
+			sraddrActive <= ~io_axi_data_valid & (_saddrReg_T | sraddrActive);
+			if (_saddrReg_T)
+				saddrReg <= saddr;
+			if (io_axi_data_valid) begin
+				sdata <= io_axi_data_bits_data;
+				sresp <= io_axi_data_bits_resp;
+			end
+			sdataValid <= (io_axi_data_valid ? ~io_ibus_ready_0 : ~((io_ibus_ready_0 & io_ibus_valid) | _saddrReg_T) & sdataValid);
+		end
+	assign io_ibus_ready = io_ibus_ready_0;
+	assign io_ibus_rdata = sdata;
+	assign io_ibus_fault_valid = io_ibus_ready_0 & |(io_axi_data_valid ? io_axi_data_bits_resp : sresp);
+	assign io_axi_addr_valid = io_axi_addr_valid_0;
+	assign io_axi_addr_bits_addr = saddr;
 endmodule
 module SRAM_2048x128 (
 	clock,
@@ -9066,14 +11066,18 @@ module SRAM_2048x128 (
 	input [127:0] io_wdata;
 	input [15:0] io_wmask;
 	output wire [127:0] io_rdata;
-	Sram_2048x128 sramModules_0(
+	Sram #(
+		.GLOBAL_BASE_ADDR(65536),
+		.NUM_ENTRIES(2048)
+	) sramModules_0(
 		.clock(clock),
 		.enable(io_enable),
 		.write(io_write),
 		.addr(io_addr),
 		.wdata(io_wdata),
 		.wmask(io_wmask),
-		.rdata(io_rdata)
+		.rdata(io_rdata),
+		.rvalid()
 	);
 endmodule
 module TCM128_1 (
@@ -9506,7 +11510,7 @@ module FabricMux (
 	assign io_ports_2_writeDataAddr_bits = (_portSelected_T_7 ? io_source_writeDataAddr_bits & 32'hfffcffff : 32'h00000000);
 	assign io_ports_2_writeDataBits = (_portSelected_T_7 ? io_source_writeDataBits : 128'h00000000000000000000000000000000);
 endmodule
-module CoralNPURRArbiter (
+module CoralNPURRArbiter_1 (
 	clock,
 	reset,
 	io_in_0_ready,
@@ -10272,7 +12276,7 @@ module AxiSlave (
 			readIssued_bits_last <= lastRead;
 			readsIssued <= (axiAddrCmd_q_io_deq_ready & _axiAddrCmd_q_io_deq_valid ? 9'h000 : readsIssued + {8'h00, issueRead});
 		end
-	CoralNPURRArbiter addrArbiter(
+	CoralNPURRArbiter_1 addrArbiter(
 		.clock(clock),
 		.reset(reset),
 		.io_in_0_ready(_addrArbiter_io_in_0_ready),
@@ -10757,6 +12761,18 @@ module CoreMiniAxi (
 	io_fault,
 	io_wfi,
 	io_irq,
+	io_boot_addr,
+	io_timer_irq,
+	io_software_irq,
+	io_dm_req_ready,
+	io_dm_req_valid,
+	io_dm_req_bits_address,
+	io_dm_req_bits_data,
+	io_dm_req_bits_op,
+	io_dm_rsp_ready,
+	io_dm_rsp_valid,
+	io_dm_rsp_bits_data,
+	io_dm_rsp_bits_op,
 	io_te
 );
 	input io_aclk;
@@ -10843,9 +12859,28 @@ module CoreMiniAxi (
 	output wire io_fault;
 	output wire io_wfi;
 	input io_irq;
+	input [31:0] io_boot_addr;
+	input io_timer_irq;
+	input io_software_irq;
+	output wire io_dm_req_ready;
+	input io_dm_req_valid;
+	input [31:0] io_dm_req_bits_address;
+	input [31:0] io_dm_req_bits_data;
+	input [1:0] io_dm_req_bits_op;
+	input io_dm_rsp_ready;
+	output wire io_dm_rsp_valid;
+	output wire [31:0] io_dm_rsp_bits_data;
+	output wire [1:0] io_dm_rsp_bits_op;
 	input io_te;
+	wire dm_io_ext_rsp_ready;
+	wire _readAddrArb_io_in_0_ready;
+	wire _readAddrArb_io_in_1_ready;
 	wire _ebus2axi_io_dbus_ready;
 	wire [127:0] _ebus2axi_io_dbus_rdata;
+	wire _ebus2axi_io_axi_read_addr_valid;
+	wire [31:0] _ebus2axi_io_axi_read_addr_bits_addr;
+	wire [2:0] _ebus2axi_io_axi_read_addr_bits_size;
+	wire _ebus2axi_io_axi_read_data_ready;
 	wire _ebus2axi_io_fault_valid;
 	wire _ebus2axi_io_fault_bits_write;
 	wire [31:0] _ebus2axi_io_fault_bits_addr;
@@ -10884,6 +12919,8 @@ module CoreMiniAxi (
 	wire [127:0] _dtcmArbiter_io_source_0_readData_bits;
 	wire _dtcmArbiter_io_source_1_readData_valid;
 	wire [127:0] _dtcmArbiter_io_source_1_readData_bits;
+	wire _dtcmArbiter_io_source_2_readData_valid;
+	wire [127:0] _dtcmArbiter_io_source_2_readData_bits;
 	wire _dtcmArbiter_io_fabricBusy_1;
 	wire _dtcmArbiter_io_port_readDataAddr_valid;
 	wire [31:0] _dtcmArbiter_io_port_readDataAddr_bits;
@@ -10944,9 +12981,16 @@ module CoreMiniAxi (
 	wire [7:0] _dtcm_io_rdata_13;
 	wire [7:0] _dtcm_io_rdata_14;
 	wire [7:0] _dtcm_io_rdata_15;
+	wire _ibus2axi_io_ibus_ready;
+	wire [127:0] _ibus2axi_io_ibus_rdata;
+	wire _ibus2axi_io_ibus_fault_valid;
+	wire _ibus2axi_io_axi_addr_valid;
+	wire [31:0] _ibus2axi_io_axi_addr_bits_addr;
 	wire [127:0] _itcmArbiter_io_source_0_readData_bits;
 	wire _itcmArbiter_io_source_1_readData_valid;
 	wire [127:0] _itcmArbiter_io_source_1_readData_bits;
+	wire _itcmArbiter_io_source_2_readData_valid;
+	wire [127:0] _itcmArbiter_io_source_2_readData_bits;
 	wire _itcmArbiter_io_fabricBusy_1;
 	wire _itcmArbiter_io_port_readDataAddr_valid;
 	wire [31:0] _itcmArbiter_io_port_readDataAddr_bits;
@@ -11019,6 +13063,13 @@ module CoreMiniAxi (
 	wire _core_io_halted;
 	wire _core_io_fault;
 	wire _core_io_wfi;
+	wire _core_io_dm_csr_rd_valid;
+	wire [31:0] _core_io_dm_csr_rd_bits;
+	wire _core_io_dm_scalar_rd_ready;
+	wire [31:0] _core_io_dm_scalar_rs_data;
+	wire [22:0] _core_io_dm_float_rs_data_mantissa;
+	wire [7:0] _core_io_dm_float_rs_data_exponent;
+	wire _core_io_dm_float_rs_data_sign;
 	wire _core_io_ibus_valid;
 	wire [31:0] _core_io_ibus_addr;
 	wire _core_io_dbus_valid;
@@ -11033,6 +13084,52 @@ module CoreMiniAxi (
 	wire [4:0] _core_io_ebus_dbus_size;
 	wire [127:0] _core_io_ebus_dbus_wdata;
 	wire [15:0] _core_io_ebus_dbus_wmask;
+	wire _inflight_io_enq_ready;
+	wire _inflight_io_deq_valid;
+	wire _inflight_io_deq_bits;
+	wire _dmReqArbiter_io_in_0_ready;
+	wire _dmReqArbiter_io_in_1_ready;
+	wire _dmReqArbiter_io_out_valid;
+	wire [31:0] _dmReqArbiter_io_out_bits_address;
+	wire [31:0] _dmReqArbiter_io_out_bits_data;
+	wire [1:0] _dmReqArbiter_io_out_bits_op;
+	wire _dmReqArbiter_io_chosen;
+	wire _dm_io_ext_req_ready;
+	wire _dm_io_ext_rsp_valid;
+	wire [31:0] _dm_io_ext_rsp_bits_data;
+	wire [1:0] _dm_io_ext_rsp_bits_op;
+	wire _dm_io_csr_valid;
+	wire [4:0] _dm_io_csr_bits_addr;
+	wire [11:0] _dm_io_csr_bits_index;
+	wire [4:0] _dm_io_csr_bits_rs1;
+	wire [1:0] _dm_io_csr_bits_op;
+	wire [31:0] _dm_io_csr_rs1;
+	wire _dm_io_scalar_rd_valid;
+	wire [4:0] _dm_io_scalar_rd_bits_addr;
+	wire [31:0] _dm_io_scalar_rd_bits_data;
+	wire [4:0] _dm_io_scalar_rs_idx;
+	wire _dm_io_float_rd_valid;
+	wire [4:0] _dm_io_float_rd_addr;
+	wire [22:0] _dm_io_float_rd_data_mantissa;
+	wire [7:0] _dm_io_float_rd_data_exponent;
+	wire _dm_io_float_rd_data_sign;
+	wire _dm_io_float_rs_valid;
+	wire [4:0] _dm_io_float_rs_addr;
+	wire _dm_io_itcm_readDataAddr_valid;
+	wire [31:0] _dm_io_itcm_readDataAddr_bits;
+	wire _dm_io_itcm_writeDataAddr_valid;
+	wire [31:0] _dm_io_itcm_writeDataAddr_bits;
+	wire [127:0] _dm_io_itcm_writeDataBits;
+	wire [15:0] _dm_io_itcm_writeDataStrb;
+	wire _dm_io_dtcm_readDataAddr_valid;
+	wire [31:0] _dm_io_dtcm_readDataAddr_bits;
+	wire _dm_io_dtcm_writeDataAddr_valid;
+	wire [31:0] _dm_io_dtcm_writeDataAddr_bits;
+	wire [127:0] _dm_io_dtcm_writeDataBits;
+	wire [15:0] _dm_io_dtcm_writeDataStrb;
+	wire _dm_io_haltreq_0;
+	wire _dm_io_resumereq_0;
+	wire _dm_io_ndmreset;
 	wire _cg_clk_o;
 	wire _csr_io_fabric_readData_valid;
 	wire [127:0] _csr_io_fabric_readData_bits;
@@ -11043,12 +13140,34 @@ module CoreMiniAxi (
 	wire _rst_sync_clk_o;
 	wire _rst_sync_rstn_o;
 	wire _global_reset_T_2 = ~(io_te ? io_aresetn : _rst_sync_rstn_o);
+	reg dmEnable;
+	wire _io_dm_rsp_valid_T = _dm_io_ext_rsp_valid & _inflight_io_deq_valid;
+	reg irq_reg;
+	reg timer_irq_reg;
+	reg software_irq_reg;
+	reg dm_io_resumeack_0_REG;
+	wire inItcm = _core_io_ibus_addr < 32'h00002000;
+	reg inItcmReg;
 	reg axiSlaveEnable;
+	wire _io_axi_master_read_data_ready_T = io_axi_master_read_data_bits_id == 6'h01;
 	always @(posedge _rst_sync_clk_o or posedge _global_reset_T_2)
-		if (_global_reset_T_2)
+		if (_global_reset_T_2) begin
+			dmEnable <= 1'h0;
+			irq_reg <= 1'h0;
+			timer_irq_reg <= 1'h0;
+			software_irq_reg <= 1'h0;
+			dm_io_resumeack_0_REG <= 1'h0;
+			inItcmReg <= 1'h1;
 			axiSlaveEnable <= 1'h0;
-		else
+		end
+		else begin
+			dmEnable <= 1'h1;
+			irq_reg <= io_irq;
+			timer_irq_reg <= io_timer_irq;
+			software_irq_reg <= io_software_irq;
+			inItcmReg <= inItcm;
 			axiSlaveEnable <= 1'h1;
+		end
 	RstSync rst_sync(
 		.clk_i(io_aclk),
 		.rstn_i(io_aresetn),
@@ -11070,6 +13189,7 @@ module CoreMiniAxi (
 		.io_reset(_csr_io_reset),
 		.io_cg(_csr_io_cg),
 		.io_pcStart(_csr_io_pcStart),
+		.io_bootAddr(io_boot_addr),
 		.io_halted(_core_io_halted),
 		.io_fault(_core_io_fault),
 		.io_coralnpu_csr_value_0(_core_io_csr_out_value_0),
@@ -11080,17 +13200,102 @@ module CoreMiniAxi (
 		.io_coralnpu_csr_value_5(_core_io_csr_out_value_5),
 		.io_coralnpu_csr_value_6(_core_io_csr_out_value_6),
 		.io_coralnpu_csr_value_7(_core_io_csr_out_value_7),
-		.io_coralnpu_csr_value_8(_core_io_csr_out_value_8)
+		.io_coralnpu_csr_value_8(_core_io_csr_out_value_8),
 	);
 	ClockGate cg(
 		.clk_i(_rst_sync_clk_o),
-		.enable(io_irq | (~_csr_io_cg & ~_core_io_wfi)),
+		.enable((((irq_reg | timer_irq_reg) | software_irq_reg) | (~_csr_io_cg & ~_core_io_wfi)) | _dm_io_haltreq_0),
 		.te(io_te),
 		.clk_o(_cg_clk_o)
 	);
+	DebugModule dm(
+		.clock(_rst_sync_clk_o),
+		.reset(_global_reset_T_2),
+		.io_ext_req_ready(_dm_io_ext_req_ready),
+		.io_ext_req_valid(_dmReqArbiter_io_out_valid & _inflight_io_enq_ready),
+		.io_ext_req_bits_address(_dmReqArbiter_io_out_bits_address),
+		.io_ext_req_bits_data(_dmReqArbiter_io_out_bits_data),
+		.io_ext_req_bits_op(_dmReqArbiter_io_out_bits_op),
+		.io_ext_rsp_ready(dm_io_ext_rsp_ready),
+		.io_ext_rsp_valid(_dm_io_ext_rsp_valid),
+		.io_ext_rsp_bits_data(_dm_io_ext_rsp_bits_data),
+		.io_ext_rsp_bits_op(_dm_io_ext_rsp_bits_op),
+		.io_csr_valid(_dm_io_csr_valid),
+		.io_csr_bits_addr(_dm_io_csr_bits_addr),
+		.io_csr_bits_index(_dm_io_csr_bits_index),
+		.io_csr_bits_rs1(_dm_io_csr_bits_rs1),
+		.io_csr_bits_op(_dm_io_csr_bits_op),
+		.io_csr_rs1(_dm_io_csr_rs1),
+		.io_csr_rd_valid(_core_io_dm_csr_rd_valid),
+		.io_csr_rd_bits(_core_io_dm_csr_rd_bits),
+		.io_scalar_rd_ready(_core_io_dm_scalar_rd_ready),
+		.io_scalar_rd_valid(_dm_io_scalar_rd_valid),
+		.io_scalar_rd_bits_addr(_dm_io_scalar_rd_bits_addr),
+		.io_scalar_rd_bits_data(_dm_io_scalar_rd_bits_data),
+		.io_scalar_rs_idx(_dm_io_scalar_rs_idx),
+		.io_scalar_rs_data(_core_io_dm_scalar_rs_data),
+		.io_float_rd_valid(_dm_io_float_rd_valid),
+		.io_float_rd_addr(_dm_io_float_rd_addr),
+		.io_float_rd_data_mantissa(_dm_io_float_rd_data_mantissa),
+		.io_float_rd_data_exponent(_dm_io_float_rd_data_exponent),
+		.io_float_rd_data_sign(_dm_io_float_rd_data_sign),
+		.io_float_rs_valid(_dm_io_float_rs_valid),
+		.io_float_rs_addr(_dm_io_float_rs_addr),
+		.io_float_rs_data_mantissa(_core_io_dm_float_rs_data_mantissa),
+		.io_float_rs_data_exponent(_core_io_dm_float_rs_data_exponent),
+		.io_float_rs_data_sign(_core_io_dm_float_rs_data_sign),
+		.io_itcm_readDataAddr_valid(_dm_io_itcm_readDataAddr_valid),
+		.io_itcm_readDataAddr_bits(_dm_io_itcm_readDataAddr_bits),
+		.io_itcm_readData_valid(_itcmArbiter_io_source_2_readData_valid),
+		.io_itcm_readData_bits(_itcmArbiter_io_source_2_readData_bits),
+		.io_itcm_writeDataAddr_valid(_dm_io_itcm_writeDataAddr_valid),
+		.io_itcm_writeDataAddr_bits(_dm_io_itcm_writeDataAddr_bits),
+		.io_itcm_writeDataBits(_dm_io_itcm_writeDataBits),
+		.io_itcm_writeDataStrb(_dm_io_itcm_writeDataStrb),
+		.io_itcm_writeResp(1'h1),
+		.io_dtcm_readDataAddr_valid(_dm_io_dtcm_readDataAddr_valid),
+		.io_dtcm_readDataAddr_bits(_dm_io_dtcm_readDataAddr_bits),
+		.io_dtcm_readData_valid(_dtcmArbiter_io_source_2_readData_valid),
+		.io_dtcm_readData_bits(_dtcmArbiter_io_source_2_readData_bits),
+		.io_dtcm_writeDataAddr_valid(_dm_io_dtcm_writeDataAddr_valid),
+		.io_dtcm_writeDataAddr_bits(_dm_io_dtcm_writeDataAddr_bits),
+		.io_dtcm_writeDataBits(_dm_io_dtcm_writeDataBits),
+		.io_dtcm_writeDataStrb(_dm_io_dtcm_writeDataStrb),
+		.io_dtcm_writeResp(1'h1),
+		.io_haltreq_0(_dm_io_haltreq_0),
+		.io_resumereq_0(_dm_io_resumereq_0),
+		.io_ndmreset(_dm_io_ndmreset),
+		.io_havereset_0(1'h0)
+	);
+	CoralNPURRArbiter dmReqArbiter(
+		.clock(_rst_sync_clk_o),
+		.reset(_global_reset_T_2),
+		.io_in_0_ready(_dmReqArbiter_io_in_0_ready),
+		.io_in_0_valid(io_dm_req_valid & dmEnable),
+		.io_in_0_bits_address(io_dm_req_bits_address),
+		.io_in_0_bits_data(io_dm_req_bits_data),
+		.io_in_0_bits_op(io_dm_req_bits_op),
+		.io_in_1_ready(_dmReqArbiter_io_in_1_ready),
+		.io_out_ready(_dm_io_ext_req_ready & _inflight_io_enq_ready),
+		.io_out_valid(_dmReqArbiter_io_out_valid),
+		.io_out_bits_address(_dmReqArbiter_io_out_bits_address),
+		.io_out_bits_data(_dmReqArbiter_io_out_bits_data),
+		.io_out_bits_op(_dmReqArbiter_io_out_bits_op),
+		.io_chosen(_dmReqArbiter_io_chosen)
+	);
+	Queue1_UInt1 inflight(
+		.clock(_rst_sync_clk_o),
+		.reset(_global_reset_T_2),
+		.io_enq_ready(_inflight_io_enq_ready),
+		.io_enq_valid(_dmReqArbiter_io_out_valid & _dm_io_ext_req_ready),
+		.io_enq_bits(_dmReqArbiter_io_chosen),
+		.io_deq_ready(dm_io_ext_rsp_ready & _dm_io_ext_rsp_valid),
+		.io_deq_valid(_inflight_io_deq_valid),
+		.io_deq_bits(_inflight_io_deq_bits)
+	);
 	CoreMini core(
 		.clock(_cg_clk_o),
-		.reset((io_te ? ~io_aresetn : _csr_io_reset)),
+		.reset((io_te ? ~io_aresetn : _csr_io_reset | _dm_io_ndmreset)),
 		.io_csr_in_value_0(_csr_io_pcStart),
 		.io_csr_out_value_0(_core_io_csr_out_value_0),
 		.io_csr_out_value_1(_core_io_csr_out_value_1),
@@ -11104,11 +13309,39 @@ module CoreMiniAxi (
 		.io_halted(_core_io_halted),
 		.io_fault(_core_io_fault),
 		.io_wfi(_core_io_wfi),
-		.io_irq(io_irq),
+		.io_irq(irq_reg | _dm_io_haltreq_0),
+		.io_timer_irq(timer_irq_reg),
+		.io_software_irq(software_irq_reg),
+		.io_dm_resume_req(_dm_io_resumereq_0),
+		.io_dm_csr_valid(_dm_io_csr_valid),
+		.io_dm_csr_bits_addr(_dm_io_csr_bits_addr),
+		.io_dm_csr_bits_index(_dm_io_csr_bits_index),
+		.io_dm_csr_bits_rs1(_dm_io_csr_bits_rs1),
+		.io_dm_csr_bits_op(_dm_io_csr_bits_op),
+		.io_dm_csr_rs1(_dm_io_csr_rs1),
+		.io_dm_csr_rd_valid(_core_io_dm_csr_rd_valid),
+		.io_dm_csr_rd_bits(_core_io_dm_csr_rd_bits),
+		.io_dm_scalar_rd_ready(_core_io_dm_scalar_rd_ready),
+		.io_dm_scalar_rd_valid(_dm_io_scalar_rd_valid),
+		.io_dm_scalar_rd_bits_addr(_dm_io_scalar_rd_bits_addr),
+		.io_dm_scalar_rd_bits_data(_dm_io_scalar_rd_bits_data),
+		.io_dm_scalar_rs_idx(_dm_io_scalar_rs_idx),
+		.io_dm_scalar_rs_data(_core_io_dm_scalar_rs_data),
+		.io_dm_float_rd_valid(_dm_io_float_rd_valid),
+		.io_dm_float_rd_addr(_dm_io_float_rd_addr),
+		.io_dm_float_rd_data_mantissa(_dm_io_float_rd_data_mantissa),
+		.io_dm_float_rd_data_exponent(_dm_io_float_rd_data_exponent),
+		.io_dm_float_rd_data_sign(_dm_io_float_rd_data_sign),
+		.io_dm_float_rs_valid(_dm_io_float_rs_valid),
+		.io_dm_float_rs_addr(_dm_io_float_rs_addr),
+		.io_dm_float_rs_data_mantissa(_core_io_dm_float_rs_data_mantissa),
+		.io_dm_float_rs_data_exponent(_core_io_dm_float_rs_data_exponent),
+		.io_dm_float_rs_data_sign(_core_io_dm_float_rs_data_sign),
 		.io_ibus_valid(_core_io_ibus_valid),
+		.io_ibus_ready((inItcm ? inItcmReg : _ibus2axi_io_ibus_ready)),
 		.io_ibus_addr(_core_io_ibus_addr),
-		.io_ibus_rdata(_itcmArbiter_io_source_0_readData_bits),
-		.io_ibus_fault_valid(_core_io_ibus_valid & |_core_io_ibus_addr[31:13]),
+		.io_ibus_rdata((inItcmReg ? _itcmArbiter_io_source_0_readData_bits : _ibus2axi_io_ibus_rdata)),
+		.io_ibus_fault_valid(_ibus2axi_io_ibus_fault_valid),
 		.io_dbus_valid(_core_io_dbus_valid),
 		.io_dbus_write(_core_io_dbus_write),
 		.io_dbus_addr(_core_io_dbus_addr),
@@ -11249,7 +13482,7 @@ module CoreMiniAxi (
 	FabricArbiter itcmArbiter(
 		.clock(_rst_sync_clk_o),
 		.reset(_global_reset_T_2),
-		.io_source_0_readDataAddr_valid(_core_io_ibus_valid),
+		.io_source_0_readDataAddr_valid(_core_io_ibus_valid & inItcm),
 		.io_source_0_readDataAddr_bits(_core_io_ibus_addr),
 		.io_source_0_readData_bits(_itcmArbiter_io_source_0_readData_bits),
 		.io_source_0_writeDataAddr_valid(1'h0),
@@ -11264,6 +13497,14 @@ module CoreMiniAxi (
 		.io_source_1_writeDataAddr_bits(_fabricMux_io_ports_0_writeDataAddr_bits),
 		.io_source_1_writeDataBits(_fabricMux_io_ports_0_writeDataBits),
 		.io_source_1_writeDataStrb(_fabricMux_io_ports_0_writeDataStrb),
+		.io_source_2_readDataAddr_valid(_dm_io_itcm_readDataAddr_valid),
+		.io_source_2_readDataAddr_bits(_dm_io_itcm_readDataAddr_bits),
+		.io_source_2_readData_valid(_itcmArbiter_io_source_2_readData_valid),
+		.io_source_2_readData_bits(_itcmArbiter_io_source_2_readData_bits),
+		.io_source_2_writeDataAddr_valid(_dm_io_itcm_writeDataAddr_valid),
+		.io_source_2_writeDataAddr_bits(_dm_io_itcm_writeDataAddr_bits),
+		.io_source_2_writeDataBits(_dm_io_itcm_writeDataBits),
+		.io_source_2_writeDataStrb(_dm_io_itcm_writeDataStrb),
 		.io_fabricBusy_1(_itcmArbiter_io_fabricBusy_1),
 		.io_port_readDataAddr_valid(_itcmArbiter_io_port_readDataAddr_valid),
 		.io_port_readDataAddr_bits(_itcmArbiter_io_port_readDataAddr_bits),
@@ -11273,6 +13514,21 @@ module CoreMiniAxi (
 		.io_port_writeDataAddr_bits(_itcmArbiter_io_port_writeDataAddr_bits),
 		.io_port_writeDataBits(_itcmArbiter_io_port_writeDataBits),
 		.io_port_writeDataStrb(_itcmArbiter_io_port_writeDataStrb)
+	);
+	IBus2Axi ibus2axi(
+		.clock(_rst_sync_clk_o),
+		.reset(_global_reset_T_2),
+		.io_ibus_valid(_core_io_ibus_valid & |_core_io_ibus_addr[31:13]),
+		.io_ibus_ready(_ibus2axi_io_ibus_ready),
+		.io_ibus_addr(_core_io_ibus_addr),
+		.io_ibus_rdata(_ibus2axi_io_ibus_rdata),
+		.io_ibus_fault_valid(_ibus2axi_io_ibus_fault_valid),
+		.io_axi_addr_ready(_readAddrArb_io_in_1_ready),
+		.io_axi_addr_valid(_ibus2axi_io_axi_addr_valid),
+		.io_axi_addr_bits_addr(_ibus2axi_io_axi_addr_bits_addr),
+		.io_axi_data_valid(io_axi_master_read_data_valid & _io_axi_master_read_data_ready_T),
+		.io_axi_data_bits_data(io_axi_master_read_data_bits_data),
+		.io_axi_data_bits_resp(io_axi_master_read_data_bits_resp)
 	);
 	TCM128_1 dtcm(
 		.clock(_rst_sync_clk_o),
@@ -11409,6 +13665,14 @@ module CoreMiniAxi (
 		.io_source_1_writeDataAddr_bits(_fabricMux_io_ports_1_writeDataAddr_bits),
 		.io_source_1_writeDataBits(_fabricMux_io_ports_1_writeDataBits),
 		.io_source_1_writeDataStrb(_fabricMux_io_ports_1_writeDataStrb),
+		.io_source_2_readDataAddr_valid(_dm_io_dtcm_readDataAddr_valid),
+		.io_source_2_readDataAddr_bits(_dm_io_dtcm_readDataAddr_bits),
+		.io_source_2_readData_valid(_dtcmArbiter_io_source_2_readData_valid),
+		.io_source_2_readData_bits(_dtcmArbiter_io_source_2_readData_bits),
+		.io_source_2_writeDataAddr_valid(_dm_io_dtcm_writeDataAddr_valid),
+		.io_source_2_writeDataAddr_bits(_dm_io_dtcm_writeDataAddr_bits),
+		.io_source_2_writeDataBits(_dm_io_dtcm_writeDataBits),
+		.io_source_2_writeDataStrb(_dm_io_dtcm_writeDataStrb),
 		.io_fabricBusy_1(_dtcmArbiter_io_fabricBusy_1),
 		.io_port_readDataAddr_valid(_dtcmArbiter_io_port_readDataAddr_valid),
 		.io_port_readDataAddr_bits(_dtcmArbiter_io_port_readDataAddr_bits),
@@ -11535,18 +13799,59 @@ module CoreMiniAxi (
 		.io_axi_write_resp_ready(io_axi_master_write_resp_ready),
 		.io_axi_write_resp_valid(io_axi_master_write_resp_valid),
 		.io_axi_write_resp_bits_resp(io_axi_master_write_resp_bits_resp),
-		.io_axi_read_addr_ready(io_axi_master_read_addr_ready),
-		.io_axi_read_addr_valid(io_axi_master_read_addr_valid),
-		.io_axi_read_addr_bits_addr(io_axi_master_read_addr_bits_addr),
-		.io_axi_read_addr_bits_size(io_axi_master_read_addr_bits_size),
-		.io_axi_read_data_ready(io_axi_master_read_data_ready),
-		.io_axi_read_data_valid(io_axi_master_read_data_valid),
+		.io_axi_read_addr_ready(_readAddrArb_io_in_0_ready),
+		.io_axi_read_addr_valid(_ebus2axi_io_axi_read_addr_valid),
+		.io_axi_read_addr_bits_addr(_ebus2axi_io_axi_read_addr_bits_addr),
+		.io_axi_read_addr_bits_size(_ebus2axi_io_axi_read_addr_bits_size),
+		.io_axi_read_data_ready(_ebus2axi_io_axi_read_data_ready),
+		.io_axi_read_data_valid(io_axi_master_read_data_valid & (io_axi_master_read_data_bits_id == 6'h00)),
 		.io_axi_read_data_bits_data(io_axi_master_read_data_bits_data),
 		.io_axi_read_data_bits_resp(io_axi_master_read_data_bits_resp),
 		.io_fault_valid(_ebus2axi_io_fault_valid),
 		.io_fault_bits_write(_ebus2axi_io_fault_bits_write),
 		.io_fault_bits_addr(_ebus2axi_io_fault_bits_addr),
 		.io_fault_bits_epc(_ebus2axi_io_fault_bits_epc)
+	);
+	CoralNPURRArbiter_1 readAddrArb(
+		.clock(_rst_sync_clk_o),
+		.reset(_global_reset_T_2),
+		.io_in_0_ready(_readAddrArb_io_in_0_ready),
+		.io_in_0_valid(_ebus2axi_io_axi_read_addr_valid),
+		.io_in_0_bits_addr(_ebus2axi_io_axi_read_addr_bits_addr),
+		.io_in_0_bits_prot(3'h2),
+		.io_in_0_bits_id(6'h00),
+		.io_in_0_bits_len(8'h00),
+		.io_in_0_bits_size(_ebus2axi_io_axi_read_addr_bits_size),
+		.io_in_0_bits_burst(2'h1),
+		.io_in_0_bits_lock(1'h0),
+		.io_in_0_bits_cache(4'h0),
+		.io_in_0_bits_qos(4'h0),
+		.io_in_0_bits_region(4'h0),
+		.io_in_1_ready(_readAddrArb_io_in_1_ready),
+		.io_in_1_valid(_ibus2axi_io_axi_addr_valid),
+		.io_in_1_bits_addr(_ibus2axi_io_axi_addr_bits_addr),
+		.io_in_1_bits_prot(3'h2),
+		.io_in_1_bits_id(6'h01),
+		.io_in_1_bits_len(8'h00),
+		.io_in_1_bits_size(3'h4),
+		.io_in_1_bits_burst(2'h1),
+		.io_in_1_bits_lock(1'h0),
+		.io_in_1_bits_cache(4'h0),
+		.io_in_1_bits_qos(4'h0),
+		.io_in_1_bits_region(4'h0),
+		.io_out_ready(io_axi_master_read_addr_ready),
+		.io_out_valid(io_axi_master_read_addr_valid),
+		.io_out_bits_addr(io_axi_master_read_addr_bits_addr),
+		.io_out_bits_prot(io_axi_master_read_addr_bits_prot),
+		.io_out_bits_id(io_axi_master_read_addr_bits_id),
+		.io_out_bits_len(io_axi_master_read_addr_bits_len),
+		.io_out_bits_size(io_axi_master_read_addr_bits_size),
+		.io_out_bits_burst(io_axi_master_read_addr_bits_burst),
+		.io_out_bits_lock(io_axi_master_read_addr_bits_lock),
+		.io_out_bits_cache(io_axi_master_read_addr_bits_cache),
+		.io_out_bits_qos(io_axi_master_read_addr_bits_qos),
+		.io_out_bits_region(io_axi_master_read_addr_bits_region),
+		.io_chosen()
 	);
 	assign io_axi_slave_write_addr_ready = _axiSlave_io_axi_write_addr_ready & axiSlaveEnable;
 	assign io_axi_slave_write_data_ready = _axiSlave_io_axi_write_data_ready & axiSlaveEnable;
@@ -11561,17 +13866,14 @@ module CoreMiniAxi (
 	assign io_axi_master_write_addr_bits_cache = 4'h0;
 	assign io_axi_master_write_addr_bits_qos = 4'h0;
 	assign io_axi_master_write_addr_bits_region = 4'h0;
-	assign io_axi_master_read_addr_bits_prot = 3'h2;
-	assign io_axi_master_read_addr_bits_id = 6'h00;
-	assign io_axi_master_read_addr_bits_len = 8'h00;
-	assign io_axi_master_read_addr_bits_burst = 2'h1;
-	assign io_axi_master_read_addr_bits_lock = 1'h0;
-	assign io_axi_master_read_addr_bits_cache = 4'h0;
-	assign io_axi_master_read_addr_bits_qos = 4'h0;
-	assign io_axi_master_read_addr_bits_region = 4'h0;
+	assign io_axi_master_read_data_ready = _io_axi_master_read_data_ready_T | _ebus2axi_io_axi_read_data_ready;
 	assign io_halted = _core_io_halted;
 	assign io_fault = _core_io_fault;
 	assign io_wfi = _core_io_wfi;
+	assign io_dm_req_ready = _dmReqArbiter_io_in_0_ready & dmEnable;
+	assign io_dm_rsp_valid = _io_dm_rsp_valid_T & ~_inflight_io_deq_bits;
+	assign io_dm_rsp_bits_data = _dm_io_ext_rsp_bits_data;
+	assign io_dm_rsp_bits_op = _dm_io_ext_rsp_bits_op;
 endmodule
 module Regfile_Verification_Assert (
 	_GEN,
@@ -11993,7 +14295,13 @@ module FetchControl_Verification_Assert (
 	predecode_firstJumpOH_1,
 	reset,
 	_GEN,
-	clock
+	ongoingFetch_valid,
+	_GEN_0,
+	io_fetchAddr_out_bits,
+	io_fetchAddr_prevBits,
+	clock,
+	io_fetchAddr_prevPending,
+	io_fetchAddr_out_valid
 );
 	input predecode_firstJumpOH_2;
 	input predecode_firstJumpOH_3;
@@ -12001,7 +14309,81 @@ module FetchControl_Verification_Assert (
 	input predecode_firstJumpOH_1;
 	input reset;
 	input _GEN;
+	input ongoingFetch_valid;
+	input _GEN_0;
+	input [31:0] io_fetchAddr_out_bits;
+	input [31:0] io_fetchAddr_prevBits;
 	input clock;
+	input io_fetchAddr_prevPending;
+	input io_fetchAddr_out_valid;
+endmodule
+module IndexAllocatorShifting_Verification_Assert (
+	io_free_valid,
+	reset,
+	io_free_ready,
+	badFree_0,
+	badFree_1,
+	_GEN,
+	_GEN_0,
+	_GEN_1,
+	_GEN_2,
+	_GEN_3,
+	clock
+);
+	input io_free_valid;
+	input reset;
+	input io_free_ready;
+	input badFree_0;
+	input badFree_1;
+	input _GEN;
+	input _GEN_0;
+	input _GEN_1;
+	input _GEN_2;
+	input _GEN_3;
+	input clock;
+endmodule
+module FetchReorderBuffer_Verification_Assert (
+	reset,
+	_GEN,
+	_GEN_0,
+	_GEN_1,
+	_noDuplicateTxid_T_36,
+	_noDuplicateTxid_T_35,
+	_GEN_2,
+	_freeTxidUsage_WIRE_1,
+	_freeTxidUsage_WIRE_2,
+	_freeTxidUsage_WIRE_0,
+	_GEN_3,
+	_GEN_4,
+	_GEN_5,
+	_GEN_6,
+	clock,
+	_GEN_7,
+	_GEN_8,
+	_GEN_9,
+	_GEN_10,
+	_GEN_11
+);
+	input reset;
+	input [1:0] _GEN;
+	input [1:0] _GEN_0;
+	input [1:0] _GEN_1;
+	input _noDuplicateTxid_T_36;
+	input _noDuplicateTxid_T_35;
+	input _GEN_2;
+	input _freeTxidUsage_WIRE_1;
+	input _freeTxidUsage_WIRE_2;
+	input _freeTxidUsage_WIRE_0;
+	input _GEN_3;
+	input _GEN_4;
+	input _GEN_5;
+	input _GEN_6;
+	input clock;
+	input _GEN_7;
+	input _GEN_8;
+	input _GEN_9;
+	input _GEN_10;
+	input _GEN_11;
 endmodule
 module CircularBufferMulti_Verification_Assert (
 	io_nEnqueued,
@@ -12066,12 +14448,20 @@ module Csr_Verification_Assert (
 	_GEN_27,
 	_GEN_28,
 	_GEN_29,
+	_GEN_30,
+	_GEN_31,
+	_GEN_32,
+	_GEN_33,
+	_GEN_34,
+	_GEN_35,
+	_GEN_36,
+	_GEN_37,
 	req_valid,
 	reset,
 	io_halted,
 	io_wfi,
 	io_fault,
-	_GEN_30,
+	_GEN_38,
 	io_rs1_valid,
 	clock
 );
@@ -12107,12 +14497,20 @@ module Csr_Verification_Assert (
 	input _GEN_27;
 	input _GEN_28;
 	input _GEN_29;
+	input _GEN_30;
+	input _GEN_31;
+	input _GEN_32;
+	input _GEN_33;
+	input _GEN_34;
+	input _GEN_35;
+	input _GEN_36;
+	input _GEN_37;
 	input req_valid;
 	input reset;
 	input io_halted;
 	input io_wfi;
 	input io_fault;
-	input _GEN_30;
+	input _GEN_38;
 	input io_rs1_valid;
 	input clock;
 endmodule
@@ -12949,6 +15347,8 @@ module FabricArbiter_Verification_Assert (
 	io_source_1_writeDataAddr_valid,
 	io_source_0_readDataAddr_valid,
 	io_source_0_writeDataAddr_valid,
+	io_source_2_readDataAddr_valid,
+	io_source_2_writeDataAddr_valid,
 	reset,
 	clock
 );
@@ -12956,7 +15356,20 @@ module FabricArbiter_Verification_Assert (
 	input io_source_1_writeDataAddr_valid;
 	input io_source_0_readDataAddr_valid;
 	input io_source_0_writeDataAddr_valid;
+	input io_source_2_readDataAddr_valid;
+	input io_source_2_writeDataAddr_valid;
 	input reset;
+	input clock;
+endmodule
+module IBus2Axi_Verification_Assert (
+	io_axi_data_valid,
+	reset,
+	sraddrActive,
+	clock
+);
+	input io_axi_data_valid;
+	input reset;
+	input sraddrActive;
 	input clock;
 endmodule
 module SRAM_1_Verification_Assert (
@@ -14730,2506 +17143,2971 @@ module fpnew_classifier (
 	endgenerate
 	initial _sv2v_0 = 0;
 endmodule
-module gated_clk_cell (
-	clk_in,
-	global_en,
-	module_en,
-	local_en,
-	external_en,
-	pad_yy_icg_scan_en,
-	clk_out
+module iteration_div_sqrt_mvp (
+	A_DI,
+	B_DI,
+	Div_enable_SI,
+	Div_start_dly_SI,
+	Sqrt_enable_SI,
+	D_DI,
+	D_DO,
+	Sum_DO,
+	Carry_out_DO
 );
-	input clk_in;
-	input global_en;
-	input module_en;
-	input local_en;
-	input external_en;
-	input pad_yy_icg_scan_en;
-	output wire clk_out;
-	wire clk_en_bf_latch;
-	wire SE;
-	assign clk_en_bf_latch = (global_en && (module_en || local_en)) || external_en;
-	assign SE = pad_yy_icg_scan_en;
-	assign clk_out = clk_in;
+	parameter WIDTH = 25;
+	input wire [WIDTH - 1:0] A_DI;
+	input wire [WIDTH - 1:0] B_DI;
+	input wire Div_enable_SI;
+	input wire Div_start_dly_SI;
+	input wire Sqrt_enable_SI;
+	input wire [1:0] D_DI;
+	output wire [1:0] D_DO;
+	output wire [WIDTH - 1:0] Sum_DO;
+	output wire Carry_out_DO;
+	wire D_carry_D;
+	wire Sqrt_cin_D;
+	wire Cin_D;
+	assign D_DO[0] = ~D_DI[0];
+	assign D_DO[1] = ~(D_DI[1] ^ D_DI[0]);
+	assign D_carry_D = D_DI[1] | D_DI[0];
+	assign Sqrt_cin_D = Sqrt_enable_SI && D_carry_D;
+	assign Cin_D = (Div_enable_SI ? 1'b0 : Sqrt_cin_D);
+	assign {Carry_out_DO, Sum_DO} = (A_DI + B_DI) + Cin_D;
 endmodule
-module pa_fdsu_ctrl (
-	cp0_fpu_icg_en,
-	cp0_yy_clk_en,
-	cpurst_b,
-	ctrl_fdsu_ex1_sel,
-	ctrl_xx_ex1_cmplt_dp,
-	ctrl_xx_ex1_inst_vld,
-	ctrl_xx_ex1_stall,
-	ctrl_xx_ex1_warm_up,
-	ctrl_xx_ex2_warm_up,
-	ctrl_xx_ex3_warm_up,
-	ex1_div,
-	ex1_expnt_adder_op0,
-	ex1_of_result_lfn,
-	ex1_op0_id,
-	ex1_op0_norm,
-	ex1_op1_id_vld,
-	ex1_op1_norm,
-	ex1_op1_sel,
-	ex1_oper_id_expnt,
-	ex1_oper_id_expnt_f,
-	ex1_pipedown,
-	ex1_pipedown_gate,
-	ex1_result_sign,
-	ex1_rm,
-	ex1_save_op0,
-	ex1_save_op0_gate,
-	ex1_sqrt,
-	ex1_srt_skip,
-	ex2_expnt_adder_op0,
-	ex2_of,
-	ex2_pipe_clk,
-	ex2_pipedown,
-	ex2_potnt_of,
-	ex2_potnt_uf,
-	ex2_result_inf,
-	ex2_result_lfn,
-	ex2_rslt_denorm,
-	ex2_srt_expnt_rst,
-	ex2_srt_first_round,
-	ex2_uf,
-	ex2_uf_srt_skip,
-	ex3_expnt_adjust_result,
-	ex3_pipedown,
-	ex3_rslt_denorm,
-	fdsu_ex1_sel,
-	fdsu_fpu_ex1_cmplt,
-	fdsu_fpu_ex1_cmplt_dp,
-	fdsu_fpu_ex1_stall,
-	fdsu_fpu_no_op,
-	fdsu_frbus_wb_vld,
-	fdsu_yy_div,
-	fdsu_yy_expnt_rst,
-	fdsu_yy_of,
-	fdsu_yy_of_rm_lfn,
-	fdsu_yy_op0_norm,
-	fdsu_yy_op1_norm,
-	fdsu_yy_potnt_of,
-	fdsu_yy_potnt_uf,
-	fdsu_yy_result_inf,
-	fdsu_yy_result_lfn,
-	fdsu_yy_result_sign,
-	fdsu_yy_rm,
-	fdsu_yy_rslt_denorm,
-	fdsu_yy_sqrt,
-	fdsu_yy_uf,
-	fdsu_yy_wb_freg,
-	forever_cpuclk,
-	frbus_fdsu_wb_grant,
-	idu_fpu_ex1_dst_freg,
-	idu_fpu_ex1_eu_sel,
-	pad_yy_icg_scan_en,
-	rtu_xx_ex1_cancel,
-	rtu_xx_ex2_cancel,
-	rtu_yy_xx_async_flush,
-	rtu_yy_xx_flush,
-	srt_remainder_zero,
-	srt_sm_on
+module control_mvp (
+	Clk_CI,
+	Rst_RBI,
+	Div_start_SI,
+	Sqrt_start_SI,
+	Start_SI,
+	Kill_SI,
+	Special_case_SBI,
+	Special_case_dly_SBI,
+	Precision_ctl_SI,
+	Format_sel_SI,
+	Numerator_DI,
+	Exp_num_DI,
+	Denominator_DI,
+	Exp_den_DI,
+	Div_start_dly_SO,
+	Sqrt_start_dly_SO,
+	Div_enable_SO,
+	Sqrt_enable_SO,
+	Full_precision_SO,
+	FP32_SO,
+	FP64_SO,
+	FP16_SO,
+	FP16ALT_SO,
+	Ready_SO,
+	Done_SO,
+	Mant_result_prenorm_DO,
+	Exp_result_prenorm_DO
 );
-	input wire cp0_fpu_icg_en;
-	input wire cp0_yy_clk_en;
-	input wire cpurst_b;
-	input wire ctrl_fdsu_ex1_sel;
-	input wire ctrl_xx_ex1_cmplt_dp;
-	input wire ctrl_xx_ex1_inst_vld;
-	input wire ctrl_xx_ex1_stall;
-	input wire ctrl_xx_ex1_warm_up;
-	input wire ctrl_xx_ex2_warm_up;
-	input wire ctrl_xx_ex3_warm_up;
-	input wire ex1_div;
-	input wire [12:0] ex1_expnt_adder_op0;
-	input wire ex1_of_result_lfn;
-	input wire ex1_op0_id;
-	input ex1_op0_norm;
-	input wire ex1_op1_id_vld;
-	input ex1_op1_norm;
-	input wire [12:0] ex1_oper_id_expnt;
-	input wire ex1_result_sign;
-	input wire [2:0] ex1_rm;
-	input wire ex1_sqrt;
-	input wire ex1_srt_skip;
-	input wire ex2_of;
-	input wire ex2_potnt_of;
-	input wire ex2_potnt_uf;
-	input wire ex2_result_inf;
-	input wire ex2_result_lfn;
-	input wire ex2_rslt_denorm;
-	input wire [9:0] ex2_srt_expnt_rst;
-	input wire ex2_uf;
-	input wire ex2_uf_srt_skip;
-	input wire [9:0] ex3_expnt_adjust_result;
-	input wire ex3_rslt_denorm;
-	input wire forever_cpuclk;
-	input wire frbus_fdsu_wb_grant;
-	input wire [4:0] idu_fpu_ex1_dst_freg;
-	input wire [2:0] idu_fpu_ex1_eu_sel;
-	input wire pad_yy_icg_scan_en;
-	input wire rtu_xx_ex1_cancel;
-	input wire rtu_xx_ex2_cancel;
-	input wire rtu_yy_xx_async_flush;
-	input wire rtu_yy_xx_flush;
-	input wire srt_remainder_zero;
-	output wire ex1_op1_sel;
-	output wire [12:0] ex1_oper_id_expnt_f;
-	output wire ex1_pipedown;
-	output wire ex1_pipedown_gate;
-	output wire ex1_save_op0;
-	output wire ex1_save_op0_gate;
-	output wire [9:0] ex2_expnt_adder_op0;
-	output wire ex2_pipe_clk;
-	output wire ex2_pipedown;
-	output reg ex2_srt_first_round;
-	output wire ex3_pipedown;
-	output wire fdsu_ex1_sel;
-	output wire fdsu_fpu_ex1_cmplt;
-	output wire fdsu_fpu_ex1_cmplt_dp;
-	output wire fdsu_fpu_ex1_stall;
-	output wire fdsu_fpu_no_op;
-	output wire fdsu_frbus_wb_vld;
-	output wire fdsu_yy_div;
-	output wire [9:0] fdsu_yy_expnt_rst;
-	output wire fdsu_yy_of;
-	output wire fdsu_yy_of_rm_lfn;
-	output wire fdsu_yy_op0_norm;
-	output wire fdsu_yy_op1_norm;
-	output wire fdsu_yy_potnt_of;
-	output wire fdsu_yy_potnt_uf;
-	output wire fdsu_yy_result_inf;
-	output wire fdsu_yy_result_lfn;
-	output wire fdsu_yy_result_sign;
-	output wire [2:0] fdsu_yy_rm;
-	output reg fdsu_yy_rslt_denorm;
-	output wire fdsu_yy_sqrt;
-	output wire fdsu_yy_uf;
-	output wire [4:0] fdsu_yy_wb_freg;
-	output wire srt_sm_on;
-	reg [2:0] fdsu_cur_state;
-	reg fdsu_div;
-	reg [9:0] fdsu_expnt_rst;
-	reg [2:0] fdsu_next_state;
-	reg fdsu_of;
-	reg fdsu_of_rm_lfn;
-	reg fdsu_potnt_of;
-	reg fdsu_potnt_uf;
-	reg fdsu_result_inf;
-	reg fdsu_result_lfn;
-	reg fdsu_result_sign;
-	reg [2:0] fdsu_rm;
-	reg fdsu_sqrt;
-	reg fdsu_uf;
-	reg [4:0] fdsu_wb_freg;
-	reg [4:0] srt_cnt;
-	reg [1:0] wb_cur_state;
-	reg [1:0] wb_nxt_state;
-	wire ctrl_fdsu_ex1_stall;
-	wire ctrl_fdsu_wb_vld;
-	wire ctrl_iter_start;
-	wire ctrl_iter_start_gate;
-	wire ctrl_pack;
-	wire ctrl_result_vld;
-	wire ctrl_round;
-	wire ctrl_sm_cmplt;
-	wire ctrl_sm_ex1;
-	wire ctrl_sm_idle;
-	wire ctrl_sm_start;
-	wire ctrl_sm_start_gate;
-	wire ctrl_srt_idle;
-	wire ctrl_srt_itering;
-	wire ctrl_wb_idle;
-	wire ctrl_wb_sm_cmplt;
-	wire ctrl_wb_sm_ex2;
-	wire ctrl_wb_sm_idle;
-	wire ctrl_wfi2;
-	wire ctrl_wfwb;
-	wire ex1_pipe_clk;
-	wire ex1_pipe_clk_en;
-	wire [4:0] ex1_wb_freg;
-	wire ex2_pipe_clk_en;
-	wire expnt_rst_clk;
-	wire expnt_rst_clk_en;
-	wire fdsu_busy;
-	wire fdsu_clk;
-	wire fdsu_clk_en;
-	wire fdsu_dn_stall;
-	wire fdsu_ex1_inst_vld;
-	wire fdsu_ex1_res_vld;
-	wire fdsu_flush;
-	wire fdsu_op0_norm;
-	wire fdsu_op1_norm;
-	wire fdsu_wb_grant;
-	wire [4:0] srt_cnt_ini;
-	wire srt_cnt_zero;
-	wire srt_last_round;
-	wire srt_skip;
-	assign ex1_wb_freg[4:0] = idu_fpu_ex1_dst_freg[4:0];
-	assign fdsu_ex1_inst_vld = ctrl_xx_ex1_inst_vld && ctrl_fdsu_ex1_sel;
-	assign fdsu_ex1_sel = idu_fpu_ex1_eu_sel[2];
-	assign fdsu_ex1_res_vld = fdsu_ex1_inst_vld && ex1_srt_skip;
-	assign fdsu_wb_grant = frbus_fdsu_wb_grant;
-	assign ctrl_iter_start = (ctrl_sm_start && !fdsu_dn_stall) || ctrl_wfi2;
-	assign ctrl_iter_start_gate = (ctrl_sm_start_gate && !fdsu_dn_stall) || ctrl_wfi2;
-	assign ctrl_sm_start = (fdsu_ex1_inst_vld && ctrl_srt_idle) && !ex1_srt_skip;
-	assign ctrl_sm_start_gate = fdsu_ex1_inst_vld && ctrl_srt_idle;
-	assign srt_last_round = ((srt_skip || srt_remainder_zero) || srt_cnt_zero) && ctrl_srt_itering;
-	assign srt_skip = ex2_of || ex2_uf_srt_skip;
-	assign srt_cnt_zero = ~|srt_cnt[4:0];
-	assign fdsu_dn_stall = ctrl_sm_start && ex1_op1_id_vld;
-	parameter IDLE = 3'b000;
-	parameter WFI2 = 3'b001;
-	parameter ITER = 3'b010;
-	parameter RND = 3'b011;
-	parameter PACK = 3'b100;
-	parameter WFWB = 3'b101;
-	always @(posedge fdsu_clk or negedge cpurst_b)
-		if (!cpurst_b)
-			fdsu_cur_state[2:0] <= IDLE;
-		else if (fdsu_flush)
-			fdsu_cur_state[2:0] <= IDLE;
+	reg _sv2v_0;
+	input wire Clk_CI;
+	input wire Rst_RBI;
+	input wire Div_start_SI;
+	input wire Sqrt_start_SI;
+	input wire Start_SI;
+	input wire Kill_SI;
+	input wire Special_case_SBI;
+	input wire Special_case_dly_SBI;
+	localparam defs_div_sqrt_mvp_C_PC = 6;
+	input wire [5:0] Precision_ctl_SI;
+	input wire [1:0] Format_sel_SI;
+	localparam defs_div_sqrt_mvp_C_MANT_FP64 = 52;
+	input wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Numerator_DI;
+	localparam defs_div_sqrt_mvp_C_EXP_FP64 = 11;
+	input wire [defs_div_sqrt_mvp_C_EXP_FP64:0] Exp_num_DI;
+	input wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Denominator_DI;
+	input wire [defs_div_sqrt_mvp_C_EXP_FP64:0] Exp_den_DI;
+	output wire Div_start_dly_SO;
+	output wire Sqrt_start_dly_SO;
+	output reg Div_enable_SO;
+	output reg Sqrt_enable_SO;
+	output wire Full_precision_SO;
+	output wire FP32_SO;
+	output wire FP64_SO;
+	output wire FP16_SO;
+	output wire FP16ALT_SO;
+	output reg Ready_SO;
+	output reg Done_SO;
+	output reg [56:0] Mant_result_prenorm_DO;
+	output wire [12:0] Exp_result_prenorm_DO;
+	reg [57:0] Partial_remainder_DN;
+	reg [57:0] Partial_remainder_DP;
+	reg [56:0] Quotient_DP;
+	wire [53:0] Numerator_se_D;
+	wire [53:0] Denominator_se_D;
+	reg [53:0] Denominator_se_DB;
+	assign Numerator_se_D = {1'b0, Numerator_DI};
+	assign Denominator_se_D = {1'b0, Denominator_DI};
+	localparam defs_div_sqrt_mvp_C_MANT_FP16 = 10;
+	localparam defs_div_sqrt_mvp_C_MANT_FP16ALT = 7;
+	localparam defs_div_sqrt_mvp_C_MANT_FP32 = 23;
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		if (FP32_SO)
+			Denominator_se_DB = {~Denominator_se_D[53:29], {29 {1'b0}}};
+		else if (FP64_SO)
+			Denominator_se_DB = ~Denominator_se_D;
+		else if (FP16_SO)
+			Denominator_se_DB = {~Denominator_se_D[53:42], {42 {1'b0}}};
 		else
-			fdsu_cur_state[2:0] <= fdsu_next_state[2:0];
-	always @(ctrl_sm_start or fdsu_dn_stall or srt_last_round or fdsu_cur_state[2:0] or fdsu_wb_grant)
-		case (fdsu_cur_state[2:0])
-			IDLE:
-				if (ctrl_sm_start) begin
-					if (fdsu_dn_stall)
-						fdsu_next_state[2:0] = WFI2;
-					else
-						fdsu_next_state[2:0] = ITER;
-				end
-				else
-					fdsu_next_state[2:0] = IDLE;
-			WFI2: fdsu_next_state[2:0] = ITER;
-			ITER:
-				if (srt_last_round)
-					fdsu_next_state[2:0] = RND;
-				else
-					fdsu_next_state[2:0] = ITER;
-			RND: fdsu_next_state[2:0] = PACK;
-			PACK:
-				if (fdsu_wb_grant) begin
-					if (ctrl_sm_start) begin
-						if (fdsu_dn_stall)
-							fdsu_next_state[2:0] = WFI2;
+			Denominator_se_DB = {~Denominator_se_D[53:45], {45 {1'b0}}};
+	end
+	wire [53:0] Mant_D_sqrt_Norm;
+	assign Mant_D_sqrt_Norm = (Exp_num_DI[0] ? {1'b0, Numerator_DI} : {Numerator_DI, 1'b0});
+	reg [1:0] Format_sel_S;
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Format_sel_S <= 'b0;
+		else if (Start_SI && Ready_SO)
+			Format_sel_S <= Format_sel_SI;
+		else
+			Format_sel_S <= Format_sel_S;
+	assign FP32_SO = Format_sel_S == 2'b00;
+	assign FP64_SO = Format_sel_S == 2'b01;
+	assign FP16_SO = Format_sel_S == 2'b10;
+	assign FP16ALT_SO = Format_sel_S == 2'b11;
+	reg [5:0] Precision_ctl_S;
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Precision_ctl_S <= 'b0;
+		else if (Start_SI && Ready_SO)
+			Precision_ctl_S <= Precision_ctl_SI;
+		else
+			Precision_ctl_S <= Precision_ctl_S;
+	assign Full_precision_SO = Precision_ctl_S == 6'h00;
+	reg [5:0] State_ctl_S;
+	wire [5:0] State_Two_iteration_unit_S;
+	wire [5:0] State_Four_iteration_unit_S;
+	assign State_Two_iteration_unit_S = Precision_ctl_S[5:1];
+	assign State_Four_iteration_unit_S = Precision_ctl_S[5:2];
+	localparam defs_div_sqrt_mvp_Iteration_unit_num_S = 2'b10;
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		case (defs_div_sqrt_mvp_Iteration_unit_num_S)
+			2'b00:
+				case (Format_sel_S)
+					2'b00:
+						if (Full_precision_SO)
+							State_ctl_S = 6'h1b;
 						else
-							fdsu_next_state[2:0] = ITER;
-					end
-					else
-						fdsu_next_state[2:0] = IDLE;
-				end
-				else
-					fdsu_next_state[2:0] = WFWB;
-			WFWB:
-				if (fdsu_wb_grant) begin
-					if (ctrl_sm_start) begin
-						if (fdsu_dn_stall)
-							fdsu_next_state[2:0] = WFI2;
+							State_ctl_S = Precision_ctl_S;
+					2'b01:
+						if (Full_precision_SO)
+							State_ctl_S = 6'h38;
 						else
-							fdsu_next_state[2:0] = ITER;
-					end
-					else
-						fdsu_next_state[2:0] = IDLE;
-				end
-				else
-					fdsu_next_state[2:0] = WFWB;
-			default: fdsu_next_state[2:0] = IDLE;
+							State_ctl_S = Precision_ctl_S;
+					2'b10:
+						if (Full_precision_SO)
+							State_ctl_S = 6'h0e;
+						else
+							State_ctl_S = Precision_ctl_S;
+					2'b11:
+						if (Full_precision_SO)
+							State_ctl_S = 6'h0b;
+						else
+							State_ctl_S = Precision_ctl_S;
+				endcase
+			2'b01:
+				case (Format_sel_S)
+					2'b00:
+						if (Full_precision_SO)
+							State_ctl_S = 6'h0d;
+						else
+							State_ctl_S = State_Two_iteration_unit_S;
+					2'b01:
+						if (Full_precision_SO)
+							State_ctl_S = 6'h1b;
+						else
+							State_ctl_S = State_Two_iteration_unit_S;
+					2'b10:
+						if (Full_precision_SO)
+							State_ctl_S = 6'h06;
+						else
+							State_ctl_S = State_Two_iteration_unit_S;
+					2'b11:
+						if (Full_precision_SO)
+							State_ctl_S = 6'h05;
+						else
+							State_ctl_S = State_Two_iteration_unit_S;
+				endcase
+			2'b10:
+				case (Format_sel_S)
+					2'b00:
+						case (Precision_ctl_S)
+							6'h00: State_ctl_S = 6'h08;
+							6'h06, 6'h07, 6'h08: State_ctl_S = 6'h02;
+							6'h09, 6'h0a, 6'h0b: State_ctl_S = 6'h03;
+							6'h0c, 6'h0d, 6'h0e: State_ctl_S = 6'h04;
+							6'h0f, 6'h10, 6'h11: State_ctl_S = 6'h05;
+							6'h12, 6'h13, 6'h14: State_ctl_S = 6'h06;
+							6'h15, 6'h16, 6'h17: State_ctl_S = 6'h07;
+							default: State_ctl_S = 6'h08;
+						endcase
+					2'b01:
+						case (Precision_ctl_S)
+							6'h00: State_ctl_S = 6'h12;
+							6'h06, 6'h07, 6'h08: State_ctl_S = 6'h02;
+							6'h09, 6'h0a, 6'h0b: State_ctl_S = 6'h03;
+							6'h0c, 6'h0d, 6'h0e: State_ctl_S = 6'h04;
+							6'h0f, 6'h10, 6'h11: State_ctl_S = 6'h05;
+							6'h12, 6'h13, 6'h14: State_ctl_S = 6'h06;
+							6'h15, 6'h16, 6'h17: State_ctl_S = 6'h07;
+							6'h18, 6'h19, 6'h1a: State_ctl_S = 6'h08;
+							6'h1b, 6'h1c, 6'h1d: State_ctl_S = 6'h09;
+							6'h1e, 6'h1f, 6'h20: State_ctl_S = 6'h0a;
+							6'h21, 6'h22, 6'h23: State_ctl_S = 6'h0b;
+							6'h24, 6'h25, 6'h26: State_ctl_S = 6'h0c;
+							6'h27, 6'h28, 6'h29: State_ctl_S = 6'h0d;
+							6'h2a, 6'h2b, 6'h2c: State_ctl_S = 6'h0e;
+							6'h2d, 6'h2e, 6'h2f: State_ctl_S = 6'h0f;
+							6'h30, 6'h31, 6'h32: State_ctl_S = 6'h10;
+							6'h33, 6'h34, 6'h35: State_ctl_S = 6'h11;
+							default: State_ctl_S = 6'h12;
+						endcase
+					2'b10:
+						case (Precision_ctl_S)
+							6'h00: State_ctl_S = 6'h04;
+							6'h06, 6'h07, 6'h08: State_ctl_S = 6'h02;
+							6'h09, 6'h0a, 6'h0b: State_ctl_S = 6'h03;
+							default: State_ctl_S = 6'h04;
+						endcase
+					2'b11:
+						case (Precision_ctl_S)
+							6'h00: State_ctl_S = 6'h03;
+							6'h06, 6'h07, 6'h08: State_ctl_S = 6'h02;
+							default: State_ctl_S = 6'h03;
+						endcase
+				endcase
+			2'b11:
+				case (Format_sel_S)
+					2'b00:
+						if (Full_precision_SO)
+							State_ctl_S = 6'h06;
+						else
+							State_ctl_S = State_Four_iteration_unit_S;
+					2'b01:
+						if (Full_precision_SO)
+							State_ctl_S = 6'h0d;
+						else
+							State_ctl_S = State_Four_iteration_unit_S;
+					2'b10:
+						if (Full_precision_SO)
+							State_ctl_S = 6'h03;
+						else
+							State_ctl_S = State_Four_iteration_unit_S;
+					2'b11:
+						if (Full_precision_SO)
+							State_ctl_S = 6'h02;
+						else
+							State_ctl_S = State_Four_iteration_unit_S;
+				endcase
 		endcase
-	assign ctrl_sm_idle = fdsu_cur_state[2:0] == IDLE;
-	assign ctrl_wfi2 = fdsu_cur_state[2:0] == WFI2;
-	assign ctrl_srt_itering = fdsu_cur_state[2:0] == ITER;
-	assign ctrl_round = fdsu_cur_state[2:0] == RND;
-	assign ctrl_pack = fdsu_cur_state[2:0] == PACK;
-	assign ctrl_wfwb = fdsu_cur_state[2:0] == WFWB;
-	assign ctrl_sm_cmplt = ctrl_pack || ctrl_wfwb;
-	assign ctrl_srt_idle = ctrl_sm_idle || fdsu_wb_grant;
-	assign ctrl_sm_ex1 = ctrl_srt_idle || ctrl_wfi2;
-	always @(posedge fdsu_clk)
-		if (fdsu_flush)
-			srt_cnt[4:0] <= 5'b00000;
-		else if (ctrl_iter_start)
-			srt_cnt[4:0] <= srt_cnt_ini[4:0];
-		else if (ctrl_srt_itering)
-			srt_cnt[4:0] <= srt_cnt[4:0] - 5'b00001;
+	end
+	reg Div_start_dly_S;
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Div_start_dly_S <= 1'b0;
+		else if (Div_start_SI && Ready_SO)
+			Div_start_dly_S <= 1'b1;
 		else
-			srt_cnt[4:0] <= srt_cnt[4:0];
-	assign srt_cnt_ini[4:0] = 5'b01110;
-	always @(posedge fdsu_clk or negedge cpurst_b)
-		if (!cpurst_b)
-			ex2_srt_first_round <= 1'b0;
-		else if (fdsu_flush)
-			ex2_srt_first_round <= 1'b0;
-		else if (ex1_pipedown)
-			ex2_srt_first_round <= 1'b1;
+			Div_start_dly_S <= 1'b0;
+	assign Div_start_dly_SO = Div_start_dly_S;
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Div_enable_SO <= 1'b0;
+		else if (Kill_SI)
+			Div_enable_SO <= 1'b0;
+		else if (Div_start_SI && Ready_SO)
+			Div_enable_SO <= 1'b1;
+		else if (Done_SO)
+			Div_enable_SO <= 1'b0;
 		else
-			ex2_srt_first_round <= 1'b0;
-	parameter WB_IDLE = 2'b00;
-	parameter WB_EX2 = 2'b10;
-	parameter WB_CMPLT = 2'b01;
-	always @(posedge fdsu_clk or negedge cpurst_b)
-		if (!cpurst_b)
-			wb_cur_state[1:0] <= WB_IDLE;
-		else if (fdsu_flush)
-			wb_cur_state[1:0] <= WB_IDLE;
+			Div_enable_SO <= Div_enable_SO;
+	reg Sqrt_start_dly_S;
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Sqrt_start_dly_S <= 1'b0;
+		else if (Sqrt_start_SI && Ready_SO)
+			Sqrt_start_dly_S <= 1'b1;
 		else
-			wb_cur_state[1:0] <= wb_nxt_state[1:0];
-	always @(ctrl_fdsu_wb_vld or fdsu_dn_stall or ctrl_xx_ex1_stall or fdsu_ex1_inst_vld or ctrl_iter_start or fdsu_ex1_res_vld or wb_cur_state[1:0])
-		case (wb_cur_state[1:0])
-			WB_IDLE:
-				if (fdsu_ex1_inst_vld) begin
-					if ((ctrl_xx_ex1_stall || fdsu_ex1_res_vld) || fdsu_dn_stall)
-						wb_nxt_state[1:0] = WB_IDLE;
-					else
-						wb_nxt_state[1:0] = WB_EX2;
-				end
-				else
-					wb_nxt_state[1:0] = WB_IDLE;
-			WB_EX2:
-				if (ctrl_fdsu_wb_vld) begin
-					if (ctrl_iter_start && !ctrl_xx_ex1_stall)
-						wb_nxt_state[1:0] = WB_EX2;
-					else
-						wb_nxt_state[1:0] = WB_IDLE;
-				end
-				else
-					wb_nxt_state[1:0] = WB_CMPLT;
-			WB_CMPLT:
-				if (ctrl_fdsu_wb_vld) begin
-					if (ctrl_iter_start && !ctrl_xx_ex1_stall)
-						wb_nxt_state[1:0] = WB_EX2;
-					else
-						wb_nxt_state[1:0] = WB_IDLE;
-				end
-				else
-					wb_nxt_state[1:0] = WB_CMPLT;
-			default: wb_nxt_state[1:0] = WB_IDLE;
-		endcase
-	assign ctrl_wb_idle = (wb_cur_state[1:0] == WB_IDLE) || ((wb_cur_state[1:0] == WB_CMPLT) && ctrl_fdsu_wb_vld);
-	assign ctrl_wb_sm_idle = wb_cur_state[1:0] == WB_IDLE;
-	assign ctrl_wb_sm_ex2 = wb_cur_state[1:0] == WB_EX2;
-	assign ctrl_wb_sm_cmplt = (wb_cur_state[1:0] == WB_EX2) || (wb_cur_state[1:0] == WB_CMPLT);
-	assign ctrl_result_vld = ctrl_sm_cmplt && ctrl_wb_sm_cmplt;
-	assign ctrl_fdsu_wb_vld = ctrl_result_vld && frbus_fdsu_wb_grant;
-	assign ctrl_fdsu_ex1_stall = ((fdsu_ex1_inst_vld && !ctrl_sm_ex1) && !ctrl_wb_idle) || (fdsu_ex1_inst_vld && fdsu_dn_stall);
-	always @(posedge ex1_pipe_clk)
-		if (ex1_pipedown) begin
-			fdsu_wb_freg[4:0] <= ex1_wb_freg[4:0];
-			fdsu_result_sign <= ex1_result_sign;
-			fdsu_of_rm_lfn <= ex1_of_result_lfn;
-			fdsu_div <= ex1_div;
-			fdsu_sqrt <= ex1_sqrt;
-			fdsu_rm[2:0] <= ex1_rm[2:0];
-		end
-		else begin
-			fdsu_wb_freg[4:0] <= fdsu_wb_freg[4:0];
-			fdsu_result_sign <= fdsu_result_sign;
-			fdsu_of_rm_lfn <= fdsu_of_rm_lfn;
-			fdsu_div <= fdsu_div;
-			fdsu_sqrt <= fdsu_sqrt;
-			fdsu_rm[2:0] <= fdsu_rm[2:0];
-		end
-	assign fdsu_op0_norm = 1'b1;
-	assign fdsu_op1_norm = 1'b1;
-	always @(posedge expnt_rst_clk)
-		if (ex1_save_op0)
-			fdsu_expnt_rst[9:0] <= ex1_oper_id_expnt[9:0];
-		else if (ex1_pipedown)
-			fdsu_expnt_rst[9:0] <= ex1_expnt_adder_op0[9:0];
-		else if (ex2_pipedown)
-			fdsu_expnt_rst[9:0] <= ex2_srt_expnt_rst[9:0];
-		else if (ex3_pipedown)
-			fdsu_expnt_rst[9:0] <= ex3_expnt_adjust_result[9:0];
+			Sqrt_start_dly_S <= 1'b0;
+	assign Sqrt_start_dly_SO = Sqrt_start_dly_S;
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Sqrt_enable_SO <= 1'b0;
+		else if (Kill_SI)
+			Sqrt_enable_SO <= 1'b0;
+		else if (Sqrt_start_SI && Ready_SO)
+			Sqrt_enable_SO <= 1'b1;
+		else if (Done_SO)
+			Sqrt_enable_SO <= 1'b0;
 		else
-			fdsu_expnt_rst[9:0] <= fdsu_expnt_rst[9:0];
-	assign ex1_oper_id_expnt_f[12:0] = {3'b001, fdsu_expnt_rst[9:0]};
-	always @(posedge expnt_rst_clk)
-		if (ex2_pipedown)
-			fdsu_yy_rslt_denorm <= ex2_rslt_denorm;
-		else if (ex3_pipedown)
-			fdsu_yy_rslt_denorm <= ex3_rslt_denorm;
+			Sqrt_enable_SO <= Sqrt_enable_SO;
+	reg [5:0] Crtl_cnt_S;
+	wire Start_dly_S;
+	assign Start_dly_S = Div_start_dly_S | Sqrt_start_dly_S;
+	wire Fsm_enable_S;
+	assign Fsm_enable_S = ((Start_dly_S | (|Crtl_cnt_S)) && ~Kill_SI) && Special_case_dly_SBI;
+	wire Final_state_S;
+	assign Final_state_S = Crtl_cnt_S == State_ctl_S;
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Crtl_cnt_S <= 1'sb0;
+		else if (Final_state_S | Kill_SI)
+			Crtl_cnt_S <= 1'sb0;
+		else if (Fsm_enable_S)
+			Crtl_cnt_S <= Crtl_cnt_S + 1;
 		else
-			fdsu_yy_rslt_denorm <= fdsu_yy_rslt_denorm;
-	always @(posedge ex2_pipe_clk)
-		if (ex2_pipedown) begin
-			fdsu_result_inf <= ex2_result_inf;
-			fdsu_result_lfn <= ex2_result_lfn;
-			fdsu_of <= ex2_of;
-			fdsu_uf <= ex2_uf;
-			fdsu_potnt_of <= ex2_potnt_of;
-			fdsu_potnt_uf <= ex2_potnt_uf;
+			Crtl_cnt_S <= 1'sb0;
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Done_SO <= 1'b0;
+		else if (Start_SI && Ready_SO) begin
+			if (~Special_case_SBI)
+				Done_SO <= 1'b1;
+			else
+				Done_SO <= 1'b0;
 		end
-		else begin
-			fdsu_result_inf <= fdsu_result_inf;
-			fdsu_result_lfn <= fdsu_result_lfn;
-			fdsu_of <= fdsu_of;
-			fdsu_uf <= fdsu_uf;
-			fdsu_potnt_of <= fdsu_potnt_of;
-			fdsu_potnt_uf <= fdsu_potnt_uf;
-		end
-	assign fdsu_flush = (((rtu_xx_ex1_cancel && ctrl_wb_idle) || (rtu_xx_ex2_cancel && ctrl_wb_sm_ex2)) || ctrl_xx_ex1_warm_up) || rtu_yy_xx_async_flush;
-	assign fdsu_busy = (fdsu_ex1_inst_vld || !ctrl_sm_idle) || !ctrl_wb_sm_idle;
-	assign fdsu_clk_en = (fdsu_busy || !ctrl_sm_idle) || rtu_yy_xx_flush;
-	gated_clk_cell x_fdsu_clk(
-		.clk_in(forever_cpuclk),
-		.clk_out(fdsu_clk),
-		.external_en(1'b0),
-		.global_en(cp0_yy_clk_en),
-		.local_en(fdsu_clk_en),
-		.module_en(cp0_fpu_icg_en),
-		.pad_yy_icg_scan_en(pad_yy_icg_scan_en)
-	);
-	assign ex1_pipe_clk_en = ex1_pipedown_gate;
-	gated_clk_cell x_ex1_pipe_clk(
-		.clk_in(forever_cpuclk),
-		.clk_out(ex1_pipe_clk),
-		.external_en(1'b0),
-		.global_en(cp0_yy_clk_en),
-		.local_en(ex1_pipe_clk_en),
-		.module_en(cp0_fpu_icg_en),
-		.pad_yy_icg_scan_en(pad_yy_icg_scan_en)
-	);
-	assign ex2_pipe_clk_en = ex2_pipedown;
-	gated_clk_cell x_ex2_pipe_clk(
-		.clk_in(forever_cpuclk),
-		.clk_out(ex2_pipe_clk),
-		.external_en(1'b0),
-		.global_en(cp0_yy_clk_en),
-		.local_en(ex2_pipe_clk_en),
-		.module_en(cp0_fpu_icg_en),
-		.pad_yy_icg_scan_en(pad_yy_icg_scan_en)
-	);
-	assign expnt_rst_clk_en = ((ex1_save_op0_gate || ex1_pipedown_gate) || ex2_pipedown) || ex3_pipedown;
-	gated_clk_cell x_expnt_rst_clk(
-		.clk_in(forever_cpuclk),
-		.clk_out(expnt_rst_clk),
-		.external_en(1'b0),
-		.global_en(cp0_yy_clk_en),
-		.local_en(expnt_rst_clk_en),
-		.module_en(cp0_fpu_icg_en),
-		.pad_yy_icg_scan_en(pad_yy_icg_scan_en)
-	);
-	assign fdsu_yy_wb_freg[4:0] = fdsu_wb_freg[4:0];
-	assign fdsu_yy_result_sign = fdsu_result_sign;
-	assign fdsu_yy_op0_norm = fdsu_op0_norm;
-	assign fdsu_yy_op1_norm = fdsu_op1_norm;
-	assign fdsu_yy_of_rm_lfn = fdsu_of_rm_lfn;
-	assign fdsu_yy_div = fdsu_div;
-	assign fdsu_yy_sqrt = fdsu_sqrt;
-	assign fdsu_yy_rm[2:0] = fdsu_rm[2:0];
-	assign fdsu_yy_expnt_rst[9:0] = fdsu_expnt_rst[9:0];
-	assign ex2_expnt_adder_op0[9:0] = fdsu_expnt_rst[9:0];
-	assign fdsu_yy_result_inf = fdsu_result_inf;
-	assign fdsu_yy_result_lfn = fdsu_result_lfn;
-	assign fdsu_yy_of = fdsu_of;
-	assign fdsu_yy_uf = fdsu_uf;
-	assign fdsu_yy_potnt_of = fdsu_potnt_of;
-	assign fdsu_yy_potnt_uf = fdsu_potnt_uf;
-	assign ex1_pipedown = ctrl_iter_start || ctrl_xx_ex1_warm_up;
-	assign ex1_pipedown_gate = ctrl_iter_start_gate || ctrl_xx_ex1_warm_up;
-	assign ex2_pipedown = (ctrl_srt_itering && srt_last_round) || ctrl_xx_ex2_warm_up;
-	assign ex3_pipedown = ctrl_round || ctrl_xx_ex3_warm_up;
-	assign srt_sm_on = ctrl_srt_itering;
-	assign fdsu_fpu_ex1_cmplt = fdsu_ex1_inst_vld;
-	assign fdsu_fpu_ex1_cmplt_dp = ctrl_xx_ex1_cmplt_dp && idu_fpu_ex1_eu_sel[2];
-	assign fdsu_fpu_ex1_stall = ctrl_fdsu_ex1_stall;
-	assign fdsu_frbus_wb_vld = ctrl_result_vld;
-	assign fdsu_fpu_no_op = !fdsu_busy;
-	assign ex1_op1_sel = ctrl_wfi2;
-	assign ex1_save_op0 = (ctrl_sm_start && ex1_op0_id) && ex1_op1_id_vld;
-	assign ex1_save_op0_gate = (ctrl_sm_start_gate && ex1_op0_id) && ex1_op1_id_vld;
-endmodule
-module pa_fdsu_ff1 (
-	fanc_shift_num,
-	frac_bin_val,
-	frac_num
-);
-	input wire [51:0] frac_num;
-	output reg [51:0] fanc_shift_num;
-	output reg [12:0] frac_bin_val;
-	always @(frac_num[51:0])
-		casez (frac_num[51:0])
-			52'b1zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h0000;
-			52'b01zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fff;
-			52'b001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ffe;
-			52'b0001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ffd;
-			52'b00001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ffc;
-			52'b000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ffb;
-			52'b0000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ffa;
-			52'b00000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ff9;
-			52'b000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ff8;
-			52'b0000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ff7;
-			52'b00000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ff6;
-			52'b000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ff5;
-			52'b0000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ff4;
-			52'b00000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ff3;
-			52'b000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ff2;
-			52'b0000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ff1;
-			52'b00000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1ff0;
-			52'b000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fef;
-			52'b0000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fee;
-			52'b00000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fed;
-			52'b000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fec;
-			52'b0000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1feb;
-			52'b00000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fea;
-			52'b000000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fe9;
-			52'b0000000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fe8;
-			52'b00000000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fe7;
-			52'b000000000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fe6;
-			52'b0000000000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fe5;
-			52'b00000000000000000000000000001zzzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fe4;
-			52'b000000000000000000000000000001zzzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fe3;
-			52'b0000000000000000000000000000001zzzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fe2;
-			52'b00000000000000000000000000000001zzzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fe1;
-			52'b000000000000000000000000000000001zzzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fe0;
-			52'b0000000000000000000000000000000001zzzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fdf;
-			52'b00000000000000000000000000000000001zzzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fde;
-			52'b000000000000000000000000000000000001zzzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fdd;
-			52'b0000000000000000000000000000000000001zzzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fdc;
-			52'b00000000000000000000000000000000000001zzzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fdb;
-			52'b000000000000000000000000000000000000001zzzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fda;
-			52'b0000000000000000000000000000000000000001zzzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fd9;
-			52'b00000000000000000000000000000000000000001zzzzzzzzzzz: frac_bin_val[12:0] = 13'h1fd8;
-			52'b000000000000000000000000000000000000000001zzzzzzzzzz: frac_bin_val[12:0] = 13'h1fd7;
-			52'b0000000000000000000000000000000000000000001zzzzzzzzz: frac_bin_val[12:0] = 13'h1fd6;
-			52'b00000000000000000000000000000000000000000001zzzzzzzz: frac_bin_val[12:0] = 13'h1fd5;
-			52'b000000000000000000000000000000000000000000001zzzzzzz: frac_bin_val[12:0] = 13'h1fd4;
-			52'b0000000000000000000000000000000000000000000001zzzzzz: frac_bin_val[12:0] = 13'h1fd3;
-			52'b00000000000000000000000000000000000000000000001zzzzz: frac_bin_val[12:0] = 13'h1fd2;
-			52'b000000000000000000000000000000000000000000000001zzzz: frac_bin_val[12:0] = 13'h1fd1;
-			52'b0000000000000000000000000000000000000000000000001zzz: frac_bin_val[12:0] = 13'h1fd0;
-			52'b00000000000000000000000000000000000000000000000001zz: frac_bin_val[12:0] = 13'h1fcf;
-			52'b000000000000000000000000000000000000000000000000001z: frac_bin_val[12:0] = 13'h1fce;
-			52'b0000000000000000000000000000000000000000000000000001: frac_bin_val[12:0] = 13'h1fcd;
-			52'b0000000000000000000000000000000000000000000000000000: frac_bin_val[12:0] = 13'h1fcc;
-			default: frac_bin_val[12:0] = 13'h0000;
-		endcase
-	always @(frac_num[51:0])
-		casez (frac_num[51:0])
-			52'b1zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = frac_num[51:0];
-			52'b01zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[50:0], 1'b0};
-			52'b001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[49:0], 2'b00};
-			52'b0001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[48:0], 3'b000};
-			52'b00001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[47:0], 4'b0000};
-			52'b000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[46:0], 5'b00000};
-			52'b0000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[45:0], 6'b000000};
-			52'b00000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[44:0], 7'b0000000};
-			52'b000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[43:0], 8'b00000000};
-			52'b0000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[42:0], 9'b000000000};
-			52'b00000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[41:0], 10'b0000000000};
-			52'b000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[40:0], 11'b00000000000};
-			52'b0000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[39:0], 12'b000000000000};
-			52'b00000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[38:0], 13'b0000000000000};
-			52'b000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[37:0], 14'b00000000000000};
-			52'b0000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[36:0], 15'b000000000000000};
-			52'b00000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[35:0], 16'b0000000000000000};
-			52'b000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[34:0], 17'b00000000000000000};
-			52'b0000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[33:0], 18'b000000000000000000};
-			52'b00000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[32:0], 19'b0000000000000000000};
-			52'b000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[31:0], 20'b00000000000000000000};
-			52'b0000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[30:0], 21'b000000000000000000000};
-			52'b00000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[29:0], 22'b0000000000000000000000};
-			52'b000000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[28:0], 23'b00000000000000000000000};
-			52'b0000000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[27:0], 24'b000000000000000000000000};
-			52'b00000000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[26:0], 25'b0000000000000000000000000};
-			52'b000000000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[25:0], 26'b00000000000000000000000000};
-			52'b0000000000000000000000000001zzzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[24:0], 27'b000000000000000000000000000};
-			52'b00000000000000000000000000001zzzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[23:0], 28'b0000000000000000000000000000};
-			52'b000000000000000000000000000001zzzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[22:0], 29'b00000000000000000000000000000};
-			52'b0000000000000000000000000000001zzzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[21:0], 30'b000000000000000000000000000000};
-			52'b00000000000000000000000000000001zzzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[20:0], 31'b0000000000000000000000000000000};
-			52'b000000000000000000000000000000001zzzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[19:0], 32'b00000000000000000000000000000000};
-			52'b0000000000000000000000000000000001zzzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[18:0], 33'b000000000000000000000000000000000};
-			52'b00000000000000000000000000000000001zzzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[17:0], 34'b0000000000000000000000000000000000};
-			52'b000000000000000000000000000000000001zzzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[16:0], 35'b00000000000000000000000000000000000};
-			52'b0000000000000000000000000000000000001zzzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[15:0], 36'b000000000000000000000000000000000000};
-			52'b00000000000000000000000000000000000001zzzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[14:0], 37'b0000000000000000000000000000000000000};
-			52'b000000000000000000000000000000000000001zzzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[13:0], 38'b00000000000000000000000000000000000000};
-			52'b0000000000000000000000000000000000000001zzzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[12:0], 39'b000000000000000000000000000000000000000};
-			52'b00000000000000000000000000000000000000001zzzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[11:0], 40'b0000000000000000000000000000000000000000};
-			52'b000000000000000000000000000000000000000001zzzzzzzzzz: fanc_shift_num[51:0] = {frac_num[10:0], 41'b00000000000000000000000000000000000000000};
-			52'b0000000000000000000000000000000000000000001zzzzzzzzz: fanc_shift_num[51:0] = {frac_num[9:0], 42'b000000000000000000000000000000000000000000};
-			52'b00000000000000000000000000000000000000000001zzzzzzzz: fanc_shift_num[51:0] = {frac_num[8:0], 43'b0000000000000000000000000000000000000000000};
-			52'b000000000000000000000000000000000000000000001zzzzzzz: fanc_shift_num[51:0] = {frac_num[7:0], 44'b00000000000000000000000000000000000000000000};
-			52'b0000000000000000000000000000000000000000000001zzzzzz: fanc_shift_num[51:0] = {frac_num[6:0], 45'b000000000000000000000000000000000000000000000};
-			52'b00000000000000000000000000000000000000000000001zzzzz: fanc_shift_num[51:0] = {frac_num[5:0], 46'b0000000000000000000000000000000000000000000000};
-			52'b000000000000000000000000000000000000000000000001zzzz: fanc_shift_num[51:0] = {frac_num[4:0], 47'b00000000000000000000000000000000000000000000000};
-			52'b0000000000000000000000000000000000000000000000001zzz: fanc_shift_num[51:0] = {frac_num[3:0], 48'b000000000000000000000000000000000000000000000000};
-			52'b00000000000000000000000000000000000000000000000001zz: fanc_shift_num[51:0] = {frac_num[2:0], 49'b0000000000000000000000000000000000000000000000000};
-			52'b000000000000000000000000000000000000000000000000001z: fanc_shift_num[51:0] = {frac_num[1:0], 50'b00000000000000000000000000000000000000000000000000};
-			52'b0000000000000000000000000000000000000000000000000001: fanc_shift_num[51:0] = {frac_num[0:0], 51'b000000000000000000000000000000000000000000000000000};
-			52'b0000000000000000000000000000000000000000000000000000: fanc_shift_num[51:0] = 52'b0000000000000000000000000000000000000000000000000000;
-			default: fanc_shift_num[51:0] = 52'b0000000000000000000000000000000000000000000000000000;
-		endcase
-endmodule
-module pa_fdsu_pack_single (
-	fdsu_ex4_denorm_to_tiny_frac,
-	fdsu_ex4_frac,
-	fdsu_ex4_nx,
-	fdsu_ex4_potnt_norm,
-	fdsu_ex4_result_nor,
-	fdsu_frbus_data,
-	fdsu_frbus_fflags,
-	fdsu_frbus_freg,
-	fdsu_yy_expnt_rst,
-	fdsu_yy_of,
-	fdsu_yy_of_rm_lfn,
-	fdsu_yy_potnt_of,
-	fdsu_yy_potnt_uf,
-	fdsu_yy_result_inf,
-	fdsu_yy_result_lfn,
-	fdsu_yy_result_sign,
-	fdsu_yy_rslt_denorm,
-	fdsu_yy_uf,
-	fdsu_yy_wb_freg
-);
-	input wire fdsu_ex4_denorm_to_tiny_frac;
-	input wire [25:0] fdsu_ex4_frac;
-	input wire fdsu_ex4_nx;
-	input wire [1:0] fdsu_ex4_potnt_norm;
-	input wire fdsu_ex4_result_nor;
-	input wire [9:0] fdsu_yy_expnt_rst;
-	input wire fdsu_yy_of;
-	input wire fdsu_yy_of_rm_lfn;
-	input wire fdsu_yy_potnt_of;
-	input wire fdsu_yy_potnt_uf;
-	input wire fdsu_yy_result_inf;
-	input wire fdsu_yy_result_lfn;
-	input wire fdsu_yy_result_sign;
-	input wire fdsu_yy_rslt_denorm;
-	input wire fdsu_yy_uf;
-	input wire [4:0] fdsu_yy_wb_freg;
-	output wire [31:0] fdsu_frbus_data;
-	output wire [4:0] fdsu_frbus_fflags;
-	output wire [4:0] fdsu_frbus_freg;
-	reg [22:0] ex4_frac_23;
-	reg [31:0] ex4_result;
-	reg [22:0] ex4_single_denorm_frac;
-	reg [9:0] expnt_add_op1;
-	wire ex4_cor_nx;
-	wire ex4_cor_uf;
-	wire ex4_denorm_potnt_norm;
-	wire [31:0] ex4_denorm_result;
-	wire [9:0] ex4_expnt_rst;
-	wire [4:0] ex4_expt;
-	wire ex4_final_rst_norm;
-	wire [25:0] ex4_frac;
-	wire ex4_of_plus;
-	wire ex4_result_inf;
-	wire ex4_result_lfn;
-	wire ex4_rslt_denorm;
-	wire [31:0] ex4_rst_inf;
-	wire [31:0] ex4_rst_lfn;
-	wire ex4_rst_nor;
-	wire [31:0] ex4_rst_norm;
-	wire ex4_uf_plus;
-	wire fdsu_ex4_dz;
-	wire [9:0] fdsu_ex4_expnt_rst;
-	wire fdsu_ex4_nv;
-	wire fdsu_ex4_of;
-	wire fdsu_ex4_of_rst_lfn;
-	wire fdsu_ex4_potnt_of;
-	wire fdsu_ex4_potnt_uf;
-	wire fdsu_ex4_result_inf;
-	wire fdsu_ex4_result_lfn;
-	wire fdsu_ex4_result_sign;
-	wire fdsu_ex4_rslt_denorm;
-	wire fdsu_ex4_uf;
-	assign fdsu_ex4_result_sign = fdsu_yy_result_sign;
-	assign fdsu_ex4_of_rst_lfn = fdsu_yy_of_rm_lfn;
-	assign fdsu_ex4_result_inf = fdsu_yy_result_inf;
-	assign fdsu_ex4_result_lfn = fdsu_yy_result_lfn;
-	assign fdsu_ex4_of = fdsu_yy_of;
-	assign fdsu_ex4_uf = fdsu_yy_uf;
-	assign fdsu_ex4_potnt_of = fdsu_yy_potnt_of;
-	assign fdsu_ex4_potnt_uf = fdsu_yy_potnt_uf;
-	assign fdsu_ex4_nv = 1'b0;
-	assign fdsu_ex4_dz = 1'b0;
-	assign fdsu_ex4_expnt_rst[9:0] = fdsu_yy_expnt_rst[9:0];
-	assign fdsu_ex4_rslt_denorm = fdsu_yy_rslt_denorm;
-	assign ex4_frac[25:0] = fdsu_ex4_frac[25:0];
-	always @(ex4_frac[25:24])
-		casez (ex4_frac[25:24])
-			2'b00: expnt_add_op1[9:0] = 10'h1ff;
-			2'b01: expnt_add_op1[9:0] = 10'h000;
-			2'b1z: expnt_add_op1[9:0] = 10'h001;
-			default: expnt_add_op1[9:0] = 10'b0000000000;
-		endcase
-	assign ex4_expnt_rst[9:0] = fdsu_ex4_expnt_rst[9:0] + expnt_add_op1[9:0];
-	always @(fdsu_ex4_expnt_rst[9:0] or fdsu_ex4_denorm_to_tiny_frac or ex4_frac[25:1])
-		case (fdsu_ex4_expnt_rst[9:0])
-			10'h001: ex4_single_denorm_frac[22:0] = {ex4_frac[23:1]};
-			10'h000: ex4_single_denorm_frac[22:0] = {ex4_frac[24:2]};
-			10'h3ff: ex4_single_denorm_frac[22:0] = {ex4_frac[25:3]};
-			10'h3fe: ex4_single_denorm_frac[22:0] = {1'b0, ex4_frac[25:4]};
-			10'h3fd: ex4_single_denorm_frac[22:0] = {2'b00, ex4_frac[25:5]};
-			10'h3fc: ex4_single_denorm_frac[22:0] = {3'b000, ex4_frac[25:6]};
-			10'h3fb: ex4_single_denorm_frac[22:0] = {4'b0000, ex4_frac[25:7]};
-			10'h3fa: ex4_single_denorm_frac[22:0] = {5'b00000, ex4_frac[25:8]};
-			10'h3f9: ex4_single_denorm_frac[22:0] = {6'b000000, ex4_frac[25:9]};
-			10'h3f8: ex4_single_denorm_frac[22:0] = {7'b0000000, ex4_frac[25:10]};
-			10'h3f7: ex4_single_denorm_frac[22:0] = {8'b00000000, ex4_frac[25:11]};
-			10'h3f6: ex4_single_denorm_frac[22:0] = {9'b000000000, ex4_frac[25:12]};
-			10'h3f5: ex4_single_denorm_frac[22:0] = {10'b0000000000, ex4_frac[25:13]};
-			10'h3f4: ex4_single_denorm_frac[22:0] = {11'b00000000000, ex4_frac[25:14]};
-			10'h3f3: ex4_single_denorm_frac[22:0] = {12'b000000000000, ex4_frac[25:15]};
-			10'h3f2: ex4_single_denorm_frac[22:0] = {13'b0000000000000, ex4_frac[25:16]};
-			10'h3f1: ex4_single_denorm_frac[22:0] = {14'b00000000000000, ex4_frac[25:17]};
-			10'h3f0: ex4_single_denorm_frac[22:0] = {15'b000000000000000, ex4_frac[25:18]};
-			10'h3ef: ex4_single_denorm_frac[22:0] = {16'b0000000000000000, ex4_frac[25:19]};
-			10'h3ee: ex4_single_denorm_frac[22:0] = {17'b00000000000000000, ex4_frac[25:20]};
-			10'h3ed: ex4_single_denorm_frac[22:0] = {18'b000000000000000000, ex4_frac[25:21]};
-			10'h3ec: ex4_single_denorm_frac[22:0] = {19'b0000000000000000000, ex4_frac[25:22]};
-			10'h3eb: ex4_single_denorm_frac[22:0] = {20'b00000000000000000000, ex4_frac[25:23]};
-			10'h3ea: ex4_single_denorm_frac[22:0] = {21'b000000000000000000000, ex4_frac[25:24]};
-			default: ex4_single_denorm_frac[22:0] = (fdsu_ex4_denorm_to_tiny_frac ? 23'b00000000000000000000001 : 23'b00000000000000000000000);
-		endcase
-	assign ex4_denorm_potnt_norm = (fdsu_ex4_potnt_norm[1] && ex4_frac[24]) || (fdsu_ex4_potnt_norm[0] && ex4_frac[25]);
-	assign ex4_rslt_denorm = fdsu_ex4_rslt_denorm && !ex4_denorm_potnt_norm;
-	assign ex4_denorm_result[31:0] = {fdsu_ex4_result_sign, 8'h00, ex4_single_denorm_frac[22:0]};
-	assign ex4_rst_nor = fdsu_ex4_result_nor;
-	assign ex4_of_plus = (fdsu_ex4_potnt_of && |ex4_frac[25:24]) && ex4_rst_nor;
-	assign ex4_uf_plus = (fdsu_ex4_potnt_uf && ~|ex4_frac[25:24]) && ex4_rst_nor;
-	assign ex4_result_lfn = (ex4_of_plus && fdsu_ex4_of_rst_lfn) || fdsu_ex4_result_lfn;
-	assign ex4_result_inf = (ex4_of_plus && !fdsu_ex4_of_rst_lfn) || fdsu_ex4_result_inf;
-	assign ex4_rst_lfn[31:0] = {fdsu_ex4_result_sign, 8'hfe, {23 {1'b1}}};
-	assign ex4_rst_inf[31:0] = {fdsu_ex4_result_sign, 31'h7f800000};
-	always @(ex4_frac[25:0])
-		casez (ex4_frac[25:24])
-			2'b00: ex4_frac_23[22:0] = ex4_frac[22:0];
-			2'b01: ex4_frac_23[22:0] = ex4_frac[23:1];
-			2'b1z: ex4_frac_23[22:0] = ex4_frac[24:2];
-			default: ex4_frac_23[22:0] = 23'b00000000000000000000000;
-		endcase
-	assign ex4_rst_norm[31:0] = {fdsu_ex4_result_sign, ex4_expnt_rst[7:0], ex4_frac_23[22:0]};
-	assign ex4_cor_uf = ((fdsu_ex4_uf || ex4_denorm_potnt_norm) || ex4_uf_plus) && fdsu_ex4_nx;
-	assign ex4_cor_nx = (fdsu_ex4_nx || fdsu_ex4_of) || ex4_of_plus;
-	assign ex4_expt[4:0] = {fdsu_ex4_nv, fdsu_ex4_dz, fdsu_ex4_of | ex4_of_plus, ex4_cor_uf, ex4_cor_nx};
-	assign ex4_final_rst_norm = (!ex4_result_inf && !ex4_result_lfn) && !ex4_rslt_denorm;
-	always @(ex4_denorm_result[31:0] or ex4_result_lfn or ex4_result_inf or ex4_final_rst_norm or ex4_rst_norm[31:0] or ex4_rst_lfn[31:0] or ex4_rst_inf[31:0] or ex4_rslt_denorm)
-		case ({ex4_rslt_denorm, ex4_result_inf, ex4_result_lfn, ex4_final_rst_norm})
-			4'b1000: ex4_result[31:0] = ex4_denorm_result[31:0];
-			4'b0100: ex4_result[31:0] = ex4_rst_inf[31:0];
-			4'b0010: ex4_result[31:0] = ex4_rst_lfn[31:0];
-			4'b0001: ex4_result[31:0] = ex4_rst_norm[31:0];
-			default: ex4_result[31:0] = 32'b00000000000000000000000000000000;
-		endcase
-	assign fdsu_frbus_freg[4:0] = fdsu_yy_wb_freg[4:0];
-	assign fdsu_frbus_data[31:0] = ex4_result[31:0];
-	assign fdsu_frbus_fflags[4:0] = ex4_expt[4:0];
-endmodule
-module pa_fdsu_prepare (
-	dp_xx_ex1_rm,
-	ex1_div,
-	ex1_divisor,
-	ex1_expnt_adder_op0,
-	ex1_expnt_adder_op1,
-	ex1_of_result_lfn,
-	ex1_op0_id,
-	ex1_op0_sign,
-	ex1_op1_id,
-	ex1_op1_id_vld,
-	ex1_op1_sel,
-	ex1_oper_id_expnt,
-	ex1_oper_id_expnt_f,
-	ex1_oper_id_frac,
-	ex1_oper_id_frac_f,
-	ex1_remainder,
-	ex1_result_sign,
-	ex1_rm,
-	ex1_sqrt,
-	fdsu_ex1_sel,
-	idu_fpu_ex1_func,
-	idu_fpu_ex1_srcf0,
-	idu_fpu_ex1_srcf1
-);
-	input wire [2:0] dp_xx_ex1_rm;
-	input wire ex1_op0_id;
-	input wire ex1_op1_id;
-	input wire ex1_op1_sel;
-	input wire [12:0] ex1_oper_id_expnt_f;
-	input wire [51:0] ex1_oper_id_frac_f;
-	input wire fdsu_ex1_sel;
-	input wire [9:0] idu_fpu_ex1_func;
-	input wire [31:0] idu_fpu_ex1_srcf0;
-	input wire [31:0] idu_fpu_ex1_srcf1;
-	output wire ex1_div;
-	output wire [23:0] ex1_divisor;
-	output wire [12:0] ex1_expnt_adder_op0;
-	output reg [12:0] ex1_expnt_adder_op1;
-	output reg ex1_of_result_lfn;
-	output wire ex1_op0_sign;
-	output wire ex1_op1_id_vld;
-	output wire [12:0] ex1_oper_id_expnt;
-	output wire [51:0] ex1_oper_id_frac;
-	output wire [31:0] ex1_remainder;
-	output wire ex1_result_sign;
-	output wire [2:0] ex1_rm;
-	output wire ex1_sqrt;
-	wire div_sign;
-	wire [52:0] ex1_div_noid_nor_srt_op0;
-	wire [52:0] ex1_div_noid_nor_srt_op1;
-	wire [52:0] ex1_div_nor_srt_op0;
-	wire [52:0] ex1_div_nor_srt_op1;
-	wire [12:0] ex1_div_op0_expnt;
-	wire [12:0] ex1_div_op1_expnt;
-	wire [52:0] ex1_div_srt_op0;
-	wire [52:0] ex1_div_srt_op1;
-	wire ex1_double;
-	wire ex1_op0_id_nor;
-	wire ex1_op1_id_nor;
-	wire ex1_op1_sign;
-	wire [63:0] ex1_oper0;
-	wire [51:0] ex1_oper0_frac;
-	wire [12:0] ex1_oper0_id_expnt;
-	wire [51:0] ex1_oper0_id_frac;
-	wire [63:0] ex1_oper1;
-	wire [51:0] ex1_oper1_frac;
-	wire [12:0] ex1_oper1_id_expnt;
-	wire [51:0] ex1_oper1_id_frac;
-	wire [51:0] ex1_oper_frac;
-	wire ex1_single;
-	wire ex1_sqrt_expnt_odd;
-	wire ex1_sqrt_op0_expnt_0;
-	wire [12:0] ex1_sqrt_op1_expnt;
-	wire [52:0] ex1_sqrt_srt_op0;
-	wire [59:0] sqrt_remainder;
-	wire sqrt_sign;
-	assign ex1_sqrt = idu_fpu_ex1_func[0];
-	assign ex1_div = idu_fpu_ex1_func[1];
-	assign ex1_oper0[63:0] = {32'b00000000000000000000000000000000, idu_fpu_ex1_srcf0[31:0] & {32 {fdsu_ex1_sel}}};
-	assign ex1_oper1[63:0] = {32'b00000000000000000000000000000000, idu_fpu_ex1_srcf1[31:0] & {32 {fdsu_ex1_sel}}};
-	assign ex1_double = 1'b0;
-	assign ex1_single = 1'b1;
-	assign ex1_op0_id_nor = ex1_op0_id;
-	assign ex1_op1_id_nor = ex1_op1_id;
-	assign ex1_op0_sign = (ex1_double && ex1_oper0[63]) || (ex1_single && ex1_oper0[31]);
-	assign ex1_op1_sign = (ex1_double && ex1_oper1[63]) || (ex1_single && ex1_oper1[31]);
-	assign div_sign = ex1_op0_sign ^ ex1_op1_sign;
-	assign sqrt_sign = ex1_op0_sign;
-	assign ex1_result_sign = (ex1_div ? div_sign : sqrt_sign);
-	assign ex1_oper_frac[51:0] = (ex1_op1_sel ? ex1_oper1_frac[51:0] : ex1_oper0_frac[51:0]);
-	pa_fdsu_ff1 x_frac_expnt(
-		.fanc_shift_num(ex1_oper_id_frac[51:0]),
-		.frac_bin_val(ex1_oper_id_expnt[12:0]),
-		.frac_num(ex1_oper_frac[51:0])
-	);
-	assign ex1_oper0_id_expnt[12:0] = (ex1_op1_sel ? ex1_oper_id_expnt_f[12:0] : ex1_oper_id_expnt[12:0]);
-	assign ex1_oper0_id_frac[51:0] = (ex1_op1_sel ? ex1_oper_id_frac_f[51:0] : ex1_oper_id_frac[51:0]);
-	assign ex1_oper1_id_expnt[12:0] = ex1_oper_id_expnt[12:0];
-	assign ex1_oper1_id_frac[51:0] = ex1_oper_id_frac[51:0];
-	assign ex1_oper0_frac[51:0] = ({52 {ex1_double}} & ex1_oper0[51:0]) | ({52 {ex1_single}} & {ex1_oper0[22:0], 29'b00000000000000000000000000000});
-	assign ex1_oper1_frac[51:0] = ({52 {ex1_double}} & ex1_oper1[51:0]) | ({52 {ex1_single}} & {ex1_oper1[22:0], 29'b00000000000000000000000000000});
-	assign ex1_div_op0_expnt[12:0] = ({13 {ex1_double}} & {2'b00, ex1_oper0[62:52]}) | ({13 {ex1_single}} & {5'b00000, ex1_oper0[30:23]});
-	assign ex1_expnt_adder_op0[12:0] = (ex1_op0_id_nor ? ex1_oper0_id_expnt[12:0] : ex1_div_op0_expnt[12:0]);
-	assign ex1_div_op1_expnt[12:0] = ({13 {ex1_double}} & {2'b00, ex1_oper1[62:52]}) | ({13 {ex1_single}} & {5'b00000, ex1_oper1[30:23]});
-	assign ex1_sqrt_op1_expnt[12:0] = ({13 {ex1_double}} & {3'b000, {10 {1'b1}}}) | ({13 {ex1_single}} & {6'b000000, {7 {1'b1}}});
-	always @(ex1_oper1_id_expnt[12:0] or ex1_div or ex1_op1_id_nor or ex1_sqrt_op1_expnt[12:0] or ex1_sqrt or ex1_div_op1_expnt[12:0])
-		case ({ex1_div, ex1_sqrt})
-			2'b10: ex1_expnt_adder_op1[12:0] = (ex1_op1_id_nor ? ex1_oper1_id_expnt[12:0] : ex1_div_op1_expnt[12:0]);
-			2'b01: ex1_expnt_adder_op1[12:0] = ex1_sqrt_op1_expnt[12:0];
-			default: ex1_expnt_adder_op1[12:0] = 13'b0000000000000;
-		endcase
-	assign ex1_sqrt_op0_expnt_0 = (ex1_op0_id_nor ? ex1_oper_id_expnt[0] : ex1_div_op0_expnt[0]);
-	assign ex1_sqrt_expnt_odd = !ex1_sqrt_op0_expnt_0;
-	assign ex1_rm[2:0] = dp_xx_ex1_rm[2:0];
-	always @(ex1_rm[2:0] or ex1_result_sign)
-		case (ex1_rm[2:0])
-			3'b000: ex1_of_result_lfn = 1'b0;
-			3'b001: ex1_of_result_lfn = 1'b1;
-			3'b010: ex1_of_result_lfn = !ex1_result_sign;
-			3'b011: ex1_of_result_lfn = ex1_result_sign;
-			3'b100: ex1_of_result_lfn = 1'b0;
-			default: ex1_of_result_lfn = 1'b0;
-		endcase
-	assign ex1_remainder[31:0] = ({32 {ex1_div}} & {5'b00000, ex1_div_srt_op0[52:28], 2'b00}) | ({32 {ex1_sqrt}} & sqrt_remainder[59:28]);
-	assign ex1_divisor[23:0] = ex1_div_srt_op1[52:29];
-	assign ex1_div_srt_op0[52:0] = ex1_div_nor_srt_op0[52:0];
-	assign ex1_div_srt_op1[52:0] = ex1_div_nor_srt_op1[52:0];
-	assign ex1_div_noid_nor_srt_op0[52:0] = ({53 {ex1_double}} & {1'b1, ex1_oper0[51:0]}) | ({53 {ex1_single}} & {1'b1, ex1_oper0[22:0], 29'b00000000000000000000000000000});
-	assign ex1_div_nor_srt_op0[52:0] = (ex1_op0_id_nor ? {ex1_oper0_id_frac[51:0], 1'b0} : ex1_div_noid_nor_srt_op0[52:0]);
-	assign ex1_div_noid_nor_srt_op1[52:0] = ({53 {ex1_double}} & {1'b1, ex1_oper1[51:0]}) | ({53 {ex1_single}} & {1'b1, ex1_oper1[22:0], 29'b00000000000000000000000000000});
-	assign ex1_div_nor_srt_op1[52:0] = (ex1_op1_id_nor ? {ex1_oper1_id_frac[51:0], 1'b0} : ex1_div_noid_nor_srt_op1[52:0]);
-	assign sqrt_remainder[59:0] = (ex1_sqrt_expnt_odd ? {5'b00000, ex1_sqrt_srt_op0[52:0], 2'b00} : {6'b000000, ex1_sqrt_srt_op0[52:0], 1'b0});
-	assign ex1_sqrt_srt_op0[52:0] = ex1_div_srt_op0[52:0];
-	assign ex1_op1_id_vld = ex1_op1_id_nor && ex1_div;
-endmodule
-module pa_fdsu_round_single (
-	cp0_fpu_icg_en,
-	cp0_yy_clk_en,
-	ex3_expnt_adjust_result,
-	ex3_frac_final_rst,
-	ex3_pipedown,
-	ex3_rslt_denorm,
-	fdsu_ex3_id_srt_skip,
-	fdsu_ex3_rem_sign,
-	fdsu_ex3_rem_zero,
-	fdsu_ex3_result_denorm_round_add_num,
-	fdsu_ex4_denorm_to_tiny_frac,
-	fdsu_ex4_nx,
-	fdsu_ex4_potnt_norm,
-	fdsu_ex4_result_nor,
-	fdsu_yy_expnt_rst,
-	fdsu_yy_result_inf,
-	fdsu_yy_result_lfn,
-	fdsu_yy_result_sign,
-	fdsu_yy_rm,
-	fdsu_yy_rslt_denorm,
-	forever_cpuclk,
-	pad_yy_icg_scan_en,
-	total_qt_rt_30
-);
-	input wire cp0_fpu_icg_en;
-	input wire cp0_yy_clk_en;
-	input wire ex3_pipedown;
-	input wire fdsu_ex3_id_srt_skip;
-	input wire fdsu_ex3_rem_sign;
-	input wire fdsu_ex3_rem_zero;
-	input wire [23:0] fdsu_ex3_result_denorm_round_add_num;
-	input wire [9:0] fdsu_yy_expnt_rst;
-	input wire fdsu_yy_result_inf;
-	input wire fdsu_yy_result_lfn;
-	input wire fdsu_yy_result_sign;
-	input wire [2:0] fdsu_yy_rm;
-	input wire fdsu_yy_rslt_denorm;
-	input wire forever_cpuclk;
-	input wire pad_yy_icg_scan_en;
-	input wire [29:0] total_qt_rt_30;
-	output wire [9:0] ex3_expnt_adjust_result;
-	output wire [25:0] ex3_frac_final_rst;
-	output wire ex3_rslt_denorm;
-	output reg fdsu_ex4_denorm_to_tiny_frac;
-	output reg fdsu_ex4_nx;
-	output reg [1:0] fdsu_ex4_potnt_norm;
-	output reg fdsu_ex4_result_nor;
-	reg denorm_to_tiny_frac;
-	reg [25:0] frac_add1_op1;
-	reg frac_add_1;
-	reg frac_orig;
-	reg [25:0] frac_sub1_op1;
-	reg frac_sub_1;
-	reg [27:0] qt_result_single_denorm_for_round;
-	reg single_denorm_lst_frac;
-	wire ex3_denorm_eq;
-	wire ex3_denorm_gr;
-	wire ex3_denorm_lst_frac;
-	wire ex3_denorm_nx;
-	wire ex3_denorm_plus;
-	wire ex3_denorm_potnt_norm;
-	wire ex3_denorm_zero;
-	wire [9:0] ex3_expnt_adjst;
-	wire ex3_nx;
-	wire ex3_pipe_clk;
-	wire ex3_pipe_clk_en;
-	wire [1:0] ex3_potnt_norm;
-	wire ex3_qt_eq;
-	wire ex3_qt_gr;
-	wire ex3_qt_sing_lo3_not0;
-	wire ex3_qt_sing_lo4_not0;
-	wire ex3_qt_zero;
-	wire ex3_rst_eq_1;
-	wire ex3_rst_nor;
-	wire ex3_single_denorm_eq;
-	wire ex3_single_denorm_gr;
-	wire ex3_single_denorm_zero;
-	wire ex3_single_low_not_zero;
-	wire [9:0] fdsu_ex3_expnt_rst;
-	wire fdsu_ex3_result_inf;
-	wire fdsu_ex3_result_lfn;
-	wire fdsu_ex3_result_sign;
-	wire [2:0] fdsu_ex3_rm;
-	wire fdsu_ex3_rslt_denorm;
-	wire [25:0] frac_add1_op1_with_denorm;
-	wire [25:0] frac_add1_rst;
-	wire frac_denorm_rdn_add_1;
-	wire frac_denorm_rdn_sub_1;
-	wire frac_denorm_rmm_add_1;
-	wire frac_denorm_rne_add_1;
-	wire frac_denorm_rtz_sub_1;
-	wire frac_denorm_rup_add_1;
-	wire frac_denorm_rup_sub_1;
-	wire [25:0] frac_final_rst;
-	wire frac_rdn_add_1;
-	wire frac_rdn_sub_1;
-	wire frac_rmm_add_1;
-	wire frac_rne_add_1;
-	wire frac_rtz_sub_1;
-	wire frac_rup_add_1;
-	wire frac_rup_sub_1;
-	wire [25:0] frac_sub1_op1_with_denorm;
-	wire [25:0] frac_sub1_rst;
-	assign fdsu_ex3_result_sign = fdsu_yy_result_sign;
-	assign fdsu_ex3_expnt_rst[9:0] = fdsu_yy_expnt_rst[9:0];
-	assign fdsu_ex3_result_inf = fdsu_yy_result_inf;
-	assign fdsu_ex3_result_lfn = fdsu_yy_result_lfn;
-	assign fdsu_ex3_rm[2:0] = fdsu_yy_rm[2:0];
-	assign fdsu_ex3_rslt_denorm = fdsu_yy_rslt_denorm;
-	assign ex3_qt_sing_lo4_not0 = |total_qt_rt_30[3:0];
-	assign ex3_qt_sing_lo3_not0 = |total_qt_rt_30[2:0];
-	assign ex3_qt_gr = (total_qt_rt_30[28] ? total_qt_rt_30[4] && ex3_qt_sing_lo4_not0 : total_qt_rt_30[3] && ex3_qt_sing_lo3_not0);
-	assign ex3_qt_eq = (total_qt_rt_30[28] ? total_qt_rt_30[4] && !ex3_qt_sing_lo4_not0 : total_qt_rt_30[3] && !ex3_qt_sing_lo3_not0);
-	assign ex3_qt_zero = (total_qt_rt_30[28] ? ~|total_qt_rt_30[4:0] : ~|total_qt_rt_30[3:0]);
-	assign ex3_rst_eq_1 = total_qt_rt_30[28] && ~|total_qt_rt_30[27:5];
-	assign ex3_denorm_plus = !total_qt_rt_30[28] && (fdsu_ex3_expnt_rst[9:0] == 10'h382);
-	assign ex3_denorm_potnt_norm = total_qt_rt_30[28] && (fdsu_ex3_expnt_rst[9:0] == 10'h381);
-	assign ex3_rslt_denorm = ex3_denorm_plus || fdsu_ex3_rslt_denorm;
-	always @(total_qt_rt_30[28:0] or fdsu_ex3_expnt_rst[9:0])
-		case (fdsu_ex3_expnt_rst[9:0])
-			10'h382: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[4:0], 23'b00000000000000000000000};
-				single_denorm_lst_frac = total_qt_rt_30[5];
-			end
-			10'h381: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[5:0], 22'b0000000000000000000000};
-				single_denorm_lst_frac = total_qt_rt_30[6];
-			end
-			10'h380: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[6:0], 21'b000000000000000000000};
-				single_denorm_lst_frac = total_qt_rt_30[7];
-			end
-			10'h37f: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[7:0], 20'b00000000000000000000};
-				single_denorm_lst_frac = total_qt_rt_30[8];
-			end
-			10'h37e: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[8:0], 19'b0000000000000000000};
-				single_denorm_lst_frac = total_qt_rt_30[9];
-			end
-			10'h37d: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[9:0], 18'b000000000000000000};
-				single_denorm_lst_frac = total_qt_rt_30[10];
-			end
-			10'h37c: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[10:0], 17'b00000000000000000};
-				single_denorm_lst_frac = total_qt_rt_30[11];
-			end
-			10'h37b: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[11:0], 16'b0000000000000000};
-				single_denorm_lst_frac = total_qt_rt_30[12];
-			end
-			10'h37a: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[12:0], 15'b000000000000000};
-				single_denorm_lst_frac = total_qt_rt_30[13];
-			end
-			10'h379: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[13:0], 14'b00000000000000};
-				single_denorm_lst_frac = total_qt_rt_30[14];
-			end
-			10'h378: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[14:0], 13'b0000000000000};
-				single_denorm_lst_frac = total_qt_rt_30[15];
-			end
-			10'h377: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[15:0], 12'b000000000000};
-				single_denorm_lst_frac = total_qt_rt_30[16];
-			end
-			10'h376: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[16:0], 11'b00000000000};
-				single_denorm_lst_frac = total_qt_rt_30[17];
-			end
-			10'h375: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[17:0], 10'b0000000000};
-				single_denorm_lst_frac = total_qt_rt_30[18];
-			end
-			10'h374: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[18:0], 9'b000000000};
-				single_denorm_lst_frac = total_qt_rt_30[19];
-			end
-			10'h373: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[19:0], 8'b00000000};
-				single_denorm_lst_frac = total_qt_rt_30[20];
-			end
-			10'h372: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[20:0], 7'b0000000};
-				single_denorm_lst_frac = total_qt_rt_30[21];
-			end
-			10'h371: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[21:0], 6'b000000};
-				single_denorm_lst_frac = total_qt_rt_30[22];
-			end
-			10'h370: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[22:0], 5'b00000};
-				single_denorm_lst_frac = total_qt_rt_30[23];
-			end
-			10'h36f: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[23:0], 4'b0000};
-				single_denorm_lst_frac = total_qt_rt_30[24];
-			end
-			10'h36e: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[24:0], 3'b000};
-				single_denorm_lst_frac = total_qt_rt_30[25];
-			end
-			10'h36d: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[25:0], 2'b00};
-				single_denorm_lst_frac = total_qt_rt_30[26];
-			end
-			10'h36c: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[26:0], 1'b0};
-				single_denorm_lst_frac = total_qt_rt_30[27];
-			end
-			10'h36b: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[27:0]};
-				single_denorm_lst_frac = total_qt_rt_30[28];
-			end
-			default: begin
-				qt_result_single_denorm_for_round[27:0] = {total_qt_rt_30[28:1]};
-				single_denorm_lst_frac = 1'b0;
-			end
-		endcase
-	assign ex3_single_denorm_eq = qt_result_single_denorm_for_round[27] && !ex3_single_low_not_zero;
-	assign ex3_single_low_not_zero = |qt_result_single_denorm_for_round[26:0];
-	assign ex3_single_denorm_gr = qt_result_single_denorm_for_round[27] && ex3_single_low_not_zero;
-	assign ex3_single_denorm_zero = !qt_result_single_denorm_for_round[27] && !ex3_single_low_not_zero;
-	assign ex3_denorm_eq = ex3_single_denorm_eq;
-	assign ex3_denorm_gr = ex3_single_denorm_gr;
-	assign ex3_denorm_zero = ex3_single_denorm_zero;
-	assign ex3_denorm_lst_frac = single_denorm_lst_frac;
-	assign frac_rne_add_1 = ex3_qt_gr || (ex3_qt_eq && !fdsu_ex3_rem_sign);
-	assign frac_rtz_sub_1 = ex3_qt_zero && fdsu_ex3_rem_sign;
-	assign frac_rup_add_1 = !fdsu_ex3_result_sign && (!ex3_qt_zero || (!fdsu_ex3_rem_sign && !fdsu_ex3_rem_zero));
-	assign frac_rup_sub_1 = fdsu_ex3_result_sign && (ex3_qt_zero && fdsu_ex3_rem_sign);
-	assign frac_rdn_add_1 = fdsu_ex3_result_sign && (!ex3_qt_zero || (!fdsu_ex3_rem_sign && !fdsu_ex3_rem_zero));
-	assign frac_rdn_sub_1 = !fdsu_ex3_result_sign && (ex3_qt_zero && fdsu_ex3_rem_sign);
-	assign frac_rmm_add_1 = ex3_qt_gr || (ex3_qt_eq && !fdsu_ex3_rem_sign);
-	assign frac_denorm_rne_add_1 = ex3_denorm_gr || (ex3_denorm_eq && ((fdsu_ex3_rem_zero && ex3_denorm_lst_frac) || (!fdsu_ex3_rem_zero && !fdsu_ex3_rem_sign)));
-	assign frac_denorm_rtz_sub_1 = ex3_denorm_zero && fdsu_ex3_rem_sign;
-	assign frac_denorm_rup_add_1 = !fdsu_ex3_result_sign && (!ex3_denorm_zero || (!fdsu_ex3_rem_sign && !fdsu_ex3_rem_zero));
-	assign frac_denorm_rup_sub_1 = fdsu_ex3_result_sign && (ex3_denorm_zero && fdsu_ex3_rem_sign);
-	assign frac_denorm_rdn_add_1 = fdsu_ex3_result_sign && (!ex3_denorm_zero || (!fdsu_ex3_rem_sign && !fdsu_ex3_rem_zero));
-	assign frac_denorm_rdn_sub_1 = !fdsu_ex3_result_sign && (ex3_denorm_zero && fdsu_ex3_rem_sign);
-	assign frac_denorm_rmm_add_1 = ex3_denorm_gr || (ex3_denorm_eq && !fdsu_ex3_rem_sign);
-	always @(fdsu_ex3_rm[2:0] or frac_denorm_rdn_add_1 or frac_rne_add_1 or frac_denorm_rdn_sub_1 or fdsu_ex3_result_sign or frac_rup_add_1 or frac_denorm_rup_sub_1 or frac_rdn_sub_1 or frac_rtz_sub_1 or frac_rdn_add_1 or fdsu_ex3_id_srt_skip or frac_denorm_rtz_sub_1 or ex3_rslt_denorm or frac_rup_sub_1 or frac_denorm_rmm_add_1 or frac_denorm_rup_add_1 or frac_denorm_rne_add_1 or frac_rmm_add_1)
-		case (fdsu_ex3_rm[2:0])
-			3'b000: begin
-				frac_add_1 = (ex3_rslt_denorm ? frac_denorm_rne_add_1 : frac_rne_add_1);
-				frac_sub_1 = 1'b0;
-				frac_orig = (ex3_rslt_denorm ? !frac_denorm_rne_add_1 : !frac_rne_add_1);
-				denorm_to_tiny_frac = (fdsu_ex3_id_srt_skip ? 1'b0 : frac_denorm_rne_add_1);
-			end
-			3'b001: begin
-				frac_add_1 = 1'b0;
-				frac_sub_1 = (ex3_rslt_denorm ? frac_denorm_rtz_sub_1 : frac_rtz_sub_1);
-				frac_orig = (ex3_rslt_denorm ? !frac_denorm_rtz_sub_1 : !frac_rtz_sub_1);
-				denorm_to_tiny_frac = 1'b0;
-			end
-			3'b010: begin
-				frac_add_1 = (ex3_rslt_denorm ? frac_denorm_rdn_add_1 : frac_rdn_add_1);
-				frac_sub_1 = (ex3_rslt_denorm ? frac_denorm_rdn_sub_1 : frac_rdn_sub_1);
-				frac_orig = (ex3_rslt_denorm ? !frac_denorm_rdn_add_1 && !frac_denorm_rdn_sub_1 : !frac_rdn_add_1 && !frac_rdn_sub_1);
-				denorm_to_tiny_frac = (fdsu_ex3_id_srt_skip ? fdsu_ex3_result_sign : frac_denorm_rdn_add_1);
-			end
-			3'b011: begin
-				frac_add_1 = (ex3_rslt_denorm ? frac_denorm_rup_add_1 : frac_rup_add_1);
-				frac_sub_1 = (ex3_rslt_denorm ? frac_denorm_rup_sub_1 : frac_rup_sub_1);
-				frac_orig = (ex3_rslt_denorm ? !frac_denorm_rup_add_1 && !frac_denorm_rup_sub_1 : !frac_rup_add_1 && !frac_rup_sub_1);
-				denorm_to_tiny_frac = (fdsu_ex3_id_srt_skip ? !fdsu_ex3_result_sign : frac_denorm_rup_add_1);
-			end
-			3'b100: begin
-				frac_add_1 = (ex3_rslt_denorm ? frac_denorm_rmm_add_1 : frac_rmm_add_1);
-				frac_sub_1 = 1'b0;
-				frac_orig = (ex3_rslt_denorm ? !frac_denorm_rmm_add_1 : !frac_rmm_add_1);
-				denorm_to_tiny_frac = (fdsu_ex3_id_srt_skip ? 1'b0 : frac_denorm_rmm_add_1);
-			end
-			default: begin
-				frac_add_1 = 1'b0;
-				frac_sub_1 = 1'b0;
-				frac_orig = 1'b0;
-				denorm_to_tiny_frac = 1'b0;
-			end
-		endcase
-	always @(total_qt_rt_30[28])
-		case (total_qt_rt_30[28])
-			1'b0: begin
-				frac_add1_op1[25:0] = 26'b00000000000000000000000001;
-				frac_sub1_op1[25:0] = {2'b11, {24 {1'b1}}};
-			end
-			1'b1: begin
-				frac_add1_op1[25:0] = 26'b00000000000000000000000010;
-				frac_sub1_op1[25:0] = {{25 {1'b1}}, 1'b0};
-			end
-			default: begin
-				frac_add1_op1[25:0] = 26'b00000000000000000000000000;
-				frac_sub1_op1[25:0] = 26'b00000000000000000000000000;
-			end
-		endcase
-	assign frac_add1_rst[25:0] = {1'b0, total_qt_rt_30[28:4]} + frac_add1_op1_with_denorm[25:0];
-	assign frac_add1_op1_with_denorm[25:0] = (ex3_rslt_denorm ? {1'b0, fdsu_ex3_result_denorm_round_add_num[23:0], 1'b0} : frac_add1_op1[25:0]);
-	assign frac_sub1_rst[25:0] = (ex3_rst_eq_1 ? {3'b000, {23 {1'b1}}} : ({1'b0, total_qt_rt_30[28:4]} + frac_sub1_op1_with_denorm[25:0]) + {25'b0000000000000000000000000, ex3_rslt_denorm});
-	assign frac_sub1_op1_with_denorm[25:0] = (ex3_rslt_denorm ? ~{1'b0, fdsu_ex3_result_denorm_round_add_num[23:0], 1'b0} : frac_sub1_op1[25:0]);
-	assign frac_final_rst[25:0] = ((frac_add1_rst[25:0] & {26 {frac_add_1}}) | (frac_sub1_rst[25:0] & {26 {frac_sub_1}})) | ({1'b0, total_qt_rt_30[28:4]} & {26 {frac_orig}});
-	assign ex3_rst_nor = !fdsu_ex3_result_inf && !fdsu_ex3_result_lfn;
-	assign ex3_nx = ex3_rst_nor && ((!ex3_qt_zero || !fdsu_ex3_rem_zero) || ex3_denorm_nx);
-	assign ex3_denorm_nx = ex3_rslt_denorm && (!ex3_denorm_zero || !fdsu_ex3_rem_zero);
-	assign ex3_expnt_adjst[9:0] = 10'h07f;
-	assign ex3_expnt_adjust_result[9:0] = fdsu_ex3_expnt_rst[9:0] + ex3_expnt_adjst[9:0];
-	assign ex3_potnt_norm[1:0] = {ex3_denorm_plus, ex3_denorm_potnt_norm};
-	gated_clk_cell x_ex3_pipe_clk(
-		.clk_in(forever_cpuclk),
-		.clk_out(ex3_pipe_clk),
-		.external_en(1'b0),
-		.global_en(cp0_yy_clk_en),
-		.local_en(ex3_pipe_clk_en),
-		.module_en(cp0_fpu_icg_en),
-		.pad_yy_icg_scan_en(pad_yy_icg_scan_en)
-	);
-	assign ex3_pipe_clk_en = ex3_pipedown;
-	always @(posedge ex3_pipe_clk)
-		if (ex3_pipedown) begin
-			fdsu_ex4_result_nor <= ex3_rst_nor;
-			fdsu_ex4_nx <= ex3_nx;
-			fdsu_ex4_denorm_to_tiny_frac <= denorm_to_tiny_frac;
-			fdsu_ex4_potnt_norm[1:0] <= ex3_potnt_norm[1:0];
-		end
-		else begin
-			fdsu_ex4_result_nor <= fdsu_ex4_result_nor;
-			fdsu_ex4_nx <= fdsu_ex4_nx;
-			fdsu_ex4_denorm_to_tiny_frac <= fdsu_ex4_denorm_to_tiny_frac;
-			fdsu_ex4_potnt_norm[1:0] <= fdsu_ex4_potnt_norm[1:0];
-		end
-	assign ex3_frac_final_rst[25:0] = frac_final_rst[25:0];
-endmodule
-module pa_fdsu_special (
-	cp0_fpu_xx_dqnan,
-	dp_xx_ex1_cnan,
-	dp_xx_ex1_id,
-	dp_xx_ex1_inf,
-	dp_xx_ex1_qnan,
-	dp_xx_ex1_snan,
-	dp_xx_ex1_zero,
-	ex1_div,
-	ex1_op0_id,
-	ex1_op0_norm,
-	ex1_op0_sign,
-	ex1_op1_id,
-	ex1_op1_norm,
-	ex1_result_sign,
-	ex1_sqrt,
-	ex1_srt_skip,
-	fdsu_fpu_ex1_fflags,
-	fdsu_fpu_ex1_special_sel,
-	fdsu_fpu_ex1_special_sign
-);
-	input wire cp0_fpu_xx_dqnan;
-	input wire [2:0] dp_xx_ex1_cnan;
-	input wire [2:0] dp_xx_ex1_id;
-	input wire [2:0] dp_xx_ex1_inf;
-	input wire [2:0] dp_xx_ex1_qnan;
-	input wire [2:0] dp_xx_ex1_snan;
-	input wire [2:0] dp_xx_ex1_zero;
-	input wire ex1_div;
-	input wire ex1_op0_sign;
-	input wire ex1_result_sign;
-	input wire ex1_sqrt;
-	output wire ex1_op0_id;
-	output wire ex1_op0_norm;
-	output wire ex1_op1_id;
-	output wire ex1_op1_norm;
-	output wire ex1_srt_skip;
-	output wire [4:0] fdsu_fpu_ex1_fflags;
-	output wire [7:0] fdsu_fpu_ex1_special_sel;
-	output wire [3:0] fdsu_fpu_ex1_special_sign;
-	reg ex1_result_cnan;
-	reg ex1_result_qnan_op0;
-	reg ex1_result_qnan_op1;
-	wire ex1_div_dz;
-	wire ex1_div_nv;
-	wire ex1_div_rst_inf;
-	wire ex1_div_rst_qnan;
-	wire ex1_div_rst_zero;
-	wire ex1_dz;
-	wire [4:0] ex1_fflags;
-	wire ex1_nv;
-	wire ex1_op0_cnan;
-	wire ex1_op0_inf;
-	wire ex1_op0_is_qnan;
-	wire ex1_op0_is_snan;
-	wire ex1_op0_qnan;
-	wire ex1_op0_snan;
-	wire ex1_op0_tt_zero;
-	wire ex1_op0_zero;
-	wire ex1_op1_cnan;
-	wire ex1_op1_inf;
-	wire ex1_op1_is_qnan;
-	wire ex1_op1_is_snan;
-	wire ex1_op1_qnan;
-	wire ex1_op1_snan;
-	wire ex1_op1_tt_zero;
-	wire ex1_op1_zero;
-	wire ex1_result_inf;
-	wire ex1_result_lfn;
-	wire ex1_result_qnan;
-	wire ex1_result_zero;
-	wire ex1_rst_default_qnan;
-	wire [7:0] ex1_special_sel;
-	wire [3:0] ex1_special_sign;
-	wire ex1_sqrt_nv;
-	wire ex1_sqrt_rst_inf;
-	wire ex1_sqrt_rst_qnan;
-	wire ex1_sqrt_rst_zero;
-	assign ex1_op0_inf = dp_xx_ex1_inf[0];
-	assign ex1_op1_inf = dp_xx_ex1_inf[1];
-	assign ex1_op0_zero = dp_xx_ex1_zero[0];
-	assign ex1_op1_zero = dp_xx_ex1_zero[1];
-	assign ex1_op0_id = dp_xx_ex1_id[0];
-	assign ex1_op1_id = dp_xx_ex1_id[1];
-	assign ex1_op0_cnan = dp_xx_ex1_cnan[0];
-	assign ex1_op1_cnan = dp_xx_ex1_cnan[1];
-	assign ex1_op0_snan = dp_xx_ex1_snan[0];
-	assign ex1_op1_snan = dp_xx_ex1_snan[1];
-	assign ex1_op0_qnan = dp_xx_ex1_qnan[0];
-	assign ex1_op1_qnan = dp_xx_ex1_qnan[1];
-	assign ex1_nv = (ex1_div && ex1_div_nv) || (ex1_sqrt && ex1_sqrt_nv);
-	assign ex1_div_nv = ((ex1_op0_snan || ex1_op1_snan) || (ex1_op0_tt_zero && ex1_op1_tt_zero)) || (ex1_op0_inf && ex1_op1_inf);
-	assign ex1_op0_tt_zero = ex1_op0_zero;
-	assign ex1_op1_tt_zero = ex1_op1_zero;
-	assign ex1_sqrt_nv = ex1_op0_snan || (ex1_op0_sign && (ex1_op0_norm || ex1_op0_inf));
-	assign ex1_op0_norm = (((!ex1_op0_inf && !ex1_op0_zero) && !ex1_op0_snan) && !ex1_op0_qnan) && !ex1_op0_cnan;
-	assign ex1_op1_norm = (((!ex1_op1_inf && !ex1_op1_zero) && !ex1_op1_snan) && !ex1_op1_qnan) && !ex1_op1_cnan;
-	assign ex1_dz = ex1_div && ex1_div_dz;
-	assign ex1_div_dz = ex1_op1_tt_zero && ex1_op0_norm;
-	assign ex1_result_zero = (ex1_div_rst_zero && ex1_div) || (ex1_sqrt_rst_zero && ex1_sqrt);
-	assign ex1_div_rst_zero = (ex1_op0_tt_zero && ex1_op1_norm) || ((((!ex1_op0_inf && !ex1_op0_qnan) && !ex1_op0_snan) && !ex1_op0_cnan) && ex1_op1_inf);
-	assign ex1_sqrt_rst_zero = ex1_op0_tt_zero;
-	assign ex1_result_qnan = ((ex1_div_rst_qnan && ex1_div) || (ex1_sqrt_rst_qnan && ex1_sqrt)) || ex1_nv;
-	assign ex1_div_rst_qnan = ex1_op0_qnan || ex1_op1_qnan;
-	assign ex1_sqrt_rst_qnan = ex1_op0_qnan;
-	assign ex1_rst_default_qnan = (((ex1_div && ex1_op0_zero) && ex1_op1_zero) || ((ex1_div && ex1_op0_inf) && ex1_op1_inf)) || ((ex1_sqrt && ex1_op0_sign) && (ex1_op0_norm || ex1_op0_inf));
-	assign ex1_result_inf = ((ex1_div_rst_inf && ex1_div) || (ex1_sqrt_rst_inf && ex1_sqrt)) || ex1_dz;
-	assign ex1_div_rst_inf = (((ex1_op0_inf && !ex1_op1_inf) && !ex1_op1_qnan) && !ex1_op1_snan) && !ex1_op1_cnan;
-	assign ex1_sqrt_rst_inf = ex1_op0_inf && !ex1_op0_sign;
-	assign ex1_result_lfn = 1'b0;
-	assign ex1_op0_is_snan = ex1_op0_snan;
-	assign ex1_op1_is_snan = ex1_op1_snan && ex1_div;
-	assign ex1_op0_is_qnan = ex1_op0_qnan;
-	assign ex1_op1_is_qnan = ex1_op1_qnan && ex1_div;
-	always @(ex1_op0_is_snan or ex1_op0_cnan or ex1_result_qnan or ex1_op0_is_qnan or ex1_rst_default_qnan or cp0_fpu_xx_dqnan or ex1_op1_cnan or ex1_op1_is_qnan or ex1_op1_is_snan)
-		if (ex1_rst_default_qnan) begin
-			ex1_result_qnan_op0 = 1'b0;
-			ex1_result_qnan_op1 = 1'b0;
-			ex1_result_cnan = ex1_result_qnan;
-		end
-		else if (ex1_op0_is_snan && cp0_fpu_xx_dqnan) begin
-			ex1_result_qnan_op0 = ex1_result_qnan;
-			ex1_result_qnan_op1 = 1'b0;
-			ex1_result_cnan = 1'b0;
-		end
-		else if (ex1_op1_is_snan && cp0_fpu_xx_dqnan) begin
-			ex1_result_qnan_op0 = 1'b0;
-			ex1_result_qnan_op1 = ex1_result_qnan;
-			ex1_result_cnan = 1'b0;
-		end
-		else if (ex1_op0_is_qnan && cp0_fpu_xx_dqnan) begin
-			ex1_result_qnan_op0 = ex1_result_qnan && !ex1_op0_cnan;
-			ex1_result_qnan_op1 = 1'b0;
-			ex1_result_cnan = ex1_result_qnan && ex1_op0_cnan;
-		end
-		else if (ex1_op1_is_qnan && cp0_fpu_xx_dqnan) begin
-			ex1_result_qnan_op0 = 1'b0;
-			ex1_result_qnan_op1 = ex1_result_qnan && !ex1_op1_cnan;
-			ex1_result_cnan = ex1_result_qnan && ex1_op1_cnan;
-		end
-		else begin
-			ex1_result_qnan_op0 = 1'b0;
-			ex1_result_qnan_op1 = 1'b0;
-			ex1_result_cnan = ex1_result_qnan;
-		end
-	assign ex1_srt_skip = ((ex1_result_zero || ex1_result_qnan) || ex1_result_lfn) || ex1_result_inf;
-	assign ex1_fflags[4:0] = {ex1_nv, ex1_dz, 3'b000};
-	assign ex1_special_sel[7:0] = {1'b0, ex1_result_qnan_op1, ex1_result_qnan_op0, ex1_result_cnan, ex1_result_lfn, ex1_result_inf, ex1_result_zero, 1'b0};
-	assign ex1_special_sign[3:0] = {ex1_result_sign, ex1_result_sign, ex1_result_sign, 1'b0};
-	assign fdsu_fpu_ex1_fflags[4:0] = ex1_fflags[4:0];
-	assign fdsu_fpu_ex1_special_sel[7:0] = ex1_special_sel[7:0];
-	assign fdsu_fpu_ex1_special_sign[3:0] = ex1_special_sign[3:0];
-endmodule
-module pa_fdsu_srt_single (
-	cp0_fpu_icg_en,
-	cp0_yy_clk_en,
-	ex1_divisor,
-	ex1_expnt_adder_op1,
-	ex1_oper_id_frac,
-	ex1_oper_id_frac_f,
-	ex1_pipedown,
-	ex1_pipedown_gate,
-	ex1_remainder,
-	ex1_save_op0,
-	ex1_save_op0_gate,
-	ex2_expnt_adder_op0,
-	ex2_of,
-	ex2_pipe_clk,
-	ex2_pipedown,
-	ex2_potnt_of,
-	ex2_potnt_uf,
-	ex2_result_inf,
-	ex2_result_lfn,
-	ex2_rslt_denorm,
-	ex2_srt_expnt_rst,
-	ex2_srt_first_round,
-	ex2_uf,
-	ex2_uf_srt_skip,
-	ex3_frac_final_rst,
-	ex3_pipedown,
-	fdsu_ex3_id_srt_skip,
-	fdsu_ex3_rem_sign,
-	fdsu_ex3_rem_zero,
-	fdsu_ex3_result_denorm_round_add_num,
-	fdsu_ex4_frac,
-	fdsu_yy_div,
-	fdsu_yy_of_rm_lfn,
-	fdsu_yy_op0_norm,
-	fdsu_yy_op1_norm,
-	fdsu_yy_sqrt,
-	forever_cpuclk,
-	pad_yy_icg_scan_en,
-	srt_remainder_zero,
-	srt_sm_on,
-	total_qt_rt_30
-);
-	input wire cp0_fpu_icg_en;
-	input wire cp0_yy_clk_en;
-	input wire [23:0] ex1_divisor;
-	input wire [12:0] ex1_expnt_adder_op1;
-	input wire [51:0] ex1_oper_id_frac;
-	input wire ex1_pipedown;
-	input wire ex1_pipedown_gate;
-	input wire [31:0] ex1_remainder;
-	input wire ex1_save_op0;
-	input wire ex1_save_op0_gate;
-	input wire [9:0] ex2_expnt_adder_op0;
-	input wire ex2_pipe_clk;
-	input wire ex2_pipedown;
-	input wire ex2_srt_first_round;
-	input wire [25:0] ex3_frac_final_rst;
-	input wire ex3_pipedown;
-	input wire fdsu_yy_div;
-	input wire fdsu_yy_of_rm_lfn;
-	input wire fdsu_yy_op0_norm;
-	input wire fdsu_yy_op1_norm;
-	input wire fdsu_yy_sqrt;
-	input wire forever_cpuclk;
-	input wire pad_yy_icg_scan_en;
-	input wire srt_sm_on;
-	output wire [51:0] ex1_oper_id_frac_f;
-	output wire ex2_of;
-	output wire ex2_potnt_of;
-	output wire ex2_potnt_uf;
-	output wire ex2_result_inf;
-	output wire ex2_result_lfn;
-	output wire ex2_rslt_denorm;
-	output wire [9:0] ex2_srt_expnt_rst;
-	output wire ex2_uf;
-	output wire ex2_uf_srt_skip;
-	output reg fdsu_ex3_id_srt_skip;
-	output reg fdsu_ex3_rem_sign;
-	output reg fdsu_ex3_rem_zero;
-	output reg [23:0] fdsu_ex3_result_denorm_round_add_num;
-	output wire [25:0] fdsu_ex4_frac;
-	output wire srt_remainder_zero;
-	output reg [29:0] total_qt_rt_30;
-	reg [31:0] cur_rem;
-	reg [7:0] digit_bound_1;
-	reg [7:0] digit_bound_2;
-	reg [23:0] ex2_result_denorm_round_add_num;
-	reg [29:0] qt_rt_const_shift_std;
-	reg [7:0] qtrt_sel_rem;
-	reg [31:0] rem_add1_op1;
-	reg [31:0] rem_add2_op1;
-	reg [25:0] srt_divisor;
-	reg [31:0] srt_remainder;
-	reg [29:0] total_qt_rt_30_next;
-	reg [29:0] total_qt_rt_minus_30;
-	reg [29:0] total_qt_rt_minus_30_next;
-	wire [7:0] bound1_cmp_result;
-	wire bound1_cmp_sign;
-	wire [7:0] bound2_cmp_result;
-	wire bound2_cmp_sign;
-	wire [3:0] bound_sel;
-	wire [31:0] cur_doub_rem_1;
-	wire [31:0] cur_doub_rem_2;
-	wire [31:0] cur_rem_1;
-	wire [31:0] cur_rem_2;
-	wire [31:0] div_qt_1_rem_add_op1;
-	wire [31:0] div_qt_2_rem_add_op1;
-	wire [31:0] div_qt_r1_rem_add_op1;
-	wire [31:0] div_qt_r2_rem_add_op1;
-	wire ex1_ex2_pipe_clk;
-	wire ex1_ex2_pipe_clk_en;
-	wire ex2_div_of;
-	wire ex2_div_uf;
-	wire [9:0] ex2_expnt_adder_op1;
-	wire ex2_expnt_of;
-	wire [9:0] ex2_expnt_result;
-	wire ex2_expnt_uf;
-	wire ex2_id_nor_srt_skip;
-	wire ex2_of_plus;
-	wire ex2_potnt_of_pre;
-	wire ex2_potnt_uf_pre;
-	wire [9:0] ex2_sqrt_expnt_result;
-	wire ex2_uf_plus;
-	wire fdsu_ex2_div;
-	wire [9:0] fdsu_ex2_expnt_rst;
-	wire fdsu_ex2_of_rm_lfn;
-	wire fdsu_ex2_op0_norm;
-	wire fdsu_ex2_op1_norm;
-	wire fdsu_ex2_result_lfn;
-	wire fdsu_ex2_sqrt;
-	wire qt_clk;
-	wire qt_clk_en;
-	wire [29:0] qt_rt_const_pre_sel_q1;
-	wire [29:0] qt_rt_const_pre_sel_q2;
-	wire [29:0] qt_rt_const_q1;
-	wire [29:0] qt_rt_const_q2;
-	wire [29:0] qt_rt_const_q3;
-	wire [29:0] qt_rt_const_shift_std_next;
-	wire [29:0] qt_rt_mins_const_pre_sel_q1;
-	wire [29:0] qt_rt_mins_const_pre_sel_q2;
-	wire rem_sign;
-	wire [31:0] sqrt_qt_1_rem_add_op1;
-	wire [31:0] sqrt_qt_2_rem_add_op1;
-	wire [31:0] sqrt_qt_r1_rem_add_op1;
-	wire [31:0] sqrt_qt_r2_rem_add_op1;
-	wire srt_div_clk;
-	wire srt_div_clk_en;
-	wire [31:0] srt_remainder_nxt;
-	wire [31:0] srt_remainder_shift;
-	wire srt_remainder_sign;
-	wire [29:0] total_qt_rt_pre_sel;
-	assign fdsu_ex2_div = fdsu_yy_div;
-	assign fdsu_ex2_sqrt = fdsu_yy_sqrt;
-	assign fdsu_ex2_op0_norm = fdsu_yy_op0_norm;
-	assign fdsu_ex2_op1_norm = fdsu_yy_op1_norm;
-	assign fdsu_ex2_of_rm_lfn = fdsu_yy_of_rm_lfn;
-	assign fdsu_ex2_result_lfn = 1'b0;
-	assign ex2_expnt_result[9:0] = ex2_expnt_adder_op0[9:0] - ex2_expnt_adder_op1[9:0];
-	assign ex2_sqrt_expnt_result[9:0] = {ex2_expnt_result[9], ex2_expnt_result[9:1]};
-	assign ex2_srt_expnt_rst[9:0] = (fdsu_ex2_sqrt ? ex2_sqrt_expnt_result[9:0] : ex2_expnt_result[9:0]);
-	assign fdsu_ex2_expnt_rst[9:0] = ex2_srt_expnt_rst[9:0];
-	assign ex2_expnt_of = ~fdsu_ex2_expnt_rst[9] && (fdsu_ex2_expnt_rst[8] || (fdsu_ex2_expnt_rst[7] && |fdsu_ex2_expnt_rst[6:0]));
-	assign ex2_potnt_of_pre = ((~fdsu_ex2_expnt_rst[9] && ~fdsu_ex2_expnt_rst[8]) && fdsu_ex2_expnt_rst[7]) && ~|fdsu_ex2_expnt_rst[6:0];
-	assign ex2_potnt_of = ((ex2_potnt_of_pre && fdsu_ex2_op0_norm) && fdsu_ex2_op1_norm) && fdsu_ex2_div;
-	assign ex2_expnt_uf = fdsu_ex2_expnt_rst[9] && (fdsu_ex2_expnt_rst[8:0] <= 9'h181);
-	assign ex2_potnt_uf_pre = ((&fdsu_ex2_expnt_rst[9:7] && ~|fdsu_ex2_expnt_rst[6:2]) && fdsu_ex2_expnt_rst[1]) && !fdsu_ex2_expnt_rst[0];
-	assign ex2_potnt_uf = (((ex2_potnt_uf_pre && fdsu_ex2_op0_norm) && fdsu_ex2_op1_norm) && fdsu_ex2_div) || (ex2_potnt_uf_pre && fdsu_ex2_op0_norm);
-	assign ex2_of = ex2_of_plus;
-	assign ex2_of_plus = ex2_div_of && fdsu_ex2_div;
-	assign ex2_div_of = (fdsu_ex2_op0_norm && fdsu_ex2_op1_norm) && ex2_expnt_of;
-	assign ex2_uf = ex2_uf_plus;
-	assign ex2_uf_plus = ex2_div_uf && fdsu_ex2_div;
-	assign ex2_div_uf = (fdsu_ex2_op0_norm && fdsu_ex2_op1_norm) && ex2_expnt_uf;
-	assign ex2_id_nor_srt_skip = fdsu_ex2_expnt_rst[9] && (fdsu_ex2_expnt_rst[8:0] < 9'h16a);
-	assign ex2_uf_srt_skip = ex2_id_nor_srt_skip;
-	assign ex2_rslt_denorm = ex2_uf;
-	always @(fdsu_ex2_expnt_rst[9:0])
-		case (fdsu_ex2_expnt_rst[9:0])
-			10'h382: ex2_result_denorm_round_add_num[23:0] = 24'h000001;
-			10'h381: ex2_result_denorm_round_add_num[23:0] = 24'h000002;
-			10'h380: ex2_result_denorm_round_add_num[23:0] = 24'h000004;
-			10'h37f: ex2_result_denorm_round_add_num[23:0] = 24'h000008;
-			10'h37e: ex2_result_denorm_round_add_num[23:0] = 24'h000010;
-			10'h37d: ex2_result_denorm_round_add_num[23:0] = 24'h000020;
-			10'h37c: ex2_result_denorm_round_add_num[23:0] = 24'h000040;
-			10'h37b: ex2_result_denorm_round_add_num[23:0] = 24'h000080;
-			10'h37a: ex2_result_denorm_round_add_num[23:0] = 24'h000100;
-			10'h379: ex2_result_denorm_round_add_num[23:0] = 24'h000200;
-			10'h378: ex2_result_denorm_round_add_num[23:0] = 24'h000400;
-			10'h377: ex2_result_denorm_round_add_num[23:0] = 24'h000800;
-			10'h376: ex2_result_denorm_round_add_num[23:0] = 24'h001000;
-			10'h375: ex2_result_denorm_round_add_num[23:0] = 24'h002000;
-			10'h374: ex2_result_denorm_round_add_num[23:0] = 24'h004000;
-			10'h373: ex2_result_denorm_round_add_num[23:0] = 24'h008000;
-			10'h372: ex2_result_denorm_round_add_num[23:0] = 24'h010000;
-			10'h371: ex2_result_denorm_round_add_num[23:0] = 24'h020000;
-			10'h370: ex2_result_denorm_round_add_num[23:0] = 24'h040000;
-			10'h36f: ex2_result_denorm_round_add_num[23:0] = 24'h080000;
-			10'h36e: ex2_result_denorm_round_add_num[23:0] = 24'h100000;
-			10'h36d: ex2_result_denorm_round_add_num[23:0] = 24'h200000;
-			10'h36c: ex2_result_denorm_round_add_num[23:0] = 24'h400000;
-			10'h36b: ex2_result_denorm_round_add_num[23:0] = 24'h800000;
-			default: ex2_result_denorm_round_add_num[23:0] = 24'h000000;
-		endcase
-	assign ex2_result_inf = ex2_of_plus && !fdsu_ex2_of_rm_lfn;
-	assign ex2_result_lfn = fdsu_ex2_result_lfn || (ex2_of_plus && fdsu_ex2_of_rm_lfn);
-	always @(posedge ex1_ex2_pipe_clk)
-		if (ex1_pipedown)
-			fdsu_ex3_result_denorm_round_add_num[23:0] <= {14'b00000000000000, ex1_expnt_adder_op1[9:0]};
-		else if (ex2_pipedown)
-			fdsu_ex3_result_denorm_round_add_num[23:0] <= ex2_result_denorm_round_add_num[23:0];
+		else if (Final_state_S)
+			Done_SO <= 1'b1;
 		else
-			fdsu_ex3_result_denorm_round_add_num[23:0] <= fdsu_ex3_result_denorm_round_add_num[23:0];
-	assign ex2_expnt_adder_op1 = fdsu_ex3_result_denorm_round_add_num[9:0];
-	assign ex1_ex2_pipe_clk_en = ex1_pipedown_gate || ex2_pipedown;
-	gated_clk_cell x_ex1_ex2_pipe_clk(
-		.clk_in(forever_cpuclk),
-		.clk_out(ex1_ex2_pipe_clk),
-		.external_en(1'b0),
-		.global_en(cp0_yy_clk_en),
-		.local_en(ex1_ex2_pipe_clk_en),
-		.module_en(cp0_fpu_icg_en),
-		.pad_yy_icg_scan_en(pad_yy_icg_scan_en)
-	);
-	always @(posedge ex2_pipe_clk)
-		if (ex2_pipedown) begin
-			fdsu_ex3_rem_sign <= srt_remainder_sign;
-			fdsu_ex3_rem_zero <= srt_remainder_zero;
-			fdsu_ex3_id_srt_skip <= ex2_id_nor_srt_skip;
+			Done_SO <= 1'b0;
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Ready_SO <= 1'b1;
+		else if (Start_SI && Ready_SO) begin
+			if (~Special_case_SBI)
+				Ready_SO <= 1'b1;
+			else
+				Ready_SO <= 1'b0;
 		end
-		else begin
-			fdsu_ex3_rem_sign <= fdsu_ex3_rem_sign;
-			fdsu_ex3_rem_zero <= fdsu_ex3_rem_zero;
-			fdsu_ex3_id_srt_skip <= fdsu_ex3_id_srt_skip;
-		end
-	always @(posedge qt_clk)
-		if (ex1_pipedown)
-			srt_remainder[31:0] <= ex1_remainder[31:0];
-		else if (srt_sm_on)
-			srt_remainder[31:0] <= srt_remainder_nxt[31:0];
+		else if (Final_state_S | Kill_SI)
+			Ready_SO <= 1'b1;
 		else
-			srt_remainder[31:0] <= srt_remainder[31:0];
-	gated_clk_cell x_srt_div_clk(
-		.clk_in(forever_cpuclk),
-		.clk_out(srt_div_clk),
-		.external_en(1'b0),
-		.global_en(cp0_yy_clk_en),
-		.local_en(srt_div_clk_en),
-		.module_en(cp0_fpu_icg_en),
-		.pad_yy_icg_scan_en(pad_yy_icg_scan_en)
-	);
-	assign srt_div_clk_en = (ex1_pipedown_gate || ex1_save_op0_gate) || ex3_pipedown;
-	always @(posedge srt_div_clk)
-		if (ex1_save_op0)
-			srt_divisor[25:0] <= {3'b000, ex1_oper_id_frac[51:29]};
-		else if (ex1_pipedown)
-			srt_divisor[25:0] <= {2'b00, ex1_divisor[23:0]};
-		else if (ex3_pipedown)
-			srt_divisor[25:0] <= ex3_frac_final_rst[25:0];
-		else
-			srt_divisor[25:0] <= srt_divisor[25:0];
-	assign ex1_oper_id_frac_f[51:0] = {srt_divisor[22:0], 29'b00000000000000000000000000000};
-	assign fdsu_ex4_frac[25:0] = srt_divisor[25:0];
-	assign bound_sel[3:0] = (fdsu_ex2_div ? srt_divisor[23:20] : (ex2_srt_first_round ? 4'b1010 : total_qt_rt_30[28:25]));
-	always @(bound_sel[3:0])
-		case (bound_sel[3:0])
-			4'b0000: begin
-				digit_bound_1[7:0] = 8'b11110100;
-				digit_bound_2[7:0] = 8'b11010001;
-			end
-			4'b1000: begin
-				digit_bound_1[7:0] = 8'b11111001;
-				digit_bound_2[7:0] = 8'b11100111;
-			end
-			4'b1001: begin
-				digit_bound_1[7:0] = 8'b11111001;
-				digit_bound_2[7:0] = 8'b11100100;
-			end
-			4'b1010: begin
-				digit_bound_1[7:0] = 8'b11111000;
-				digit_bound_2[7:0] = 8'b11100001;
-			end
-			4'b1011: begin
-				digit_bound_1[7:0] = 8'b11110111;
-				digit_bound_2[7:0] = 8'b11011111;
-			end
-			4'b1100: begin
-				digit_bound_1[7:0] = 8'b11110111;
-				digit_bound_2[7:0] = 8'b11011100;
-			end
-			4'b1101: begin
-				digit_bound_1[7:0] = 8'b11110110;
-				digit_bound_2[7:0] = 8'b11011001;
-			end
-			4'b1110: begin
-				digit_bound_1[7:0] = 8'b11110101;
-				digit_bound_2[7:0] = 8'b11010111;
-			end
-			4'b1111: begin
-				digit_bound_1[7:0] = 8'b11110100;
-				digit_bound_2[7:0] = 8'b11010001;
-			end
-			default: begin
-				digit_bound_1[7:0] = 8'b11111001;
-				digit_bound_2[7:0] = 8'b11100111;
-			end
-		endcase
-	assign bound1_cmp_result[7:0] = qtrt_sel_rem[7:0] + digit_bound_1[7:0];
-	assign bound2_cmp_result[7:0] = qtrt_sel_rem[7:0] + digit_bound_2[7:0];
-	assign bound1_cmp_sign = bound1_cmp_result[7];
-	assign bound2_cmp_sign = bound2_cmp_result[7];
-	assign rem_sign = srt_remainder[29];
-	always @(ex2_srt_first_round or fdsu_ex2_sqrt or srt_remainder[29:21])
-		if (ex2_srt_first_round && fdsu_ex2_sqrt)
-			qtrt_sel_rem[7:0] = {srt_remainder[29], srt_remainder[27:21]};
-		else
-			qtrt_sel_rem[7:0] = (srt_remainder[29] ? ~srt_remainder[29:22] : srt_remainder[29:22]);
-	gated_clk_cell x_qt_clk(
-		.clk_in(forever_cpuclk),
-		.clk_out(qt_clk),
-		.external_en(1'b0),
-		.global_en(cp0_yy_clk_en),
-		.local_en(qt_clk_en),
-		.module_en(cp0_fpu_icg_en),
-		.pad_yy_icg_scan_en(pad_yy_icg_scan_en)
-	);
-	assign qt_clk_en = srt_sm_on || ex1_pipedown_gate;
-	always @(posedge qt_clk)
-		if (ex1_pipedown) begin
-			qt_rt_const_shift_std[29:0] <= 30'b010000000000000000000000000000;
-			total_qt_rt_30[29:0] <= 30'b000000000000000000000000000000;
-			total_qt_rt_minus_30[29:0] <= 30'b000000000000000000000000000000;
-		end
-		else if (srt_sm_on) begin
-			qt_rt_const_shift_std[29:0] <= qt_rt_const_shift_std_next[29:0];
-			total_qt_rt_30[29:0] <= total_qt_rt_30_next[29:0];
-			total_qt_rt_minus_30[29:0] <= total_qt_rt_minus_30_next[29:0];
-		end
-		else begin
-			qt_rt_const_shift_std[29:0] <= qt_rt_const_shift_std[29:0];
-			total_qt_rt_30[29:0] <= total_qt_rt_30[29:0];
-			total_qt_rt_minus_30[29:0] <= total_qt_rt_minus_30[29:0];
-		end
-	assign qt_rt_const_q1[29:0] = qt_rt_const_shift_std[29:0];
-	assign qt_rt_const_q2[29:0] = {qt_rt_const_shift_std[28:0], 1'b0};
-	assign qt_rt_const_q3[29:0] = qt_rt_const_q1[29:0] | qt_rt_const_q2[29:0];
-	assign qt_rt_const_shift_std_next[29:0] = {2'b00, qt_rt_const_shift_std[29:2]};
-	assign total_qt_rt_pre_sel[29:0] = (rem_sign ? total_qt_rt_minus_30[29:0] : total_qt_rt_30[29:0]);
-	assign qt_rt_const_pre_sel_q2[29:0] = qt_rt_const_q2[29:0];
-	assign qt_rt_mins_const_pre_sel_q2[29:0] = qt_rt_const_q1[29:0];
-	assign qt_rt_const_pre_sel_q1[29:0] = (rem_sign ? qt_rt_const_q3[29:0] : qt_rt_const_q1[29:0]);
-	assign qt_rt_mins_const_pre_sel_q1[29:0] = (rem_sign ? qt_rt_const_q2[29:0] : 30'b000000000000000000000000000000);
-	always @(qt_rt_const_q3[29:0] or qt_rt_mins_const_pre_sel_q1[29:0] or bound1_cmp_sign or total_qt_rt_30[29:0] or qt_rt_mins_const_pre_sel_q2[29:0] or total_qt_rt_minus_30[29:0] or bound2_cmp_sign or qt_rt_const_pre_sel_q2[29:0] or qt_rt_const_pre_sel_q1[29:0] or total_qt_rt_pre_sel[29:0])
-		casez ({bound1_cmp_sign, bound2_cmp_sign})
+			Ready_SO <= Ready_SO;
+	wire Qcnt_one_0;
+	wire Qcnt_one_1;
+	wire [1:0] Qcnt_one_2;
+	wire [2:0] Qcnt_one_3;
+	wire [3:0] Qcnt_one_4;
+	wire [4:0] Qcnt_one_5;
+	wire [5:0] Qcnt_one_6;
+	wire [6:0] Qcnt_one_7;
+	wire [7:0] Qcnt_one_8;
+	wire [8:0] Qcnt_one_9;
+	wire [9:0] Qcnt_one_10;
+	wire [10:0] Qcnt_one_11;
+	wire [11:0] Qcnt_one_12;
+	wire [12:0] Qcnt_one_13;
+	wire [13:0] Qcnt_one_14;
+	wire [14:0] Qcnt_one_15;
+	wire [15:0] Qcnt_one_16;
+	wire [16:0] Qcnt_one_17;
+	wire [17:0] Qcnt_one_18;
+	wire [18:0] Qcnt_one_19;
+	wire [19:0] Qcnt_one_20;
+	wire [20:0] Qcnt_one_21;
+	wire [21:0] Qcnt_one_22;
+	wire [22:0] Qcnt_one_23;
+	wire [23:0] Qcnt_one_24;
+	wire [24:0] Qcnt_one_25;
+	wire [25:0] Qcnt_one_26;
+	wire [26:0] Qcnt_one_27;
+	wire [27:0] Qcnt_one_28;
+	wire [28:0] Qcnt_one_29;
+	wire [29:0] Qcnt_one_30;
+	wire [30:0] Qcnt_one_31;
+	wire [31:0] Qcnt_one_32;
+	wire [32:0] Qcnt_one_33;
+	wire [33:0] Qcnt_one_34;
+	wire [34:0] Qcnt_one_35;
+	wire [35:0] Qcnt_one_36;
+	wire [36:0] Qcnt_one_37;
+	wire [37:0] Qcnt_one_38;
+	wire [38:0] Qcnt_one_39;
+	wire [39:0] Qcnt_one_40;
+	wire [40:0] Qcnt_one_41;
+	wire [41:0] Qcnt_one_42;
+	wire [42:0] Qcnt_one_43;
+	wire [43:0] Qcnt_one_44;
+	wire [44:0] Qcnt_one_45;
+	wire [45:0] Qcnt_one_46;
+	wire [46:0] Qcnt_one_47;
+	wire [47:0] Qcnt_one_48;
+	wire [48:0] Qcnt_one_49;
+	wire [49:0] Qcnt_one_50;
+	wire [50:0] Qcnt_one_51;
+	wire [51:0] Qcnt_one_52;
+	wire [52:0] Qcnt_one_53;
+	wire [53:0] Qcnt_one_54;
+	wire [54:0] Qcnt_one_55;
+	wire [55:0] Qcnt_one_56;
+	wire [56:0] Qcnt_one_57;
+	wire [57:0] Qcnt_one_58;
+	wire [58:0] Qcnt_one_59;
+	wire [59:0] Qcnt_one_60;
+	wire [1:0] Qcnt_two_0;
+	wire [2:0] Qcnt_two_1;
+	wire [4:0] Qcnt_two_2;
+	wire [6:0] Qcnt_two_3;
+	wire [8:0] Qcnt_two_4;
+	wire [10:0] Qcnt_two_5;
+	wire [12:0] Qcnt_two_6;
+	wire [14:0] Qcnt_two_7;
+	wire [16:0] Qcnt_two_8;
+	wire [18:0] Qcnt_two_9;
+	wire [20:0] Qcnt_two_10;
+	wire [22:0] Qcnt_two_11;
+	wire [24:0] Qcnt_two_12;
+	wire [26:0] Qcnt_two_13;
+	wire [28:0] Qcnt_two_14;
+	wire [30:0] Qcnt_two_15;
+	wire [32:0] Qcnt_two_16;
+	wire [34:0] Qcnt_two_17;
+	wire [36:0] Qcnt_two_18;
+	wire [38:0] Qcnt_two_19;
+	wire [40:0] Qcnt_two_20;
+	wire [42:0] Qcnt_two_21;
+	wire [44:0] Qcnt_two_22;
+	wire [46:0] Qcnt_two_23;
+	wire [48:0] Qcnt_two_24;
+	wire [50:0] Qcnt_two_25;
+	wire [52:0] Qcnt_two_26;
+	wire [54:0] Qcnt_two_27;
+	wire [56:0] Qcnt_two_28;
+	wire [2:0] Qcnt_three_0;
+	wire [4:0] Qcnt_three_1;
+	wire [7:0] Qcnt_three_2;
+	wire [10:0] Qcnt_three_3;
+	wire [13:0] Qcnt_three_4;
+	wire [16:0] Qcnt_three_5;
+	wire [19:0] Qcnt_three_6;
+	wire [22:0] Qcnt_three_7;
+	wire [25:0] Qcnt_three_8;
+	wire [28:0] Qcnt_three_9;
+	wire [31:0] Qcnt_three_10;
+	wire [34:0] Qcnt_three_11;
+	wire [37:0] Qcnt_three_12;
+	wire [40:0] Qcnt_three_13;
+	wire [43:0] Qcnt_three_14;
+	wire [46:0] Qcnt_three_15;
+	wire [49:0] Qcnt_three_16;
+	wire [52:0] Qcnt_three_17;
+	wire [55:0] Qcnt_three_18;
+	wire [58:0] Qcnt_three_19;
+	wire [61:0] Qcnt_three_20;
+	wire [3:0] Qcnt_four_0;
+	wire [6:0] Qcnt_four_1;
+	wire [10:0] Qcnt_four_2;
+	wire [14:0] Qcnt_four_3;
+	wire [18:0] Qcnt_four_4;
+	wire [22:0] Qcnt_four_5;
+	wire [26:0] Qcnt_four_6;
+	wire [30:0] Qcnt_four_7;
+	wire [34:0] Qcnt_four_8;
+	wire [38:0] Qcnt_four_9;
+	wire [42:0] Qcnt_four_10;
+	wire [46:0] Qcnt_four_11;
+	wire [50:0] Qcnt_four_12;
+	wire [54:0] Qcnt_four_13;
+	wire [58:0] Qcnt_four_14;
+	wire [57:0] Sqrt_R0;
+	reg [57:0] Sqrt_Q0;
+	reg [57:0] Q_sqrt0;
+	reg [57:0] Q_sqrt_com_0;
+	wire [57:0] Sqrt_R1;
+	reg [57:0] Sqrt_Q1;
+	reg [57:0] Q_sqrt1;
+	reg [57:0] Q_sqrt_com_1;
+	wire [57:0] Sqrt_R2;
+	reg [57:0] Sqrt_Q2;
+	reg [57:0] Q_sqrt2;
+	reg [57:0] Q_sqrt_com_2;
+	wire [57:0] Sqrt_R3;
+	reg [57:0] Sqrt_Q3;
+	reg [57:0] Q_sqrt3;
+	reg [57:0] Q_sqrt_com_3;
+	wire [57:0] Sqrt_R4;
+	reg [1:0] Sqrt_DI [3:0];
+	wire [1:0] Sqrt_DO [3:0];
+	wire Sqrt_carry_DO;
+	wire [57:0] Iteration_cell_a_D [3:0];
+	wire [57:0] Iteration_cell_b_D [3:0];
+	wire [57:0] Iteration_cell_a_BMASK_D [3:0];
+	wire [57:0] Iteration_cell_b_BMASK_D [3:0];
+	wire Iteration_cell_carry_D [3:0];
+	wire [57:0] Iteration_cell_sum_D [3:0];
+	wire [57:0] Iteration_cell_sum_AMASK_D [3:0];
+	reg [3:0] Sqrt_quotinent_S;
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		case (Format_sel_S)
 			2'b00: begin
-				total_qt_rt_30_next[29:0] = total_qt_rt_pre_sel[29:0] | qt_rt_const_pre_sel_q2[29:0];
-				total_qt_rt_minus_30_next[29:0] = total_qt_rt_pre_sel[29:0] | qt_rt_mins_const_pre_sel_q2[29:0];
+				Sqrt_quotinent_S = {~Iteration_cell_sum_AMASK_D[0][28], ~Iteration_cell_sum_AMASK_D[1][28], ~Iteration_cell_sum_AMASK_D[2][28], ~Iteration_cell_sum_AMASK_D[3][28]};
+				Q_sqrt_com_0 = {{29 {1'b0}}, ~Q_sqrt0[28:0]};
+				Q_sqrt_com_1 = {{29 {1'b0}}, ~Q_sqrt1[28:0]};
+				Q_sqrt_com_2 = {{29 {1'b0}}, ~Q_sqrt2[28:0]};
+				Q_sqrt_com_3 = {{29 {1'b0}}, ~Q_sqrt3[28:0]};
 			end
 			2'b01: begin
-				total_qt_rt_30_next[29:0] = total_qt_rt_pre_sel[29:0] | qt_rt_const_pre_sel_q1[29:0];
-				total_qt_rt_minus_30_next[29:0] = total_qt_rt_pre_sel[29:0] | qt_rt_mins_const_pre_sel_q1[29:0];
-			end
-			2'b1z: begin
-				total_qt_rt_30_next[29:0] = total_qt_rt_30[29:0];
-				total_qt_rt_minus_30_next[29:0] = total_qt_rt_minus_30[29:0] | qt_rt_const_q3[29:0];
-			end
-			default: begin
-				total_qt_rt_30_next[29:0] = 30'b000000000000000000000000000000;
-				total_qt_rt_minus_30_next[29:0] = 30'b000000000000000000000000000000;
-			end
-		endcase
-	assign div_qt_1_rem_add_op1[31:0] = ~{3'b000, srt_divisor[23:0], 5'b00000};
-	assign div_qt_2_rem_add_op1[31:0] = ~{2'b00, srt_divisor[23:0], 6'b000000};
-	assign div_qt_r1_rem_add_op1[31:0] = {3'b000, srt_divisor[23:0], 5'b00000};
-	assign div_qt_r2_rem_add_op1[31:0] = {2'b00, srt_divisor[23:0], 6'b000000};
-	assign sqrt_qt_1_rem_add_op1[31:0] = ~({2'b00, total_qt_rt_30[29:0]} | {3'b000, qt_rt_const_q1[29:1]});
-	assign sqrt_qt_2_rem_add_op1[31:0] = ~({1'b0, total_qt_rt_30[29:0], 1'b0} | {1'b0, qt_rt_const_q1[29:0], 1'b0});
-	assign sqrt_qt_r1_rem_add_op1[31:0] = (({2'b00, total_qt_rt_minus_30[29:0]} | {1'b0, qt_rt_const_q1[29:0], 1'b0}) | {2'b00, qt_rt_const_q1[29:0]}) | {3'b000, qt_rt_const_q1[29:1]};
-	assign sqrt_qt_r2_rem_add_op1[31:0] = ({1'b0, total_qt_rt_minus_30[29:0], 1'b0} | {qt_rt_const_q1[29:0], 2'b00}) | {1'b0, qt_rt_const_q1[29:0], 1'b0};
-	always @(div_qt_2_rem_add_op1[31:0] or sqrt_qt_r2_rem_add_op1[31:0] or sqrt_qt_r1_rem_add_op1[31:0] or rem_sign or div_qt_r2_rem_add_op1[31:0] or div_qt_1_rem_add_op1[31:0] or sqrt_qt_2_rem_add_op1[31:0] or fdsu_ex2_sqrt or div_qt_r1_rem_add_op1[31:0] or sqrt_qt_1_rem_add_op1[31:0])
-		case ({rem_sign, fdsu_ex2_sqrt})
-			2'b01: begin
-				rem_add1_op1[31:0] = sqrt_qt_1_rem_add_op1[31:0];
-				rem_add2_op1[31:0] = sqrt_qt_2_rem_add_op1[31:0];
-			end
-			2'b00: begin
-				rem_add1_op1[31:0] = div_qt_1_rem_add_op1[31:0];
-				rem_add2_op1[31:0] = div_qt_2_rem_add_op1[31:0];
-			end
-			2'b11: begin
-				rem_add1_op1[31:0] = sqrt_qt_r1_rem_add_op1[31:0];
-				rem_add2_op1[31:0] = sqrt_qt_r2_rem_add_op1[31:0];
+				Sqrt_quotinent_S = {Iteration_cell_carry_D[0], Iteration_cell_carry_D[1], Iteration_cell_carry_D[2], Iteration_cell_carry_D[3]};
+				Q_sqrt_com_0 = ~Q_sqrt0;
+				Q_sqrt_com_1 = ~Q_sqrt1;
+				Q_sqrt_com_2 = ~Q_sqrt2;
+				Q_sqrt_com_3 = ~Q_sqrt3;
 			end
 			2'b10: begin
-				rem_add1_op1[31:0] = div_qt_r1_rem_add_op1[31:0];
-				rem_add2_op1[31:0] = div_qt_r2_rem_add_op1[31:0];
+				Sqrt_quotinent_S = {~Iteration_cell_sum_AMASK_D[0][15], ~Iteration_cell_sum_AMASK_D[1][15], ~Iteration_cell_sum_AMASK_D[2][15], ~Iteration_cell_sum_AMASK_D[3][15]};
+				Q_sqrt_com_0 = {{42 {1'b0}}, ~Q_sqrt0[15:0]};
+				Q_sqrt_com_1 = {{42 {1'b0}}, ~Q_sqrt1[15:0]};
+				Q_sqrt_com_2 = {{42 {1'b0}}, ~Q_sqrt2[15:0]};
+				Q_sqrt_com_3 = {{42 {1'b0}}, ~Q_sqrt3[15:0]};
 			end
-			default: begin
-				rem_add1_op1[31:0] = 32'b00000000000000000000000000000000;
-				rem_add2_op1[31:0] = 32'b00000000000000000000000000000000;
-			end
-		endcase
-	assign srt_remainder_shift[31:0] = {srt_remainder[31], srt_remainder[28:0], 2'b00};
-	assign cur_doub_rem_1[31:0] = (srt_remainder_shift[31:0] + rem_add1_op1[31:0]) + {31'b0000000000000000000000000000000, ~rem_sign};
-	assign cur_doub_rem_2[31:0] = (srt_remainder_shift[31:0] + rem_add2_op1[31:0]) + {31'b0000000000000000000000000000000, ~rem_sign};
-	assign cur_rem_1[31:0] = cur_doub_rem_1[31:0];
-	assign cur_rem_2[31:0] = cur_doub_rem_2[31:0];
-	always @(cur_rem_2[31:0] or bound1_cmp_sign or srt_remainder_shift[31:0] or bound2_cmp_sign or cur_rem_1[31:0])
-		case ({bound1_cmp_sign, bound2_cmp_sign})
-			2'b00: cur_rem[31:0] = cur_rem_2[31:0];
-			2'b01: cur_rem[31:0] = cur_rem_1[31:0];
-			default: cur_rem[31:0] = srt_remainder_shift[31:0];
-		endcase
-	assign srt_remainder_nxt[31:0] = cur_rem[31:0];
-	assign srt_remainder_zero = ~|srt_remainder[31:0];
-	assign srt_remainder_sign = srt_remainder[31];
-endmodule
-module pa_fdsu_top (
-	cp0_fpu_icg_en,
-	cp0_fpu_xx_dqnan,
-	cp0_yy_clk_en,
-	cpurst_b,
-	ctrl_fdsu_ex1_sel,
-	ctrl_xx_ex1_cmplt_dp,
-	ctrl_xx_ex1_inst_vld,
-	ctrl_xx_ex1_stall,
-	ctrl_xx_ex1_warm_up,
-	ctrl_xx_ex2_warm_up,
-	ctrl_xx_ex3_warm_up,
-	dp_xx_ex1_cnan,
-	dp_xx_ex1_id,
-	dp_xx_ex1_inf,
-	dp_xx_ex1_qnan,
-	dp_xx_ex1_rm,
-	dp_xx_ex1_snan,
-	dp_xx_ex1_zero,
-	fdsu_fpu_ex1_cmplt,
-	fdsu_fpu_ex1_cmplt_dp,
-	fdsu_fpu_ex1_fflags,
-	fdsu_fpu_ex1_special_sel,
-	fdsu_fpu_ex1_special_sign,
-	fdsu_fpu_ex1_stall,
-	fdsu_fpu_no_op,
-	fdsu_frbus_data,
-	fdsu_frbus_fflags,
-	fdsu_frbus_freg,
-	fdsu_frbus_wb_vld,
-	forever_cpuclk,
-	frbus_fdsu_wb_grant,
-	idu_fpu_ex1_dst_freg,
-	idu_fpu_ex1_eu_sel,
-	idu_fpu_ex1_func,
-	idu_fpu_ex1_srcf0,
-	idu_fpu_ex1_srcf1,
-	pad_yy_icg_scan_en,
-	rtu_xx_ex1_cancel,
-	rtu_xx_ex2_cancel,
-	rtu_yy_xx_async_flush,
-	rtu_yy_xx_flush
-);
-	input wire cp0_fpu_icg_en;
-	input wire cp0_fpu_xx_dqnan;
-	input wire cp0_yy_clk_en;
-	input wire cpurst_b;
-	input wire ctrl_fdsu_ex1_sel;
-	input wire ctrl_xx_ex1_cmplt_dp;
-	input wire ctrl_xx_ex1_inst_vld;
-	input wire ctrl_xx_ex1_stall;
-	input wire ctrl_xx_ex1_warm_up;
-	input wire ctrl_xx_ex2_warm_up;
-	input wire ctrl_xx_ex3_warm_up;
-	input wire [2:0] dp_xx_ex1_cnan;
-	input wire [2:0] dp_xx_ex1_id;
-	input wire [2:0] dp_xx_ex1_inf;
-	input wire [2:0] dp_xx_ex1_qnan;
-	input wire [2:0] dp_xx_ex1_rm;
-	input wire [2:0] dp_xx_ex1_snan;
-	input wire [2:0] dp_xx_ex1_zero;
-	input wire forever_cpuclk;
-	input wire frbus_fdsu_wb_grant;
-	input wire [4:0] idu_fpu_ex1_dst_freg;
-	input wire [2:0] idu_fpu_ex1_eu_sel;
-	input wire [9:0] idu_fpu_ex1_func;
-	input wire [31:0] idu_fpu_ex1_srcf0;
-	input wire [31:0] idu_fpu_ex1_srcf1;
-	input wire pad_yy_icg_scan_en;
-	input wire rtu_xx_ex1_cancel;
-	input wire rtu_xx_ex2_cancel;
-	input wire rtu_yy_xx_async_flush;
-	input wire rtu_yy_xx_flush;
-	output wire fdsu_fpu_ex1_cmplt;
-	output wire fdsu_fpu_ex1_cmplt_dp;
-	output wire [4:0] fdsu_fpu_ex1_fflags;
-	output wire [7:0] fdsu_fpu_ex1_special_sel;
-	output wire [3:0] fdsu_fpu_ex1_special_sign;
-	output wire fdsu_fpu_ex1_stall;
-	output wire fdsu_fpu_no_op;
-	output wire [31:0] fdsu_frbus_data;
-	output wire [4:0] fdsu_frbus_fflags;
-	output wire [4:0] fdsu_frbus_freg;
-	output wire fdsu_frbus_wb_vld;
-	wire ex1_div;
-	wire [23:0] ex1_divisor;
-	wire [12:0] ex1_expnt_adder_op0;
-	wire [12:0] ex1_expnt_adder_op1;
-	wire ex1_of_result_lfn;
-	wire ex1_op0_id;
-	wire ex1_op0_norm;
-	wire ex1_op0_sign;
-	wire ex1_op1_id;
-	wire ex1_op1_id_vld;
-	wire ex1_op1_norm;
-	wire ex1_op1_sel;
-	wire [12:0] ex1_oper_id_expnt;
-	wire [12:0] ex1_oper_id_expnt_f;
-	wire [51:0] ex1_oper_id_frac;
-	wire [51:0] ex1_oper_id_frac_f;
-	wire ex1_pipedown;
-	wire ex1_pipedown_gate;
-	wire [31:0] ex1_remainder;
-	wire ex1_result_sign;
-	wire [2:0] ex1_rm;
-	wire ex1_save_op0;
-	wire ex1_save_op0_gate;
-	wire ex1_sqrt;
-	wire ex1_srt_skip;
-	wire [9:0] ex2_expnt_adder_op0;
-	wire ex2_of;
-	wire ex2_pipe_clk;
-	wire ex2_pipedown;
-	wire ex2_potnt_of;
-	wire ex2_potnt_uf;
-	wire ex2_result_inf;
-	wire ex2_result_lfn;
-	wire ex2_rslt_denorm;
-	wire [9:0] ex2_srt_expnt_rst;
-	wire ex2_srt_first_round;
-	wire ex2_uf;
-	wire ex2_uf_srt_skip;
-	wire [9:0] ex3_expnt_adjust_result;
-	wire [25:0] ex3_frac_final_rst;
-	wire ex3_pipedown;
-	wire ex3_rslt_denorm;
-	wire fdsu_ex1_sel;
-	wire fdsu_ex3_id_srt_skip;
-	wire fdsu_ex3_rem_sign;
-	wire fdsu_ex3_rem_zero;
-	wire [23:0] fdsu_ex3_result_denorm_round_add_num;
-	wire fdsu_ex4_denorm_to_tiny_frac;
-	wire [25:0] fdsu_ex4_frac;
-	wire fdsu_ex4_nx;
-	wire [1:0] fdsu_ex4_potnt_norm;
-	wire fdsu_ex4_result_nor;
-	wire fdsu_yy_div;
-	wire [9:0] fdsu_yy_expnt_rst;
-	wire fdsu_yy_of;
-	wire fdsu_yy_of_rm_lfn;
-	wire fdsu_yy_op0_norm;
-	wire fdsu_yy_op1_norm;
-	wire fdsu_yy_potnt_of;
-	wire fdsu_yy_potnt_uf;
-	wire fdsu_yy_result_inf;
-	wire fdsu_yy_result_lfn;
-	wire fdsu_yy_result_sign;
-	wire [2:0] fdsu_yy_rm;
-	wire fdsu_yy_rslt_denorm;
-	wire fdsu_yy_sqrt;
-	wire fdsu_yy_uf;
-	wire [4:0] fdsu_yy_wb_freg;
-	wire srt_remainder_zero;
-	wire srt_sm_on;
-	wire [29:0] total_qt_rt_30;
-	pa_fdsu_special x_pa_fdsu_special(
-		.cp0_fpu_xx_dqnan(cp0_fpu_xx_dqnan),
-		.dp_xx_ex1_cnan(dp_xx_ex1_cnan),
-		.dp_xx_ex1_id(dp_xx_ex1_id),
-		.dp_xx_ex1_inf(dp_xx_ex1_inf),
-		.dp_xx_ex1_qnan(dp_xx_ex1_qnan),
-		.dp_xx_ex1_snan(dp_xx_ex1_snan),
-		.dp_xx_ex1_zero(dp_xx_ex1_zero),
-		.ex1_div(ex1_div),
-		.ex1_op0_id(ex1_op0_id),
-		.ex1_op0_norm(ex1_op0_norm),
-		.ex1_op0_sign(ex1_op0_sign),
-		.ex1_op1_id(ex1_op1_id),
-		.ex1_op1_norm(ex1_op1_norm),
-		.ex1_result_sign(ex1_result_sign),
-		.ex1_sqrt(ex1_sqrt),
-		.ex1_srt_skip(ex1_srt_skip),
-		.fdsu_fpu_ex1_fflags(fdsu_fpu_ex1_fflags),
-		.fdsu_fpu_ex1_special_sel(fdsu_fpu_ex1_special_sel),
-		.fdsu_fpu_ex1_special_sign(fdsu_fpu_ex1_special_sign)
-	);
-	pa_fdsu_prepare x_pa_fdsu_prepare(
-		.dp_xx_ex1_rm(dp_xx_ex1_rm),
-		.ex1_div(ex1_div),
-		.ex1_divisor(ex1_divisor),
-		.ex1_expnt_adder_op0(ex1_expnt_adder_op0),
-		.ex1_expnt_adder_op1(ex1_expnt_adder_op1),
-		.ex1_of_result_lfn(ex1_of_result_lfn),
-		.ex1_op0_id(ex1_op0_id),
-		.ex1_op0_sign(ex1_op0_sign),
-		.ex1_op1_id(ex1_op1_id),
-		.ex1_op1_id_vld(ex1_op1_id_vld),
-		.ex1_op1_sel(ex1_op1_sel),
-		.ex1_oper_id_expnt(ex1_oper_id_expnt),
-		.ex1_oper_id_expnt_f(ex1_oper_id_expnt_f),
-		.ex1_oper_id_frac(ex1_oper_id_frac),
-		.ex1_oper_id_frac_f(ex1_oper_id_frac_f),
-		.ex1_remainder(ex1_remainder),
-		.ex1_result_sign(ex1_result_sign),
-		.ex1_rm(ex1_rm),
-		.ex1_sqrt(ex1_sqrt),
-		.fdsu_ex1_sel(fdsu_ex1_sel),
-		.idu_fpu_ex1_func(idu_fpu_ex1_func),
-		.idu_fpu_ex1_srcf0(idu_fpu_ex1_srcf0),
-		.idu_fpu_ex1_srcf1(idu_fpu_ex1_srcf1)
-	);
-	pa_fdsu_srt_single x_pa_fdsu_srt(
-		.cp0_fpu_icg_en(cp0_fpu_icg_en),
-		.cp0_yy_clk_en(cp0_yy_clk_en),
-		.ex1_divisor(ex1_divisor),
-		.ex1_expnt_adder_op1(ex1_expnt_adder_op1),
-		.ex1_oper_id_frac(ex1_oper_id_frac),
-		.ex1_oper_id_frac_f(ex1_oper_id_frac_f),
-		.ex1_pipedown(ex1_pipedown),
-		.ex1_pipedown_gate(ex1_pipedown_gate),
-		.ex1_remainder(ex1_remainder),
-		.ex1_save_op0(ex1_save_op0),
-		.ex1_save_op0_gate(ex1_save_op0_gate),
-		.ex2_expnt_adder_op0(ex2_expnt_adder_op0),
-		.ex2_of(ex2_of),
-		.ex2_pipe_clk(ex2_pipe_clk),
-		.ex2_pipedown(ex2_pipedown),
-		.ex2_potnt_of(ex2_potnt_of),
-		.ex2_potnt_uf(ex2_potnt_uf),
-		.ex2_result_inf(ex2_result_inf),
-		.ex2_result_lfn(ex2_result_lfn),
-		.ex2_rslt_denorm(ex2_rslt_denorm),
-		.ex2_srt_expnt_rst(ex2_srt_expnt_rst),
-		.ex2_srt_first_round(ex2_srt_first_round),
-		.ex2_uf(ex2_uf),
-		.ex2_uf_srt_skip(ex2_uf_srt_skip),
-		.ex3_frac_final_rst(ex3_frac_final_rst),
-		.ex3_pipedown(ex3_pipedown),
-		.fdsu_ex3_id_srt_skip(fdsu_ex3_id_srt_skip),
-		.fdsu_ex3_rem_sign(fdsu_ex3_rem_sign),
-		.fdsu_ex3_rem_zero(fdsu_ex3_rem_zero),
-		.fdsu_ex3_result_denorm_round_add_num(fdsu_ex3_result_denorm_round_add_num),
-		.fdsu_ex4_frac(fdsu_ex4_frac),
-		.fdsu_yy_div(fdsu_yy_div),
-		.fdsu_yy_of_rm_lfn(fdsu_yy_of_rm_lfn),
-		.fdsu_yy_op0_norm(fdsu_yy_op0_norm),
-		.fdsu_yy_op1_norm(fdsu_yy_op1_norm),
-		.fdsu_yy_sqrt(fdsu_yy_sqrt),
-		.forever_cpuclk(forever_cpuclk),
-		.pad_yy_icg_scan_en(pad_yy_icg_scan_en),
-		.srt_remainder_zero(srt_remainder_zero),
-		.srt_sm_on(srt_sm_on),
-		.total_qt_rt_30(total_qt_rt_30)
-	);
-	pa_fdsu_round_single x_pa_fdsu_round(
-		.cp0_fpu_icg_en(cp0_fpu_icg_en),
-		.cp0_yy_clk_en(cp0_yy_clk_en),
-		.ex3_expnt_adjust_result(ex3_expnt_adjust_result),
-		.ex3_frac_final_rst(ex3_frac_final_rst),
-		.ex3_pipedown(ex3_pipedown),
-		.ex3_rslt_denorm(ex3_rslt_denorm),
-		.fdsu_ex3_id_srt_skip(fdsu_ex3_id_srt_skip),
-		.fdsu_ex3_rem_sign(fdsu_ex3_rem_sign),
-		.fdsu_ex3_rem_zero(fdsu_ex3_rem_zero),
-		.fdsu_ex3_result_denorm_round_add_num(fdsu_ex3_result_denorm_round_add_num),
-		.fdsu_ex4_denorm_to_tiny_frac(fdsu_ex4_denorm_to_tiny_frac),
-		.fdsu_ex4_nx(fdsu_ex4_nx),
-		.fdsu_ex4_potnt_norm(fdsu_ex4_potnt_norm),
-		.fdsu_ex4_result_nor(fdsu_ex4_result_nor),
-		.fdsu_yy_expnt_rst(fdsu_yy_expnt_rst),
-		.fdsu_yy_result_inf(fdsu_yy_result_inf),
-		.fdsu_yy_result_lfn(fdsu_yy_result_lfn),
-		.fdsu_yy_result_sign(fdsu_yy_result_sign),
-		.fdsu_yy_rm(fdsu_yy_rm),
-		.fdsu_yy_rslt_denorm(fdsu_yy_rslt_denorm),
-		.forever_cpuclk(forever_cpuclk),
-		.pad_yy_icg_scan_en(pad_yy_icg_scan_en),
-		.total_qt_rt_30(total_qt_rt_30)
-	);
-	pa_fdsu_pack_single x_pa_fdsu_pack(
-		.fdsu_ex4_denorm_to_tiny_frac(fdsu_ex4_denorm_to_tiny_frac),
-		.fdsu_ex4_frac(fdsu_ex4_frac),
-		.fdsu_ex4_nx(fdsu_ex4_nx),
-		.fdsu_ex4_potnt_norm(fdsu_ex4_potnt_norm),
-		.fdsu_ex4_result_nor(fdsu_ex4_result_nor),
-		.fdsu_frbus_data(fdsu_frbus_data),
-		.fdsu_frbus_fflags(fdsu_frbus_fflags),
-		.fdsu_frbus_freg(fdsu_frbus_freg),
-		.fdsu_yy_expnt_rst(fdsu_yy_expnt_rst),
-		.fdsu_yy_of(fdsu_yy_of),
-		.fdsu_yy_of_rm_lfn(fdsu_yy_of_rm_lfn),
-		.fdsu_yy_potnt_of(fdsu_yy_potnt_of),
-		.fdsu_yy_potnt_uf(fdsu_yy_potnt_uf),
-		.fdsu_yy_result_inf(fdsu_yy_result_inf),
-		.fdsu_yy_result_lfn(fdsu_yy_result_lfn),
-		.fdsu_yy_result_sign(fdsu_yy_result_sign),
-		.fdsu_yy_rslt_denorm(fdsu_yy_rslt_denorm),
-		.fdsu_yy_uf(fdsu_yy_uf),
-		.fdsu_yy_wb_freg(fdsu_yy_wb_freg)
-	);
-	pa_fdsu_ctrl x_pa_fdsu_ctrl(
-		.cp0_fpu_icg_en(cp0_fpu_icg_en),
-		.cp0_yy_clk_en(cp0_yy_clk_en),
-		.cpurst_b(cpurst_b),
-		.ctrl_fdsu_ex1_sel(ctrl_fdsu_ex1_sel),
-		.ctrl_xx_ex1_cmplt_dp(ctrl_xx_ex1_cmplt_dp),
-		.ctrl_xx_ex1_inst_vld(ctrl_xx_ex1_inst_vld),
-		.ctrl_xx_ex1_stall(ctrl_xx_ex1_stall),
-		.ctrl_xx_ex1_warm_up(ctrl_xx_ex1_warm_up),
-		.ctrl_xx_ex2_warm_up(ctrl_xx_ex2_warm_up),
-		.ctrl_xx_ex3_warm_up(ctrl_xx_ex3_warm_up),
-		.ex1_div(ex1_div),
-		.ex1_expnt_adder_op0(ex1_expnt_adder_op0),
-		.ex1_of_result_lfn(ex1_of_result_lfn),
-		.ex1_op0_id(ex1_op0_id),
-		.ex1_op0_norm(ex1_op0_norm),
-		.ex1_op1_id_vld(ex1_op1_id_vld),
-		.ex1_op1_norm(ex1_op1_norm),
-		.ex1_op1_sel(ex1_op1_sel),
-		.ex1_oper_id_expnt(ex1_oper_id_expnt),
-		.ex1_oper_id_expnt_f(ex1_oper_id_expnt_f),
-		.ex1_pipedown(ex1_pipedown),
-		.ex1_pipedown_gate(ex1_pipedown_gate),
-		.ex1_result_sign(ex1_result_sign),
-		.ex1_rm(ex1_rm),
-		.ex1_save_op0(ex1_save_op0),
-		.ex1_save_op0_gate(ex1_save_op0_gate),
-		.ex1_sqrt(ex1_sqrt),
-		.ex1_srt_skip(ex1_srt_skip),
-		.ex2_expnt_adder_op0(ex2_expnt_adder_op0),
-		.ex2_of(ex2_of),
-		.ex2_pipe_clk(ex2_pipe_clk),
-		.ex2_pipedown(ex2_pipedown),
-		.ex2_potnt_of(ex2_potnt_of),
-		.ex2_potnt_uf(ex2_potnt_uf),
-		.ex2_result_inf(ex2_result_inf),
-		.ex2_result_lfn(ex2_result_lfn),
-		.ex2_rslt_denorm(ex2_rslt_denorm),
-		.ex2_srt_expnt_rst(ex2_srt_expnt_rst),
-		.ex2_srt_first_round(ex2_srt_first_round),
-		.ex2_uf(ex2_uf),
-		.ex2_uf_srt_skip(ex2_uf_srt_skip),
-		.ex3_expnt_adjust_result(ex3_expnt_adjust_result),
-		.ex3_pipedown(ex3_pipedown),
-		.ex3_rslt_denorm(ex3_rslt_denorm),
-		.fdsu_ex1_sel(fdsu_ex1_sel),
-		.fdsu_fpu_ex1_cmplt(fdsu_fpu_ex1_cmplt),
-		.fdsu_fpu_ex1_cmplt_dp(fdsu_fpu_ex1_cmplt_dp),
-		.fdsu_fpu_ex1_stall(fdsu_fpu_ex1_stall),
-		.fdsu_fpu_no_op(fdsu_fpu_no_op),
-		.fdsu_frbus_wb_vld(fdsu_frbus_wb_vld),
-		.fdsu_yy_div(fdsu_yy_div),
-		.fdsu_yy_expnt_rst(fdsu_yy_expnt_rst),
-		.fdsu_yy_of(fdsu_yy_of),
-		.fdsu_yy_of_rm_lfn(fdsu_yy_of_rm_lfn),
-		.fdsu_yy_op0_norm(fdsu_yy_op0_norm),
-		.fdsu_yy_op1_norm(fdsu_yy_op1_norm),
-		.fdsu_yy_potnt_of(fdsu_yy_potnt_of),
-		.fdsu_yy_potnt_uf(fdsu_yy_potnt_uf),
-		.fdsu_yy_result_inf(fdsu_yy_result_inf),
-		.fdsu_yy_result_lfn(fdsu_yy_result_lfn),
-		.fdsu_yy_result_sign(fdsu_yy_result_sign),
-		.fdsu_yy_rm(fdsu_yy_rm),
-		.fdsu_yy_rslt_denorm(fdsu_yy_rslt_denorm),
-		.fdsu_yy_sqrt(fdsu_yy_sqrt),
-		.fdsu_yy_uf(fdsu_yy_uf),
-		.fdsu_yy_wb_freg(fdsu_yy_wb_freg),
-		.forever_cpuclk(forever_cpuclk),
-		.frbus_fdsu_wb_grant(frbus_fdsu_wb_grant),
-		.idu_fpu_ex1_dst_freg(idu_fpu_ex1_dst_freg),
-		.idu_fpu_ex1_eu_sel(idu_fpu_ex1_eu_sel),
-		.pad_yy_icg_scan_en(pad_yy_icg_scan_en),
-		.rtu_xx_ex1_cancel(rtu_xx_ex1_cancel),
-		.rtu_xx_ex2_cancel(rtu_xx_ex2_cancel),
-		.rtu_yy_xx_async_flush(rtu_yy_xx_async_flush),
-		.rtu_yy_xx_flush(rtu_yy_xx_flush),
-		.srt_remainder_zero(srt_remainder_zero),
-		.srt_sm_on(srt_sm_on)
-	);
-endmodule
-module pa_fpu_dp (
-	cp0_fpu_icg_en,
-	cp0_fpu_xx_rm,
-	cp0_yy_clk_en,
-	ctrl_xx_ex1_inst_vld,
-	ctrl_xx_ex1_stall,
-	ctrl_xx_ex1_warm_up,
-	dp_frbus_ex2_data,
-	dp_frbus_ex2_fflags,
-	dp_xx_ex1_cnan,
-	dp_xx_ex1_id,
-	dp_xx_ex1_inf,
-	dp_xx_ex1_norm,
-	dp_xx_ex1_qnan,
-	dp_xx_ex1_snan,
-	dp_xx_ex1_zero,
-	ex2_inst_wb,
-	fdsu_fpu_ex1_fflags,
-	fdsu_fpu_ex1_special_sel,
-	fdsu_fpu_ex1_special_sign,
-	forever_cpuclk,
-	idu_fpu_ex1_eu_sel,
-	idu_fpu_ex1_func,
-	idu_fpu_ex1_gateclk_vld,
-	idu_fpu_ex1_rm,
-	idu_fpu_ex1_srcf0,
-	idu_fpu_ex1_srcf1,
-	idu_fpu_ex1_srcf2,
-	pad_yy_icg_scan_en
-);
-	input wire cp0_fpu_icg_en;
-	input wire [2:0] cp0_fpu_xx_rm;
-	input wire cp0_yy_clk_en;
-	input wire ctrl_xx_ex1_inst_vld;
-	input wire ctrl_xx_ex1_stall;
-	input wire ctrl_xx_ex1_warm_up;
-	input wire [4:0] fdsu_fpu_ex1_fflags;
-	input wire [7:0] fdsu_fpu_ex1_special_sel;
-	input wire [3:0] fdsu_fpu_ex1_special_sign;
-	input wire forever_cpuclk;
-	input wire [2:0] idu_fpu_ex1_eu_sel;
-	input wire [9:0] idu_fpu_ex1_func;
-	input wire idu_fpu_ex1_gateclk_vld;
-	input wire [2:0] idu_fpu_ex1_rm;
-	input wire [31:0] idu_fpu_ex1_srcf0;
-	input wire [31:0] idu_fpu_ex1_srcf1;
-	input wire [31:0] idu_fpu_ex1_srcf2;
-	input wire pad_yy_icg_scan_en;
-	output wire [31:0] dp_frbus_ex2_data;
-	output wire [4:0] dp_frbus_ex2_fflags;
-	output wire [2:0] dp_xx_ex1_cnan;
-	output wire [2:0] dp_xx_ex1_id;
-	output wire [2:0] dp_xx_ex1_inf;
-	output wire [2:0] dp_xx_ex1_norm;
-	output wire [2:0] dp_xx_ex1_qnan;
-	output wire [2:0] dp_xx_ex1_snan;
-	output wire [2:0] dp_xx_ex1_zero;
-	output wire ex2_inst_wb;
-	reg [4:0] ex1_fflags;
-	reg [31:0] ex1_special_data;
-	reg [8:0] ex1_special_sel;
-	reg [3:0] ex1_special_sign;
-	reg [4:0] ex2_fflags;
-	reg [31:0] ex2_result;
-	reg [31:0] ex2_special_data;
-	reg [6:0] ex2_special_sel;
-	reg [3:0] ex2_special_sign;
-	wire [2:0] ex1_decode_rm;
-	wire ex1_double;
-	wire [2:0] ex1_eu_sel;
-	wire [9:0] ex1_func;
-	wire [2:0] ex1_global_rm;
-	wire [2:0] ex1_rm;
-	wire ex1_single;
-	wire [31:0] ex1_special_data_final;
-	wire [63:0] ex1_src0;
-	wire [63:0] ex1_src1;
-	wire [63:0] ex1_src2;
-	wire ex1_src2_vld;
-	wire [2:0] ex1_src_cnan;
-	wire [2:0] ex1_src_id;
-	wire [2:0] ex1_src_inf;
-	wire [2:0] ex1_src_norm;
-	wire [2:0] ex1_src_qnan;
-	wire [2:0] ex1_src_snan;
-	wire [2:0] ex1_src_zero;
-	wire ex2_data_clk;
-	wire ex2_data_clk_en;
-	parameter DOUBLE_WIDTH = 64;
-	parameter SINGLE_WIDTH = 32;
-	parameter FUNC_WIDTH = 10;
-	assign ex1_eu_sel[2:0] = idu_fpu_ex1_eu_sel[2:0];
-	assign ex1_func[FUNC_WIDTH - 1:0] = idu_fpu_ex1_func[FUNC_WIDTH - 1:0];
-	assign ex1_global_rm[2:0] = cp0_fpu_xx_rm[2:0];
-	assign ex1_decode_rm[2:0] = idu_fpu_ex1_rm[2:0];
-	assign ex1_rm[2:0] = (ex1_decode_rm[2:0] == 3'b111 ? ex1_global_rm[2:0] : ex1_decode_rm[2:0]);
-	assign ex1_src2_vld = idu_fpu_ex1_eu_sel[1] && ex1_func[0];
-	assign ex1_src0[DOUBLE_WIDTH - 1:0] = {{SINGLE_WIDTH {1'b1}}, idu_fpu_ex1_srcf0[SINGLE_WIDTH - 1:0]};
-	assign ex1_src1[DOUBLE_WIDTH - 1:0] = {{SINGLE_WIDTH {1'b1}}, idu_fpu_ex1_srcf1[SINGLE_WIDTH - 1:0]};
-	assign ex1_src2[DOUBLE_WIDTH - 1:0] = (ex1_src2_vld ? {{SINGLE_WIDTH {1'b1}}, idu_fpu_ex1_srcf2[SINGLE_WIDTH - 1:0]} : {{SINGLE_WIDTH {1'b1}}, {SINGLE_WIDTH {1'b0}}});
-	assign ex1_double = 1'b0;
-	assign ex1_single = 1'b1;
-	pa_fpu_src_type x_pa_fpu_ex1_srcf0_type(
-		.inst_double(ex1_double),
-		.inst_single(ex1_single),
-		.src_cnan(ex1_src_cnan[0]),
-		.src_id(ex1_src_id[0]),
-		.src_in(ex1_src0),
-		.src_inf(ex1_src_inf[0]),
-		.src_norm(ex1_src_norm[0]),
-		.src_qnan(ex1_src_qnan[0]),
-		.src_snan(ex1_src_snan[0]),
-		.src_zero(ex1_src_zero[0])
-	);
-	pa_fpu_src_type x_pa_fpu_ex1_srcf1_type(
-		.inst_double(ex1_double),
-		.inst_single(ex1_single),
-		.src_cnan(ex1_src_cnan[1]),
-		.src_id(ex1_src_id[1]),
-		.src_in(ex1_src1),
-		.src_inf(ex1_src_inf[1]),
-		.src_norm(ex1_src_norm[1]),
-		.src_qnan(ex1_src_qnan[1]),
-		.src_snan(ex1_src_snan[1]),
-		.src_zero(ex1_src_zero[1])
-	);
-	pa_fpu_src_type x_pa_fpu_ex1_srcf2_type(
-		.inst_double(ex1_double),
-		.inst_single(ex1_single),
-		.src_cnan(ex1_src_cnan[2]),
-		.src_id(ex1_src_id[2]),
-		.src_in(ex1_src2),
-		.src_inf(ex1_src_inf[2]),
-		.src_norm(ex1_src_norm[2]),
-		.src_qnan(ex1_src_qnan[2]),
-		.src_snan(ex1_src_snan[2]),
-		.src_zero(ex1_src_zero[2])
-	);
-	assign dp_xx_ex1_cnan[2:0] = ex1_src_cnan[2:0];
-	assign dp_xx_ex1_snan[2:0] = ex1_src_snan[2:0];
-	assign dp_xx_ex1_qnan[2:0] = ex1_src_qnan[2:0];
-	assign dp_xx_ex1_norm[2:0] = ex1_src_norm[2:0];
-	assign dp_xx_ex1_zero[2:0] = ex1_src_zero[2:0];
-	assign dp_xx_ex1_inf[2:0] = ex1_src_inf[2:0];
-	assign dp_xx_ex1_id[2:0] = ex1_src_id[2:0];
-	always @(fdsu_fpu_ex1_special_sign[3:0] or fdsu_fpu_ex1_fflags[4:0] or ex1_eu_sel[2:0] or fdsu_fpu_ex1_special_sel[7:0])
-		case (ex1_eu_sel[2:0])
-			3'b100: begin
-				ex1_fflags[4:0] = fdsu_fpu_ex1_fflags[4:0];
-				ex1_special_sel[8:0] = {1'b0, fdsu_fpu_ex1_special_sel[7:0]};
-				ex1_special_sign[3:0] = fdsu_fpu_ex1_special_sign[3:0];
-			end
-			default: begin
-				ex1_fflags[4:0] = {5 {1'b0}};
-				ex1_special_sel[8:0] = {9 {1'b0}};
-				ex1_special_sign[3:0] = {4 {1'b0}};
+			2'b11: begin
+				Sqrt_quotinent_S = {~Iteration_cell_sum_AMASK_D[0][12], ~Iteration_cell_sum_AMASK_D[1][12], ~Iteration_cell_sum_AMASK_D[2][12], ~Iteration_cell_sum_AMASK_D[3][12]};
+				Q_sqrt_com_0 = {{45 {1'b0}}, ~Q_sqrt0[12:0]};
+				Q_sqrt_com_1 = {{45 {1'b0}}, ~Q_sqrt1[12:0]};
+				Q_sqrt_com_2 = {{45 {1'b0}}, ~Q_sqrt2[12:0]};
+				Q_sqrt_com_3 = {{45 {1'b0}}, ~Q_sqrt3[12:0]};
 			end
 		endcase
-	always @(ex1_special_sel[8:5] or ex1_src0[31:0] or ex1_src1[31:0] or ex1_src2[31:0])
-		case (ex1_special_sel[8:5])
-			4'b0001: ex1_special_data[SINGLE_WIDTH - 1:0] = ex1_src0[SINGLE_WIDTH - 1:0];
-			4'b0010: ex1_special_data[SINGLE_WIDTH - 1:0] = ex1_src1[SINGLE_WIDTH - 1:0];
-			4'b0100: ex1_special_data[SINGLE_WIDTH - 1:0] = ex1_src2[SINGLE_WIDTH - 1:0];
-			default: ex1_special_data[SINGLE_WIDTH - 1:0] = ex1_src2[SINGLE_WIDTH - 1:0];
+	end
+	assign Qcnt_one_0 = 1'b0;
+	assign Qcnt_one_1 = {Quotient_DP[0]};
+	assign Qcnt_one_2 = {Quotient_DP[1:0]};
+	assign Qcnt_one_3 = {Quotient_DP[2:0]};
+	assign Qcnt_one_4 = {Quotient_DP[3:0]};
+	assign Qcnt_one_5 = {Quotient_DP[4:0]};
+	assign Qcnt_one_6 = {Quotient_DP[5:0]};
+	assign Qcnt_one_7 = {Quotient_DP[6:0]};
+	assign Qcnt_one_8 = {Quotient_DP[7:0]};
+	assign Qcnt_one_9 = {Quotient_DP[8:0]};
+	assign Qcnt_one_10 = {Quotient_DP[9:0]};
+	assign Qcnt_one_11 = {Quotient_DP[10:0]};
+	assign Qcnt_one_12 = {Quotient_DP[11:0]};
+	assign Qcnt_one_13 = {Quotient_DP[12:0]};
+	assign Qcnt_one_14 = {Quotient_DP[13:0]};
+	assign Qcnt_one_15 = {Quotient_DP[14:0]};
+	assign Qcnt_one_16 = {Quotient_DP[15:0]};
+	assign Qcnt_one_17 = {Quotient_DP[16:0]};
+	assign Qcnt_one_18 = {Quotient_DP[17:0]};
+	assign Qcnt_one_19 = {Quotient_DP[18:0]};
+	assign Qcnt_one_20 = {Quotient_DP[19:0]};
+	assign Qcnt_one_21 = {Quotient_DP[20:0]};
+	assign Qcnt_one_22 = {Quotient_DP[21:0]};
+	assign Qcnt_one_23 = {Quotient_DP[22:0]};
+	assign Qcnt_one_24 = {Quotient_DP[23:0]};
+	assign Qcnt_one_25 = {Quotient_DP[24:0]};
+	assign Qcnt_one_26 = {Quotient_DP[25:0]};
+	assign Qcnt_one_27 = {Quotient_DP[26:0]};
+	assign Qcnt_one_28 = {Quotient_DP[27:0]};
+	assign Qcnt_one_29 = {Quotient_DP[28:0]};
+	assign Qcnt_one_30 = {Quotient_DP[29:0]};
+	assign Qcnt_one_31 = {Quotient_DP[30:0]};
+	assign Qcnt_one_32 = {Quotient_DP[31:0]};
+	assign Qcnt_one_33 = {Quotient_DP[32:0]};
+	assign Qcnt_one_34 = {Quotient_DP[33:0]};
+	assign Qcnt_one_35 = {Quotient_DP[34:0]};
+	assign Qcnt_one_36 = {Quotient_DP[35:0]};
+	assign Qcnt_one_37 = {Quotient_DP[36:0]};
+	assign Qcnt_one_38 = {Quotient_DP[37:0]};
+	assign Qcnt_one_39 = {Quotient_DP[38:0]};
+	assign Qcnt_one_40 = {Quotient_DP[39:0]};
+	assign Qcnt_one_41 = {Quotient_DP[40:0]};
+	assign Qcnt_one_42 = {Quotient_DP[41:0]};
+	assign Qcnt_one_43 = {Quotient_DP[42:0]};
+	assign Qcnt_one_44 = {Quotient_DP[43:0]};
+	assign Qcnt_one_45 = {Quotient_DP[44:0]};
+	assign Qcnt_one_46 = {Quotient_DP[45:0]};
+	assign Qcnt_one_47 = {Quotient_DP[46:0]};
+	assign Qcnt_one_48 = {Quotient_DP[47:0]};
+	assign Qcnt_one_49 = {Quotient_DP[48:0]};
+	assign Qcnt_one_50 = {Quotient_DP[49:0]};
+	assign Qcnt_one_51 = {Quotient_DP[50:0]};
+	assign Qcnt_one_52 = {Quotient_DP[51:0]};
+	assign Qcnt_one_53 = {Quotient_DP[52:0]};
+	assign Qcnt_one_54 = {Quotient_DP[53:0]};
+	assign Qcnt_one_55 = {Quotient_DP[54:0]};
+	assign Qcnt_one_56 = {Quotient_DP[55:0]};
+	assign Qcnt_one_57 = {Quotient_DP[56:0]};
+	assign Qcnt_two_0 = {1'b0, Sqrt_quotinent_S[3]};
+	assign Qcnt_two_1 = {Quotient_DP[1:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_2 = {Quotient_DP[3:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_3 = {Quotient_DP[5:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_4 = {Quotient_DP[7:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_5 = {Quotient_DP[9:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_6 = {Quotient_DP[11:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_7 = {Quotient_DP[13:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_8 = {Quotient_DP[15:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_9 = {Quotient_DP[17:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_10 = {Quotient_DP[19:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_11 = {Quotient_DP[21:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_12 = {Quotient_DP[23:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_13 = {Quotient_DP[25:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_14 = {Quotient_DP[27:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_15 = {Quotient_DP[29:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_16 = {Quotient_DP[31:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_17 = {Quotient_DP[33:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_18 = {Quotient_DP[35:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_19 = {Quotient_DP[37:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_20 = {Quotient_DP[39:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_21 = {Quotient_DP[41:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_22 = {Quotient_DP[43:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_23 = {Quotient_DP[45:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_24 = {Quotient_DP[47:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_25 = {Quotient_DP[49:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_26 = {Quotient_DP[51:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_27 = {Quotient_DP[53:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_two_28 = {Quotient_DP[55:0], Sqrt_quotinent_S[3]};
+	assign Qcnt_three_0 = {1'b0, Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_1 = {Quotient_DP[2:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_2 = {Quotient_DP[5:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_3 = {Quotient_DP[8:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_4 = {Quotient_DP[11:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_5 = {Quotient_DP[14:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_6 = {Quotient_DP[17:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_7 = {Quotient_DP[20:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_8 = {Quotient_DP[23:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_9 = {Quotient_DP[26:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_10 = {Quotient_DP[29:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_11 = {Quotient_DP[32:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_12 = {Quotient_DP[35:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_13 = {Quotient_DP[38:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_14 = {Quotient_DP[41:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_15 = {Quotient_DP[44:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_16 = {Quotient_DP[47:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_17 = {Quotient_DP[50:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_18 = {Quotient_DP[53:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_three_19 = {Quotient_DP[56:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2]};
+	assign Qcnt_four_0 = {1'b0, Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_1 = {Quotient_DP[3:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_2 = {Quotient_DP[7:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_3 = {Quotient_DP[11:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_4 = {Quotient_DP[15:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_5 = {Quotient_DP[19:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_6 = {Quotient_DP[23:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_7 = {Quotient_DP[27:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_8 = {Quotient_DP[31:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_9 = {Quotient_DP[35:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_10 = {Quotient_DP[39:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_11 = {Quotient_DP[43:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_12 = {Quotient_DP[47:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_13 = {Quotient_DP[51:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	assign Qcnt_four_14 = {Quotient_DP[55:0], Sqrt_quotinent_S[3], Sqrt_quotinent_S[2], Sqrt_quotinent_S[1]};
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		case (defs_div_sqrt_mvp_Iteration_unit_num_S)
+			2'b00:
+				case (Crtl_cnt_S)
+					6'b000000: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[53:defs_div_sqrt_mvp_C_MANT_FP64];
+						Q_sqrt0 = {{57 {1'b0}}, Qcnt_one_0};
+						Sqrt_Q0 = Q_sqrt_com_0;
+					end
+					6'b000001: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[51:50];
+						Q_sqrt0 = {{57 {1'b0}}, Qcnt_one_1};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b000010: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[49:48];
+						Q_sqrt0 = {{56 {1'b0}}, Qcnt_one_2};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b000011: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[47:46];
+						Q_sqrt0 = {{55 {1'b0}}, Qcnt_one_3};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b000100: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[45:44];
+						Q_sqrt0 = {{54 {1'b0}}, Qcnt_one_4};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b000101: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[43:42];
+						Q_sqrt0 = {{53 {1'b0}}, Qcnt_one_5};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b000110: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[41:40];
+						Q_sqrt0 = {{defs_div_sqrt_mvp_C_MANT_FP64 {1'b0}}, Qcnt_one_6};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b000111: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[39:38];
+						Q_sqrt0 = {{51 {1'b0}}, Qcnt_one_7};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b001000: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[37:36];
+						Q_sqrt0 = {{50 {1'b0}}, Qcnt_one_8};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b001001: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[35:34];
+						Q_sqrt0 = {{49 {1'b0}}, Qcnt_one_9};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b001010: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[33:32];
+						Q_sqrt0 = {{48 {1'b0}}, Qcnt_one_10};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b001011: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[31:30];
+						Q_sqrt0 = {{47 {1'b0}}, Qcnt_one_11};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b001100: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[29:28];
+						Q_sqrt0 = {{46 {1'b0}}, Qcnt_one_12};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b001101: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[27:26];
+						Q_sqrt0 = {{45 {1'b0}}, Qcnt_one_13};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b001110: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[25:24];
+						Q_sqrt0 = {{44 {1'b0}}, Qcnt_one_14};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b001111: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[23:22];
+						Q_sqrt0 = {{43 {1'b0}}, Qcnt_one_15};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b010000: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[21:20];
+						Q_sqrt0 = {{42 {1'b0}}, Qcnt_one_16};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b010001: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[19:18];
+						Q_sqrt0 = {{41 {1'b0}}, Qcnt_one_17};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b010010: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[17:16];
+						Q_sqrt0 = {{40 {1'b0}}, Qcnt_one_18};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b010011: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[15:14];
+						Q_sqrt0 = {{39 {1'b0}}, Qcnt_one_19};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b010100: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[13:12];
+						Q_sqrt0 = {{38 {1'b0}}, Qcnt_one_20};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b010101: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[11:10];
+						Q_sqrt0 = {{37 {1'b0}}, Qcnt_one_21};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b010110: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[9:8];
+						Q_sqrt0 = {{36 {1'b0}}, Qcnt_one_22};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b010111: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[7:6];
+						Q_sqrt0 = {{35 {1'b0}}, Qcnt_one_23};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b011000: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[5:4];
+						Q_sqrt0 = {{34 {1'b0}}, Qcnt_one_24};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b011001: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[3:2];
+						Q_sqrt0 = {{33 {1'b0}}, Qcnt_one_25};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b011010: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[1:0];
+						Q_sqrt0 = {{32 {1'b0}}, Qcnt_one_26};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b011011: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{31 {1'b0}}, Qcnt_one_27};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b011100: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{30 {1'b0}}, Qcnt_one_28};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b011101: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{29 {1'b0}}, Qcnt_one_29};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b011110: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{28 {1'b0}}, Qcnt_one_30};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b011111: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{27 {1'b0}}, Qcnt_one_31};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b100000: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{26 {1'b0}}, Qcnt_one_32};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b100001: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{25 {1'b0}}, Qcnt_one_33};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b100010: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{24 {1'b0}}, Qcnt_one_34};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b100011: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{23 {1'b0}}, Qcnt_one_35};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b100100: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{22 {1'b0}}, Qcnt_one_36};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b100101: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{21 {1'b0}}, Qcnt_one_37};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b100110: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{20 {1'b0}}, Qcnt_one_38};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b100111: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{19 {1'b0}}, Qcnt_one_39};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b101000: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{18 {1'b0}}, Qcnt_one_40};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b101001: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{17 {1'b0}}, Qcnt_one_41};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b101010: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{16 {1'b0}}, Qcnt_one_42};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b101011: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{15 {1'b0}}, Qcnt_one_43};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b101100: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{14 {1'b0}}, Qcnt_one_44};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b101101: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{13 {1'b0}}, Qcnt_one_45};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b101110: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{12 {1'b0}}, Qcnt_one_46};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b101111: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{11 {1'b0}}, Qcnt_one_47};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b110000: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{10 {1'b0}}, Qcnt_one_48};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b110001: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{9 {1'b0}}, Qcnt_one_49};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b110010: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{8 {1'b0}}, Qcnt_one_50};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b110011: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{7 {1'b0}}, Qcnt_one_51};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b110100: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{6 {1'b0}}, Qcnt_one_52};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b110101: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{5 {1'b0}}, Qcnt_one_53};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b110110: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{4 {1'b0}}, Qcnt_one_54};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b110111: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{3 {1'b0}}, Qcnt_one_55};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					6'b111000: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{2 {1'b0}}, Qcnt_one_56};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+					end
+					default: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = 1'sb0;
+						Sqrt_Q0 = 1'sb0;
+					end
+				endcase
+			2'b01:
+				case (Crtl_cnt_S)
+					6'b000000: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[53:defs_div_sqrt_mvp_C_MANT_FP64];
+						Q_sqrt0 = {{57 {1'b0}}, Qcnt_two_0[1]};
+						Sqrt_Q0 = Q_sqrt_com_0;
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[51:50];
+						Q_sqrt1 = {{56 {1'b0}}, Qcnt_two_0[1:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b000001: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[49:48];
+						Q_sqrt0 = {{56 {1'b0}}, Qcnt_two_1[2:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[47:46];
+						Q_sqrt1 = {{55 {1'b0}}, Qcnt_two_1[2:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b000010: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[45:44];
+						Q_sqrt0 = {{54 {1'b0}}, Qcnt_two_2[4:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[43:42];
+						Q_sqrt1 = {{53 {1'b0}}, Qcnt_two_2[4:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b000011: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[41:40];
+						Q_sqrt0 = {{defs_div_sqrt_mvp_C_MANT_FP64 {1'b0}}, Qcnt_two_3[6:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[39:38];
+						Q_sqrt1 = {{51 {1'b0}}, Qcnt_two_3[6:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b000100: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[37:36];
+						Q_sqrt0 = {{50 {1'b0}}, Qcnt_two_4[8:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[35:34];
+						Q_sqrt1 = {{49 {1'b0}}, Qcnt_two_4[8:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b000101: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[33:32];
+						Q_sqrt0 = {{48 {1'b0}}, Qcnt_two_5[10:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[31:30];
+						Q_sqrt1 = {{47 {1'b0}}, Qcnt_two_5[10:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b000110: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[29:28];
+						Q_sqrt0 = {{46 {1'b0}}, Qcnt_two_6[12:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[27:26];
+						Q_sqrt1 = {{45 {1'b0}}, Qcnt_two_6[12:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b000111: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[25:24];
+						Q_sqrt0 = {{44 {1'b0}}, Qcnt_two_7[14:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[23:22];
+						Q_sqrt1 = {{43 {1'b0}}, Qcnt_two_7[14:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b001000: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[21:20];
+						Q_sqrt0 = {{42 {1'b0}}, Qcnt_two_8[16:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[19:18];
+						Q_sqrt1 = {{41 {1'b0}}, Qcnt_two_8[16:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b001001: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[17:16];
+						Q_sqrt0 = {{40 {1'b0}}, Qcnt_two_9[18:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[15:14];
+						Q_sqrt1 = {{39 {1'b0}}, Qcnt_two_9[18:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b001010: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[13:12];
+						Q_sqrt0 = {{38 {1'b0}}, Qcnt_two_10[20:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[11:10];
+						Q_sqrt1 = {{37 {1'b0}}, Qcnt_two_10[20:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b001011: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[9:8];
+						Q_sqrt0 = {{36 {1'b0}}, Qcnt_two_11[22:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[7:6];
+						Q_sqrt1 = {{35 {1'b0}}, Qcnt_two_11[22:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b001100: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[5:4];
+						Q_sqrt0 = {{34 {1'b0}}, Qcnt_two_12[24:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[3:2];
+						Q_sqrt1 = {{33 {1'b0}}, Qcnt_two_12[24:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b001101: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[1:0];
+						Q_sqrt0 = {{32 {1'b0}}, Qcnt_two_13[26:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{31 {1'b0}}, Qcnt_two_13[26:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b001110: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{30 {1'b0}}, Qcnt_two_14[28:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{29 {1'b0}}, Qcnt_two_14[28:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b001111: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{28 {1'b0}}, Qcnt_two_15[30:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{27 {1'b0}}, Qcnt_two_15[30:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b010000: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{26 {1'b0}}, Qcnt_two_16[32:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{25 {1'b0}}, Qcnt_two_16[32:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b010001: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{24 {1'b0}}, Qcnt_two_17[34:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{23 {1'b0}}, Qcnt_two_17[34:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b010010: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{22 {1'b0}}, Qcnt_two_18[36:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{21 {1'b0}}, Qcnt_two_18[36:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b010011: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{20 {1'b0}}, Qcnt_two_19[38:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{19 {1'b0}}, Qcnt_two_19[38:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b010100: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{18 {1'b0}}, Qcnt_two_20[40:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{17 {1'b0}}, Qcnt_two_20[40:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b010101: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{16 {1'b0}}, Qcnt_two_21[42:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{15 {1'b0}}, Qcnt_two_21[42:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b010110: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{14 {1'b0}}, Qcnt_two_22[44:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{13 {1'b0}}, Qcnt_two_22[44:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b010111: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{12 {1'b0}}, Qcnt_two_23[46:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{11 {1'b0}}, Qcnt_two_23[46:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b011000: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{10 {1'b0}}, Qcnt_two_24[48:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{9 {1'b0}}, Qcnt_two_24[48:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b011001: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{8 {1'b0}}, Qcnt_two_25[50:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{7 {1'b0}}, Qcnt_two_25[50:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b011010: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{6 {1'b0}}, Qcnt_two_26[52:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{5 {1'b0}}, Qcnt_two_26[52:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b011011: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{4 {1'b0}}, Qcnt_two_27[54:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{3 {1'b0}}, Qcnt_two_27[54:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					6'b011100: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{2 {1'b0}}, Qcnt_two_28[56:1]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {1'b0, Qcnt_two_28[56:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+					default: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[53:defs_div_sqrt_mvp_C_MANT_FP64];
+						Q_sqrt0 = {{57 {1'b0}}, Qcnt_two_0[1]};
+						Sqrt_Q0 = Q_sqrt_com_0;
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[51:50];
+						Q_sqrt1 = {{56 {1'b0}}, Qcnt_two_0[1:0]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+					end
+				endcase
+			2'b10:
+				case (Crtl_cnt_S)
+					6'b000000: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[53:defs_div_sqrt_mvp_C_MANT_FP64];
+						Q_sqrt0 = {{57 {1'b0}}, Qcnt_three_0[2]};
+						Sqrt_Q0 = Q_sqrt_com_0;
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[51:50];
+						Q_sqrt1 = {{56 {1'b0}}, Qcnt_three_0[2:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[49:48];
+						Q_sqrt2 = {{55 {1'b0}}, Qcnt_three_0[2:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b000001: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[47:46];
+						Q_sqrt0 = {{54 {1'b0}}, Qcnt_three_1[4:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[45:44];
+						Q_sqrt1 = {{53 {1'b0}}, Qcnt_three_1[4:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[43:42];
+						Q_sqrt2 = {{defs_div_sqrt_mvp_C_MANT_FP64 {1'b0}}, Qcnt_three_1[4:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b000010: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[41:40];
+						Q_sqrt0 = {{51 {1'b0}}, Qcnt_three_2[7:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[39:38];
+						Q_sqrt1 = {{50 {1'b0}}, Qcnt_three_2[7:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[37:36];
+						Q_sqrt2 = {{49 {1'b0}}, Qcnt_three_2[7:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b000011: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[35:34];
+						Q_sqrt0 = {{48 {1'b0}}, Qcnt_three_3[10:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[33:32];
+						Q_sqrt1 = {{47 {1'b0}}, Qcnt_three_3[10:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[31:30];
+						Q_sqrt2 = {{46 {1'b0}}, Qcnt_three_3[10:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b000100: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[29:28];
+						Q_sqrt0 = {{45 {1'b0}}, Qcnt_three_4[13:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[27:26];
+						Q_sqrt1 = {{44 {1'b0}}, Qcnt_three_4[13:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[25:24];
+						Q_sqrt2 = {{43 {1'b0}}, Qcnt_three_4[13:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b000101: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[23:22];
+						Q_sqrt0 = {{42 {1'b0}}, Qcnt_three_5[16:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[21:20];
+						Q_sqrt1 = {{41 {1'b0}}, Qcnt_three_5[16:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[19:18];
+						Q_sqrt2 = {{40 {1'b0}}, Qcnt_three_5[16:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b000110: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[17:16];
+						Q_sqrt0 = {{39 {1'b0}}, Qcnt_three_6[19:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[15:14];
+						Q_sqrt1 = {{38 {1'b0}}, Qcnt_three_6[19:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[13:12];
+						Q_sqrt2 = {{37 {1'b0}}, Qcnt_three_6[19:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b000111: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[11:10];
+						Q_sqrt0 = {{36 {1'b0}}, Qcnt_three_7[22:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[9:8];
+						Q_sqrt1 = {{35 {1'b0}}, Qcnt_three_7[22:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[7:6];
+						Q_sqrt2 = {{34 {1'b0}}, Qcnt_three_7[22:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b001000: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[5:4];
+						Q_sqrt0 = {{33 {1'b0}}, Qcnt_three_8[25:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[3:2];
+						Q_sqrt1 = {{32 {1'b0}}, Qcnt_three_8[25:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[1:0];
+						Q_sqrt2 = {{31 {1'b0}}, Qcnt_three_8[25:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b001001: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{30 {1'b0}}, Qcnt_three_9[28:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{29 {1'b0}}, Qcnt_three_9[28:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{28 {1'b0}}, Qcnt_three_9[28:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b001010: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{27 {1'b0}}, Qcnt_three_10[31:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{26 {1'b0}}, Qcnt_three_10[31:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{25 {1'b0}}, Qcnt_three_10[31:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b001011: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{24 {1'b0}}, Qcnt_three_11[34:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{23 {1'b0}}, Qcnt_three_11[34:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{22 {1'b0}}, Qcnt_three_11[34:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b001100: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{21 {1'b0}}, Qcnt_three_12[37:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{20 {1'b0}}, Qcnt_three_12[37:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{19 {1'b0}}, Qcnt_three_12[37:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b001101: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{18 {1'b0}}, Qcnt_three_13[40:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{17 {1'b0}}, Qcnt_three_13[40:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{16 {1'b0}}, Qcnt_three_13[40:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b001110: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{15 {1'b0}}, Qcnt_three_14[43:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{14 {1'b0}}, Qcnt_three_14[43:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{13 {1'b0}}, Qcnt_three_14[43:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b001111: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{12 {1'b0}}, Qcnt_three_15[46:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{11 {1'b0}}, Qcnt_three_15[46:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{10 {1'b0}}, Qcnt_three_15[46:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b010000: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{9 {1'b0}}, Qcnt_three_16[49:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{8 {1'b0}}, Qcnt_three_16[49:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{7 {1'b0}}, Qcnt_three_16[49:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b010001: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{6 {1'b0}}, Qcnt_three_17[52:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{5 {1'b0}}, Qcnt_three_17[52:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{4 {1'b0}}, Qcnt_three_17[52:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					6'b010010: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{3 {1'b0}}, Qcnt_three_18[55:2]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{2 {1'b0}}, Qcnt_three_18[55:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {1'b0, Qcnt_three_18[55:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+					default: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[53:defs_div_sqrt_mvp_C_MANT_FP64];
+						Q_sqrt0 = {{57 {1'b0}}, Qcnt_three_0[2]};
+						Sqrt_Q0 = Q_sqrt_com_0;
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[51:50];
+						Q_sqrt1 = {{56 {1'b0}}, Qcnt_three_0[2:1]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[49:48];
+						Q_sqrt2 = {{55 {1'b0}}, Qcnt_three_0[2:0]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+					end
+				endcase
+			2'b11:
+				case (Crtl_cnt_S)
+					6'b000000: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[53:defs_div_sqrt_mvp_C_MANT_FP64];
+						Q_sqrt0 = {{57 {1'b0}}, Qcnt_four_0[3]};
+						Sqrt_Q0 = Q_sqrt_com_0;
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[51:50];
+						Q_sqrt1 = {{56 {1'b0}}, Qcnt_four_0[3:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[49:48];
+						Q_sqrt2 = {{55 {1'b0}}, Qcnt_four_0[3:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = Mant_D_sqrt_Norm[47:46];
+						Q_sqrt3 = {{54 {1'b0}}, Qcnt_four_0[3:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					6'b000001: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[45:44];
+						Q_sqrt0 = {{53 {1'b0}}, Qcnt_four_1[6:3]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[43:42];
+						Q_sqrt1 = {{defs_div_sqrt_mvp_C_MANT_FP64 {1'b0}}, Qcnt_four_1[6:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[41:40];
+						Q_sqrt2 = {{51 {1'b0}}, Qcnt_four_1[6:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = Mant_D_sqrt_Norm[39:38];
+						Q_sqrt3 = {{50 {1'b0}}, Qcnt_four_1[6:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					6'b000010: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[37:36];
+						Q_sqrt0 = {{49 {1'b0}}, Qcnt_four_2[10:3]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[35:34];
+						Q_sqrt1 = {{48 {1'b0}}, Qcnt_four_2[10:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[33:32];
+						Q_sqrt2 = {{47 {1'b0}}, Qcnt_four_2[10:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = Mant_D_sqrt_Norm[31:30];
+						Q_sqrt3 = {{46 {1'b0}}, Qcnt_four_2[10:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					6'b000011: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[29:28];
+						Q_sqrt0 = {{45 {1'b0}}, Qcnt_four_3[14:3]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[27:26];
+						Q_sqrt1 = {{44 {1'b0}}, Qcnt_four_3[14:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[25:24];
+						Q_sqrt2 = {{43 {1'b0}}, Qcnt_four_3[14:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = Mant_D_sqrt_Norm[23:22];
+						Q_sqrt3 = {{42 {1'b0}}, Qcnt_four_3[14:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					6'b000100: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[21:20];
+						Q_sqrt0 = {{41 {1'b0}}, Qcnt_four_4[18:3]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[19:18];
+						Q_sqrt1 = {{40 {1'b0}}, Qcnt_four_4[18:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[17:16];
+						Q_sqrt2 = {{39 {1'b0}}, Qcnt_four_4[18:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = Mant_D_sqrt_Norm[15:14];
+						Q_sqrt3 = {{38 {1'b0}}, Qcnt_four_4[18:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					6'b000101: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[13:12];
+						Q_sqrt0 = {{37 {1'b0}}, Qcnt_four_5[22:3]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[11:10];
+						Q_sqrt1 = {{36 {1'b0}}, Qcnt_four_5[22:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[9:8];
+						Q_sqrt2 = {{35 {1'b0}}, Qcnt_four_5[22:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = Mant_D_sqrt_Norm[7:6];
+						Q_sqrt3 = {{34 {1'b0}}, Qcnt_four_5[22:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					6'b000110: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[5:4];
+						Q_sqrt0 = {{33 {1'b0}}, Qcnt_four_6[26:3]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[3:2];
+						Q_sqrt1 = {{32 {1'b0}}, Qcnt_four_6[26:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[1:0];
+						Q_sqrt2 = {{31 {1'b0}}, Qcnt_four_6[26:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = 2'b00;
+						Q_sqrt3 = {{30 {1'b0}}, Qcnt_four_6[26:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					6'b000111: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{29 {1'b0}}, Qcnt_four_7[30:3]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{28 {1'b0}}, Qcnt_four_7[30:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{27 {1'b0}}, Qcnt_four_7[30:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = 2'b00;
+						Q_sqrt3 = {{26 {1'b0}}, Qcnt_four_7[30:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					6'b001000: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{25 {1'b0}}, Qcnt_four_8[34:3]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{24 {1'b0}}, Qcnt_four_8[34:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{23 {1'b0}}, Qcnt_four_8[34:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = 2'b00;
+						Q_sqrt3 = {{22 {1'b0}}, Qcnt_four_8[34:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					6'b001001: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{21 {1'b0}}, Qcnt_four_9[38:3]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{20 {1'b0}}, Qcnt_four_9[38:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{19 {1'b0}}, Qcnt_four_9[38:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = 2'b00;
+						Q_sqrt3 = {{18 {1'b0}}, Qcnt_four_9[38:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					6'b001010: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{17 {1'b0}}, Qcnt_four_10[42:3]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{16 {1'b0}}, Qcnt_four_10[42:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{15 {1'b0}}, Qcnt_four_10[42:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = 2'b00;
+						Q_sqrt3 = {{14 {1'b0}}, Qcnt_four_10[42:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					6'b001011: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{13 {1'b0}}, Qcnt_four_11[46:3]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{12 {1'b0}}, Qcnt_four_11[46:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{11 {1'b0}}, Qcnt_four_11[46:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = 2'b00;
+						Q_sqrt3 = {{10 {1'b0}}, Qcnt_four_11[46:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					6'b001100: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{9 {1'b0}}, Qcnt_four_12[50:3]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{8 {1'b0}}, Qcnt_four_12[50:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{7 {1'b0}}, Qcnt_four_12[50:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = 2'b00;
+						Q_sqrt3 = {{6 {1'b0}}, Qcnt_four_12[50:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					6'b001101: begin
+						Sqrt_DI[0] = 2'b00;
+						Q_sqrt0 = {{5 {1'b0}}, Qcnt_four_13[54:3]};
+						Sqrt_Q0 = (Quotient_DP[0] ? Q_sqrt_com_0 : Q_sqrt0);
+						Sqrt_DI[1] = 2'b00;
+						Q_sqrt1 = {{4 {1'b0}}, Qcnt_four_13[54:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = 2'b00;
+						Q_sqrt2 = {{3 {1'b0}}, Qcnt_four_13[54:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = 2'b00;
+						Q_sqrt3 = {{2 {1'b0}}, Qcnt_four_13[54:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+					default: begin
+						Sqrt_DI[0] = Mant_D_sqrt_Norm[53:defs_div_sqrt_mvp_C_MANT_FP64];
+						Q_sqrt0 = {{57 {1'b0}}, Qcnt_four_0[3]};
+						Sqrt_Q0 = Q_sqrt_com_0;
+						Sqrt_DI[1] = Mant_D_sqrt_Norm[51:50];
+						Q_sqrt1 = {{56 {1'b0}}, Qcnt_four_0[3:2]};
+						Sqrt_Q1 = (Sqrt_quotinent_S[3] ? Q_sqrt_com_1 : Q_sqrt1);
+						Sqrt_DI[2] = Mant_D_sqrt_Norm[49:48];
+						Q_sqrt2 = {{55 {1'b0}}, Qcnt_four_0[3:1]};
+						Sqrt_Q2 = (Sqrt_quotinent_S[2] ? Q_sqrt_com_2 : Q_sqrt2);
+						Sqrt_DI[3] = Mant_D_sqrt_Norm[47:46];
+						Q_sqrt3 = {{54 {1'b0}}, Qcnt_four_0[3:0]};
+						Sqrt_Q3 = (Sqrt_quotinent_S[1] ? Q_sqrt_com_3 : Q_sqrt3);
+					end
+				endcase
 		endcase
-	assign ex1_special_data_final[SINGLE_WIDTH - 1:0] = ex1_special_data[SINGLE_WIDTH - 1:0];
-	assign ex2_data_clk_en = idu_fpu_ex1_gateclk_vld || ctrl_xx_ex1_warm_up;
-	gated_clk_cell x_fpu_data_ex2_gated_clk(
-		.clk_in(forever_cpuclk),
-		.clk_out(ex2_data_clk),
-		.external_en(1'b0),
-		.global_en(cp0_yy_clk_en),
-		.local_en(ex2_data_clk_en),
-		.module_en(cp0_fpu_icg_en),
-		.pad_yy_icg_scan_en(pad_yy_icg_scan_en)
-	);
-	always @(posedge ex2_data_clk)
-		if ((ctrl_xx_ex1_inst_vld && !ctrl_xx_ex1_stall) || ctrl_xx_ex1_warm_up) begin
-			ex2_fflags[4:0] <= ex1_fflags[4:0];
-			ex2_special_sign[3:0] <= ex1_special_sign[3:0];
-			ex2_special_sel[6:0] <= {ex1_special_sel[8], |ex1_special_sel[7:5], ex1_special_sel[4:0]};
-			ex2_special_data[SINGLE_WIDTH - 1:0] <= ex1_special_data_final[SINGLE_WIDTH - 1:0];
+	end
+	assign Sqrt_R0 = (Sqrt_start_dly_S ? {58 {1'sb0}} : {Partial_remainder_DP[57:0]});
+	assign Sqrt_R1 = {Iteration_cell_sum_AMASK_D[0][57], Iteration_cell_sum_AMASK_D[0][54:0], Sqrt_DO[0]};
+	assign Sqrt_R2 = {Iteration_cell_sum_AMASK_D[1][57], Iteration_cell_sum_AMASK_D[1][54:0], Sqrt_DO[1]};
+	assign Sqrt_R3 = {Iteration_cell_sum_AMASK_D[2][57], Iteration_cell_sum_AMASK_D[2][54:0], Sqrt_DO[2]};
+	assign Sqrt_R4 = {Iteration_cell_sum_AMASK_D[3][57], Iteration_cell_sum_AMASK_D[3][54:0], Sqrt_DO[3]};
+	wire [57:0] Denominator_se_format_DB;
+	assign Denominator_se_format_DB = {Denominator_se_DB[53:45], (FP16ALT_SO ? FP16ALT_SO : Denominator_se_DB[44]), Denominator_se_DB[43:42], (FP16_SO ? FP16_SO : Denominator_se_DB[41]), Denominator_se_DB[40:29], (FP32_SO ? FP32_SO : Denominator_se_DB[28]), Denominator_se_DB[27:0], FP64_SO, 3'b000};
+	wire [57:0] First_iteration_cell_div_a_D;
+	wire [57:0] First_iteration_cell_div_b_D;
+	wire Sel_b_for_first_S;
+	assign First_iteration_cell_div_a_D = (Div_start_dly_S ? {Numerator_se_D[53:45], (FP16ALT_SO ? FP16ALT_SO : Numerator_se_D[44]), Numerator_se_D[43:42], (FP16_SO ? FP16_SO : Numerator_se_D[41]), Numerator_se_D[40:29], (FP32_SO ? FP32_SO : Numerator_se_D[28]), Numerator_se_D[27:0], FP64_SO, 3'b000} : {Partial_remainder_DP[56:48], (FP16ALT_SO ? Quotient_DP[0] : Partial_remainder_DP[47]), Partial_remainder_DP[46:45], (FP16_SO ? Quotient_DP[0] : Partial_remainder_DP[44]), Partial_remainder_DP[43:32], (FP32_SO ? Quotient_DP[0] : Partial_remainder_DP[31]), Partial_remainder_DP[30:3], FP64_SO && Quotient_DP[0], 3'b000});
+	assign Sel_b_for_first_S = (Div_start_dly_S ? 1 : Quotient_DP[0]);
+	assign First_iteration_cell_div_b_D = (Sel_b_for_first_S ? Denominator_se_format_DB : {Denominator_se_D, 4'b0000});
+	assign Iteration_cell_a_BMASK_D[0] = (Sqrt_enable_SO ? Sqrt_R0 : {First_iteration_cell_div_a_D});
+	assign Iteration_cell_b_BMASK_D[0] = (Sqrt_enable_SO ? Sqrt_Q0 : {First_iteration_cell_div_b_D});
+	wire [57:0] Sec_iteration_cell_div_a_D;
+	wire [57:0] Sec_iteration_cell_div_b_D;
+	wire Sel_b_for_sec_S;
+	generate
+		if (|defs_div_sqrt_mvp_Iteration_unit_num_S) begin : genblk1
+			assign Sel_b_for_sec_S = ~Iteration_cell_sum_AMASK_D[0][57];
+			assign Sec_iteration_cell_div_a_D = {Iteration_cell_sum_AMASK_D[0][56:48], (FP16ALT_SO ? Sel_b_for_sec_S : Iteration_cell_sum_AMASK_D[0][47]), Iteration_cell_sum_AMASK_D[0][46:45], (FP16_SO ? Sel_b_for_sec_S : Iteration_cell_sum_AMASK_D[0][44]), Iteration_cell_sum_AMASK_D[0][43:32], (FP32_SO ? Sel_b_for_sec_S : Iteration_cell_sum_AMASK_D[0][31]), Iteration_cell_sum_AMASK_D[0][30:3], FP64_SO && Sel_b_for_sec_S, 3'b000};
+			assign Sec_iteration_cell_div_b_D = (Sel_b_for_sec_S ? Denominator_se_format_DB : {Denominator_se_D, 4'b0000});
+			assign Iteration_cell_a_BMASK_D[1] = (Sqrt_enable_SO ? Sqrt_R1 : {Sec_iteration_cell_div_a_D});
+			assign Iteration_cell_b_BMASK_D[1] = (Sqrt_enable_SO ? Sqrt_Q1 : {Sec_iteration_cell_div_b_D});
 		end
-	assign ex2_inst_wb = |ex2_special_sel[6:0];
-	always @(ex2_special_sel[6:0] or ex2_special_data[31:0] or ex2_special_sign[3:0])
-		case (ex2_special_sel[6:0])
-			7'b0000001: ex2_result[SINGLE_WIDTH - 1:0] = {ex2_special_sign[0], ex2_special_data[SINGLE_WIDTH - 2:0]};
-			7'b0000010: ex2_result[SINGLE_WIDTH - 1:0] = {ex2_special_sign[1], {31 {1'b0}}};
-			7'b0000100: ex2_result[SINGLE_WIDTH - 1:0] = {ex2_special_sign[2], {8 {1'b1}}, {23 {1'b0}}};
-			7'b0001000: ex2_result[SINGLE_WIDTH - 1:0] = {ex2_special_sign[3], {7 {1'b1}}, 1'b0, {23 {1'b1}}};
-			7'b0010000: ex2_result[SINGLE_WIDTH - 1:0] = {1'b0, {8 {1'b1}}, 1'b1, {22 {1'b0}}};
-			7'b0100000: ex2_result[SINGLE_WIDTH - 1:0] = {ex2_special_data[31], {8 {1'b1}}, 1'b1, ex2_special_data[21:0]};
-			7'b1000000: ex2_result[SINGLE_WIDTH - 1:0] = ex2_special_data[SINGLE_WIDTH - 1:0];
-			default: ex2_result[SINGLE_WIDTH - 1:0] = {SINGLE_WIDTH {1'b0}};
+	endgenerate
+	wire [57:0] Thi_iteration_cell_div_a_D;
+	wire [57:0] Thi_iteration_cell_div_b_D;
+	wire Sel_b_for_thi_S;
+	generate
+		if (1'd1 | 1'd0) begin : genblk2
+			assign Sel_b_for_thi_S = ~Iteration_cell_sum_AMASK_D[1][57];
+			assign Thi_iteration_cell_div_a_D = {Iteration_cell_sum_AMASK_D[1][56:48], (FP16ALT_SO ? Sel_b_for_thi_S : Iteration_cell_sum_AMASK_D[1][47]), Iteration_cell_sum_AMASK_D[1][46:45], (FP16_SO ? Sel_b_for_thi_S : Iteration_cell_sum_AMASK_D[1][44]), Iteration_cell_sum_AMASK_D[1][43:32], (FP32_SO ? Sel_b_for_thi_S : Iteration_cell_sum_AMASK_D[1][31]), Iteration_cell_sum_AMASK_D[1][30:3], FP64_SO && Sel_b_for_thi_S, 3'b000};
+			assign Thi_iteration_cell_div_b_D = (Sel_b_for_thi_S ? Denominator_se_format_DB : {Denominator_se_D, 4'b0000});
+			assign Iteration_cell_a_BMASK_D[2] = (Sqrt_enable_SO ? Sqrt_R2 : {Thi_iteration_cell_div_a_D});
+			assign Iteration_cell_b_BMASK_D[2] = (Sqrt_enable_SO ? Sqrt_Q2 : {Thi_iteration_cell_div_b_D});
+		end
+	endgenerate
+	wire [57:0] Fou_iteration_cell_div_a_D;
+	wire [57:0] Fou_iteration_cell_div_b_D;
+	wire Sel_b_for_fou_S;
+	wire [57:0] Mask_bits_ctl_S;
+	assign Mask_bits_ctl_S = 58'h3ffffffffffffff;
+	wire Div_enable_SI [3:0];
+	wire Div_start_dly_SI [3:0];
+	wire Sqrt_enable_SI [3:0];
+	genvar _gv_i_5;
+	genvar _gv_j_2;
+	generate
+		for (_gv_i_5 = 0; _gv_i_5 <= defs_div_sqrt_mvp_Iteration_unit_num_S; _gv_i_5 = _gv_i_5 + 1) begin : genblk4
+			localparam i = _gv_i_5;
+			for (_gv_j_2 = 0; _gv_j_2 <= 57; _gv_j_2 = _gv_j_2 + 1) begin : genblk1
+				localparam j = _gv_j_2;
+				assign Iteration_cell_a_D[i][j] = Mask_bits_ctl_S[j] && Iteration_cell_a_BMASK_D[i][j];
+				assign Iteration_cell_b_D[i][j] = Mask_bits_ctl_S[j] && Iteration_cell_b_BMASK_D[i][j];
+				assign Iteration_cell_sum_AMASK_D[i][j] = Mask_bits_ctl_S[j] && Iteration_cell_sum_D[i][j];
+			end
+			assign Div_enable_SI[i] = Div_enable_SO;
+			assign Div_start_dly_SI[i] = Div_start_dly_S;
+			assign Sqrt_enable_SI[i] = Sqrt_enable_SO;
+			iteration_div_sqrt_mvp #(.WIDTH(58)) iteration_div_sqrt(
+				.A_DI(Iteration_cell_a_D[i]),
+				.B_DI(Iteration_cell_b_D[i]),
+				.Div_enable_SI(Div_enable_SI[i]),
+				.Div_start_dly_SI(Div_start_dly_SI[i]),
+				.Sqrt_enable_SI(Sqrt_enable_SI[i]),
+				.D_DI(Sqrt_DI[i]),
+				.D_DO(Sqrt_DO[i]),
+				.Sum_DO(Iteration_cell_sum_D[i]),
+				.Carry_out_DO(Iteration_cell_carry_D[i])
+			);
+		end
+	endgenerate
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		case (defs_div_sqrt_mvp_Iteration_unit_num_S)
+			2'b00:
+				if (Fsm_enable_S)
+					Partial_remainder_DN = (Sqrt_enable_SO ? Sqrt_R1 : Iteration_cell_sum_AMASK_D[0]);
+				else
+					Partial_remainder_DN = Partial_remainder_DP;
+			2'b01:
+				if (Fsm_enable_S)
+					Partial_remainder_DN = (Sqrt_enable_SO ? Sqrt_R2 : Iteration_cell_sum_AMASK_D[1]);
+				else
+					Partial_remainder_DN = Partial_remainder_DP;
+			2'b10:
+				if (Fsm_enable_S)
+					Partial_remainder_DN = (Sqrt_enable_SO ? Sqrt_R3 : Iteration_cell_sum_AMASK_D[2]);
+				else
+					Partial_remainder_DN = Partial_remainder_DP;
+			2'b11:
+				if (Fsm_enable_S)
+					Partial_remainder_DN = (Sqrt_enable_SO ? Sqrt_R4 : Iteration_cell_sum_AMASK_D[3]);
+				else
+					Partial_remainder_DN = Partial_remainder_DP;
 		endcase
-	assign dp_frbus_ex2_data[SINGLE_WIDTH - 1:0] = ex2_result[SINGLE_WIDTH - 1:0];
-	assign dp_frbus_ex2_fflags[4:0] = ex2_fflags[4:0];
-endmodule
-module pa_fpu_frbus (
-	ctrl_frbus_ex2_wb_req,
-	dp_frbus_ex2_data,
-	dp_frbus_ex2_fflags,
-	fdsu_frbus_data,
-	fdsu_frbus_fflags,
-	fdsu_frbus_wb_vld,
-	fpu_idu_fwd_data,
-	fpu_idu_fwd_fflags,
-	fpu_idu_fwd_vld
-);
-	input wire ctrl_frbus_ex2_wb_req;
-	input [31:0] dp_frbus_ex2_data;
-	input [4:0] dp_frbus_ex2_fflags;
-	input wire [31:0] fdsu_frbus_data;
-	input wire [4:0] fdsu_frbus_fflags;
-	input wire fdsu_frbus_wb_vld;
-	output wire [31:0] fpu_idu_fwd_data;
-	output wire [4:0] fpu_idu_fwd_fflags;
-	output wire fpu_idu_fwd_vld;
-	reg [31:0] frbus_wb_data;
-	reg [4:0] frbus_wb_fflags;
-	wire frbus_ex2_wb_vld;
-	wire frbus_fdsu_wb_vld;
-	wire frbus_wb_vld;
-	wire [3:0] frbus_source_vld;
-	assign frbus_fdsu_wb_vld = fdsu_frbus_wb_vld;
-	assign frbus_ex2_wb_vld = ctrl_frbus_ex2_wb_req;
-	assign frbus_source_vld[3:0] = {2'b00, frbus_ex2_wb_vld, frbus_fdsu_wb_vld};
-	assign frbus_wb_vld = frbus_ex2_wb_vld | frbus_fdsu_wb_vld;
-	always @(frbus_source_vld[3:0] or fdsu_frbus_data[31:0] or dp_frbus_ex2_data[31:0] or fdsu_frbus_fflags[4:0] or dp_frbus_ex2_fflags[4:0])
-		case (frbus_source_vld[3:0])
-			4'b0001: begin
-				frbus_wb_data[31:0] = fdsu_frbus_data[31:0];
-				frbus_wb_fflags[4:0] = fdsu_frbus_fflags[4:0];
+	end
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Partial_remainder_DP <= 1'sb0;
+		else
+			Partial_remainder_DP <= Partial_remainder_DN;
+	reg [56:0] Quotient_DN;
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		case (defs_div_sqrt_mvp_Iteration_unit_num_S)
+			2'b00:
+				if (Fsm_enable_S)
+					Quotient_DN = (Sqrt_enable_SO ? {Quotient_DP[55:0], Sqrt_quotinent_S[3]} : {Quotient_DP[55:0], Iteration_cell_carry_D[0]});
+				else
+					Quotient_DN = Quotient_DP;
+			2'b01:
+				if (Fsm_enable_S)
+					Quotient_DN = (Sqrt_enable_SO ? {Quotient_DP[54:0], Sqrt_quotinent_S[3:2]} : {Quotient_DP[54:0], Iteration_cell_carry_D[0], Iteration_cell_carry_D[1]});
+				else
+					Quotient_DN = Quotient_DP;
+			2'b10:
+				if (Fsm_enable_S)
+					Quotient_DN = (Sqrt_enable_SO ? {Quotient_DP[53:0], Sqrt_quotinent_S[3:1]} : {Quotient_DP[53:0], Iteration_cell_carry_D[0], Iteration_cell_carry_D[1], Iteration_cell_carry_D[2]});
+				else
+					Quotient_DN = Quotient_DP;
+			2'b11:
+				if (Fsm_enable_S)
+					Quotient_DN = (Sqrt_enable_SO ? {Quotient_DP[defs_div_sqrt_mvp_C_MANT_FP64:0], Sqrt_quotinent_S} : {Quotient_DP[defs_div_sqrt_mvp_C_MANT_FP64:0], Iteration_cell_carry_D[0], Iteration_cell_carry_D[1], Iteration_cell_carry_D[2], Iteration_cell_carry_D[3]});
+				else
+					Quotient_DN = Quotient_DP;
+		endcase
+	end
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Quotient_DP <= 1'sb0;
+		else
+			Quotient_DP <= Quotient_DN;
+	generate
+		if (1) begin : genblk7
+			always @(*) begin
+				if (_sv2v_0)
+					;
+				case (Format_sel_S)
+					2'b00:
+						case (Precision_ctl_S)
+							6'h00: Mant_result_prenorm_DO = {Quotient_DP[26:0], {30 {1'b0}}};
+							6'h17, 6'h16, 6'h15: Mant_result_prenorm_DO = {Quotient_DP[defs_div_sqrt_mvp_C_MANT_FP32:0], {33 {1'b0}}};
+							6'h14, 6'h13, 6'h12: Mant_result_prenorm_DO = {Quotient_DP[20:0], {36 {1'b0}}};
+							6'h11, 6'h10, 6'h0f: Mant_result_prenorm_DO = {Quotient_DP[17:0], {39 {1'b0}}};
+							6'h0e, 6'h0d, 6'h0c: Mant_result_prenorm_DO = {Quotient_DP[14:0], {42 {1'b0}}};
+							6'h0b, 6'h0a, 6'h09: Mant_result_prenorm_DO = {Quotient_DP[11:0], {45 {1'b0}}};
+							6'h08, 6'h07, 6'h06: Mant_result_prenorm_DO = {Quotient_DP[8:0], {48 {1'b0}}};
+							default: Mant_result_prenorm_DO = {Quotient_DP[26:0], {30 {1'b0}}};
+						endcase
+					2'b01:
+						case (Precision_ctl_S)
+							6'h00: Mant_result_prenorm_DO = Quotient_DP[56:0];
+							6'h34, 6'h33: Mant_result_prenorm_DO = {Quotient_DP[53:1], {4 {1'b0}}};
+							6'h32, 6'h31, 6'h30: Mant_result_prenorm_DO = {Quotient_DP[50:0], {6 {1'b0}}};
+							6'h2f, 6'h2e, 6'h2d: Mant_result_prenorm_DO = {Quotient_DP[47:0], {9 {1'b0}}};
+							6'h2c, 6'h2b, 6'h2a: Mant_result_prenorm_DO = {Quotient_DP[44:0], {12 {1'b0}}};
+							6'h29, 6'h28, 6'h27: Mant_result_prenorm_DO = {Quotient_DP[41:0], {15 {1'b0}}};
+							6'h26, 6'h25, 6'h24: Mant_result_prenorm_DO = {Quotient_DP[38:0], {18 {1'b0}}};
+							6'h23, 6'h22, 6'h21: Mant_result_prenorm_DO = {Quotient_DP[35:0], {21 {1'b0}}};
+							6'h20, 6'h1f, 6'h1e: Mant_result_prenorm_DO = {Quotient_DP[32:0], {24 {1'b0}}};
+							6'h1d, 6'h1c, 6'h1b: Mant_result_prenorm_DO = {Quotient_DP[29:0], {27 {1'b0}}};
+							6'h1a, 6'h19, 6'h18: Mant_result_prenorm_DO = {Quotient_DP[26:0], {30 {1'b0}}};
+							6'h17, 6'h16, 6'h15: Mant_result_prenorm_DO = {Quotient_DP[23:0], {33 {1'b0}}};
+							6'h14, 6'h13, 6'h12: Mant_result_prenorm_DO = {Quotient_DP[20:0], {36 {1'b0}}};
+							6'h11, 6'h10, 6'h0f: Mant_result_prenorm_DO = {Quotient_DP[17:0], {39 {1'b0}}};
+							6'h0e, 6'h0d, 6'h0c: Mant_result_prenorm_DO = {Quotient_DP[14:0], {42 {1'b0}}};
+							6'h0b, 6'h0a, 6'h09: Mant_result_prenorm_DO = {Quotient_DP[11:0], {45 {1'b0}}};
+							6'h08, 6'h07, 6'h06: Mant_result_prenorm_DO = {Quotient_DP[8:0], {48 {1'b0}}};
+							default: Mant_result_prenorm_DO = Quotient_DP[56:0];
+						endcase
+					2'b10:
+						case (Precision_ctl_S)
+							6'b000000: Mant_result_prenorm_DO = {Quotient_DP[14:0], {42 {1'b0}}};
+							6'h0a, 6'h09: Mant_result_prenorm_DO = {Quotient_DP[11:1], {46 {1'b0}}};
+							6'h08, 6'h07, 6'h06: Mant_result_prenorm_DO = {Quotient_DP[8:0], {48 {1'b0}}};
+							default: Mant_result_prenorm_DO = {Quotient_DP[14:0], {42 {1'b0}}};
+						endcase
+					2'b11:
+						case (Precision_ctl_S)
+							6'b000000: Mant_result_prenorm_DO = {Quotient_DP[11:0], {45 {1'b0}}};
+							6'h07, 6'h06: Mant_result_prenorm_DO = {Quotient_DP[8:1], {49 {1'b0}}};
+							default: Mant_result_prenorm_DO = {Quotient_DP[11:0], {45 {1'b0}}};
+						endcase
+				endcase
 			end
-			4'b0010: begin
-				frbus_wb_data[31:0] = dp_frbus_ex2_data[31:0];
-				frbus_wb_fflags[4:0] = dp_frbus_ex2_fflags[4:0];
+		end
+	endgenerate
+	wire [12:0] Exp_result_prenorm_DN;
+	reg [12:0] Exp_result_prenorm_DP;
+	wire [12:0] Exp_add_a_D;
+	wire [12:0] Exp_add_b_D;
+	wire [12:0] Exp_add_c_D;
+	integer C_BIAS_AONE;
+	integer C_HALF_BIAS;
+	localparam defs_div_sqrt_mvp_C_BIAS_AONE_FP16 = 5'h10;
+	localparam defs_div_sqrt_mvp_C_BIAS_AONE_FP16ALT = 8'h80;
+	localparam defs_div_sqrt_mvp_C_BIAS_AONE_FP32 = 8'h80;
+	localparam defs_div_sqrt_mvp_C_BIAS_AONE_FP64 = 11'h400;
+	localparam defs_div_sqrt_mvp_C_HALF_BIAS_FP16 = 7;
+	localparam defs_div_sqrt_mvp_C_HALF_BIAS_FP16ALT = 63;
+	localparam defs_div_sqrt_mvp_C_HALF_BIAS_FP32 = 63;
+	localparam defs_div_sqrt_mvp_C_HALF_BIAS_FP64 = 511;
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		case (Format_sel_S)
+			2'b00: begin
+				C_BIAS_AONE = defs_div_sqrt_mvp_C_BIAS_AONE_FP32;
+				C_HALF_BIAS = defs_div_sqrt_mvp_C_HALF_BIAS_FP32;
 			end
-			default: begin
-				frbus_wb_data[31:0] = {31 {1'b0}};
-				frbus_wb_fflags[4:0] = 5'b00000;
+			2'b01: begin
+				C_BIAS_AONE = defs_div_sqrt_mvp_C_BIAS_AONE_FP64;
+				C_HALF_BIAS = defs_div_sqrt_mvp_C_HALF_BIAS_FP64;
+			end
+			2'b10: begin
+				C_BIAS_AONE = defs_div_sqrt_mvp_C_BIAS_AONE_FP16;
+				C_HALF_BIAS = defs_div_sqrt_mvp_C_HALF_BIAS_FP16;
+			end
+			2'b11: begin
+				C_BIAS_AONE = defs_div_sqrt_mvp_C_BIAS_AONE_FP16ALT;
+				C_HALF_BIAS = defs_div_sqrt_mvp_C_HALF_BIAS_FP16ALT;
 			end
 		endcase
-	assign fpu_idu_fwd_vld = frbus_wb_vld;
-	assign fpu_idu_fwd_fflags[4:0] = frbus_wb_fflags[4:0];
-	assign fpu_idu_fwd_data[31:0] = frbus_wb_data[31:0];
+	end
+	assign Exp_add_a_D = {(Sqrt_start_dly_S ? {Exp_num_DI[defs_div_sqrt_mvp_C_EXP_FP64], Exp_num_DI[defs_div_sqrt_mvp_C_EXP_FP64], Exp_num_DI[defs_div_sqrt_mvp_C_EXP_FP64], Exp_num_DI[defs_div_sqrt_mvp_C_EXP_FP64:1]} : {Exp_num_DI[defs_div_sqrt_mvp_C_EXP_FP64], Exp_num_DI[defs_div_sqrt_mvp_C_EXP_FP64], Exp_num_DI})};
+	localparam defs_div_sqrt_mvp_C_EXP_ZERO_FP64 = 11'h000;
+	assign Exp_add_b_D = {(Sqrt_start_dly_S ? {1'b0, defs_div_sqrt_mvp_C_EXP_ZERO_FP64, Exp_num_DI[0]} : {~Exp_den_DI[defs_div_sqrt_mvp_C_EXP_FP64], ~Exp_den_DI[defs_div_sqrt_mvp_C_EXP_FP64], ~Exp_den_DI})};
+	assign Exp_add_c_D = {(Div_start_dly_S ? {C_BIAS_AONE} : {C_HALF_BIAS})};
+	assign Exp_result_prenorm_DN = (Start_dly_S ? {(Exp_add_a_D + Exp_add_b_D) + Exp_add_c_D} : Exp_result_prenorm_DP);
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Exp_result_prenorm_DP <= 1'sb0;
+		else
+			Exp_result_prenorm_DP <= Exp_result_prenorm_DN;
+	assign Exp_result_prenorm_DO = Exp_result_prenorm_DP;
+	initial _sv2v_0 = 0;
 endmodule
-module pa_fpu_src_type (
-	inst_double,
-	inst_single,
-	src_cnan,
-	src_id,
-	src_in,
-	src_inf,
-	src_norm,
-	src_qnan,
-	src_snan,
-	src_zero
+module norm_div_sqrt_mvp (
+	Mant_in_DI,
+	Exp_in_DI,
+	Sign_in_DI,
+	Div_enable_SI,
+	Sqrt_enable_SI,
+	Inf_a_SI,
+	Inf_b_SI,
+	Zero_a_SI,
+	Zero_b_SI,
+	NaN_a_SI,
+	NaN_b_SI,
+	SNaN_SI,
+	RM_SI,
+	Full_precision_SI,
+	FP32_SI,
+	FP64_SI,
+	FP16_SI,
+	FP16ALT_SI,
+	Result_DO,
+	Fflags_SO
 );
-	input wire inst_double;
-	input wire inst_single;
-	input wire [63:0] src_in;
-	output wire src_cnan;
-	output wire src_id;
-	output wire src_inf;
-	output wire src_norm;
-	output wire src_qnan;
-	output wire src_snan;
-	output wire src_zero;
-	wire [63:0] src;
-	wire src_expn_max;
-	wire src_expn_zero;
-	wire src_frac_msb;
-	wire src_frac_zero;
-	assign src[63:0] = src_in[63:0];
-	assign src_cnan = !(&src[63:32]) && inst_single;
-	assign src_expn_zero = (!(|src[62:52]) && inst_double) || (!(|src[30:23]) && inst_single);
-	assign src_expn_max = (&src[62:52] && inst_double) || (&src[30:23] && inst_single);
-	assign src_frac_zero = (!(|src[51:0]) && inst_double) || (!(|src[22:0]) && inst_single);
-	assign src_frac_msb = (src[51] && inst_double) || (src[22] && inst_single);
-	assign src_snan = ((src_expn_max && !src_frac_msb) && !src_frac_zero) && !src_cnan;
-	assign src_qnan = (src_expn_max && src_frac_msb) || src_cnan;
-	assign src_zero = (src_expn_zero && src_frac_zero) && !src_cnan;
-	assign src_id = (src_expn_zero && !src_frac_zero) && !src_cnan;
-	assign src_inf = (src_expn_max && src_frac_zero) && !src_cnan;
-	assign src_norm = (!(src_expn_zero && src_frac_zero) && !src_expn_max) && !src_cnan;
+	reg _sv2v_0;
+	localparam defs_div_sqrt_mvp_C_MANT_FP64 = 52;
+	input wire [56:0] Mant_in_DI;
+	localparam defs_div_sqrt_mvp_C_EXP_FP64 = 11;
+	input wire signed [12:0] Exp_in_DI;
+	input wire Sign_in_DI;
+	input wire Div_enable_SI;
+	input wire Sqrt_enable_SI;
+	input wire Inf_a_SI;
+	input wire Inf_b_SI;
+	input wire Zero_a_SI;
+	input wire Zero_b_SI;
+	input wire NaN_a_SI;
+	input wire NaN_b_SI;
+	input wire SNaN_SI;
+	localparam defs_div_sqrt_mvp_C_RM = 3;
+	input wire [2:0] RM_SI;
+	input wire Full_precision_SI;
+	input wire FP32_SI;
+	input wire FP64_SI;
+	input wire FP16_SI;
+	input wire FP16ALT_SI;
+	output reg [63:0] Result_DO;
+	output wire [4:0] Fflags_SO;
+	reg Sign_res_D;
+	reg NV_OP_S;
+	reg Exp_OF_S;
+	reg Exp_UF_S;
+	reg Div_Zero_S;
+	wire In_Exact_S;
+	reg [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_res_norm_D;
+	reg [10:0] Exp_res_norm_D;
+	wire [12:0] Exp_Max_RS_FP64_D;
+	localparam defs_div_sqrt_mvp_C_EXP_FP32 = 8;
+	wire [9:0] Exp_Max_RS_FP32_D;
+	localparam defs_div_sqrt_mvp_C_EXP_FP16 = 5;
+	wire [6:0] Exp_Max_RS_FP16_D;
+	localparam defs_div_sqrt_mvp_C_EXP_FP16ALT = 8;
+	wire [9:0] Exp_Max_RS_FP16ALT_D;
+	assign Exp_Max_RS_FP64_D = (Exp_in_DI[defs_div_sqrt_mvp_C_EXP_FP64:0] + defs_div_sqrt_mvp_C_MANT_FP64) + 1;
+	localparam defs_div_sqrt_mvp_C_MANT_FP32 = 23;
+	assign Exp_Max_RS_FP32_D = (Exp_in_DI[defs_div_sqrt_mvp_C_EXP_FP32:0] + defs_div_sqrt_mvp_C_MANT_FP32) + 1;
+	localparam defs_div_sqrt_mvp_C_MANT_FP16 = 10;
+	assign Exp_Max_RS_FP16_D = (Exp_in_DI[defs_div_sqrt_mvp_C_EXP_FP16:0] + defs_div_sqrt_mvp_C_MANT_FP16) + 1;
+	localparam defs_div_sqrt_mvp_C_MANT_FP16ALT = 7;
+	assign Exp_Max_RS_FP16ALT_D = (Exp_in_DI[defs_div_sqrt_mvp_C_EXP_FP16ALT:0] + defs_div_sqrt_mvp_C_MANT_FP16ALT) + 1;
+	wire [12:0] Num_RS_D;
+	assign Num_RS_D = ~Exp_in_DI + 2;
+	wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_RS_D;
+	wire [56:0] Mant_forsticky_D;
+	assign {Mant_RS_D, Mant_forsticky_D} = {Mant_in_DI, {53 {1'b0}}} >> Num_RS_D;
+	wire [12:0] Exp_subOne_D;
+	assign Exp_subOne_D = Exp_in_DI - 1;
+	reg [1:0] Mant_lower_D;
+	reg Mant_sticky_bit_D;
+	reg [56:0] Mant_forround_D;
+	localparam defs_div_sqrt_mvp_C_EXP_ONE_FP64 = 13'h0001;
+	localparam defs_div_sqrt_mvp_C_MANT_NAN_FP64 = 52'h8000000000000;
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		if (NaN_a_SI) begin
+			Div_Zero_S = 1'b0;
+			Exp_OF_S = 1'b0;
+			Exp_UF_S = 1'b0;
+			Mant_res_norm_D = {1'b0, defs_div_sqrt_mvp_C_MANT_NAN_FP64};
+			Exp_res_norm_D = 1'sb1;
+			Mant_forround_D = 1'sb0;
+			Sign_res_D = 1'b0;
+			NV_OP_S = SNaN_SI;
+		end
+		else if (NaN_b_SI) begin
+			Div_Zero_S = 1'b0;
+			Exp_OF_S = 1'b0;
+			Exp_UF_S = 1'b0;
+			Mant_res_norm_D = {1'b0, defs_div_sqrt_mvp_C_MANT_NAN_FP64};
+			Exp_res_norm_D = 1'sb1;
+			Mant_forround_D = 1'sb0;
+			Sign_res_D = 1'b0;
+			NV_OP_S = SNaN_SI;
+		end
+		else if (Inf_a_SI) begin
+			if (Div_enable_SI && Inf_b_SI) begin
+				Div_Zero_S = 1'b0;
+				Exp_OF_S = 1'b0;
+				Exp_UF_S = 1'b0;
+				Mant_res_norm_D = {1'b0, defs_div_sqrt_mvp_C_MANT_NAN_FP64};
+				Exp_res_norm_D = 1'sb1;
+				Mant_forround_D = 1'sb0;
+				Sign_res_D = 1'b0;
+				NV_OP_S = 1'b1;
+			end
+			else if (Sqrt_enable_SI && Sign_in_DI) begin
+				Div_Zero_S = 1'b0;
+				Exp_OF_S = 1'b0;
+				Exp_UF_S = 1'b0;
+				Mant_res_norm_D = {1'b0, defs_div_sqrt_mvp_C_MANT_NAN_FP64};
+				Exp_res_norm_D = 1'sb1;
+				Mant_forround_D = 1'sb0;
+				Sign_res_D = 1'b0;
+				NV_OP_S = 1'b1;
+			end
+			else begin
+				Div_Zero_S = 1'b0;
+				Exp_OF_S = 1'b1;
+				Exp_UF_S = 1'b0;
+				Mant_res_norm_D = 1'sb0;
+				Exp_res_norm_D = 1'sb1;
+				Mant_forround_D = 1'sb0;
+				Sign_res_D = Sign_in_DI;
+				NV_OP_S = 1'b0;
+			end
+		end
+		else if (Div_enable_SI && Inf_b_SI) begin
+			Div_Zero_S = 1'b0;
+			Exp_OF_S = 1'b1;
+			Exp_UF_S = 1'b0;
+			Mant_res_norm_D = 1'sb0;
+			Exp_res_norm_D = 1'sb0;
+			Mant_forround_D = 1'sb0;
+			Sign_res_D = Sign_in_DI;
+			NV_OP_S = 1'b0;
+		end
+		else if (Zero_a_SI) begin
+			if (Div_enable_SI && Zero_b_SI) begin
+				Div_Zero_S = 1'b1;
+				Exp_OF_S = 1'b0;
+				Exp_UF_S = 1'b0;
+				Mant_res_norm_D = {1'b0, defs_div_sqrt_mvp_C_MANT_NAN_FP64};
+				Exp_res_norm_D = 1'sb1;
+				Mant_forround_D = 1'sb0;
+				Sign_res_D = 1'b0;
+				NV_OP_S = 1'b1;
+			end
+			else begin
+				Div_Zero_S = 1'b0;
+				Exp_OF_S = 1'b0;
+				Exp_UF_S = 1'b0;
+				Mant_res_norm_D = 1'sb0;
+				Exp_res_norm_D = 1'sb0;
+				Mant_forround_D = 1'sb0;
+				Sign_res_D = Sign_in_DI;
+				NV_OP_S = 1'b0;
+			end
+		end
+		else if (Div_enable_SI && Zero_b_SI) begin
+			Div_Zero_S = 1'b1;
+			Exp_OF_S = 1'b0;
+			Exp_UF_S = 1'b0;
+			Mant_res_norm_D = 1'sb0;
+			Exp_res_norm_D = 1'sb1;
+			Mant_forround_D = 1'sb0;
+			Sign_res_D = Sign_in_DI;
+			NV_OP_S = 1'b0;
+		end
+		else if (Sign_in_DI && Sqrt_enable_SI) begin
+			Div_Zero_S = 1'b0;
+			Exp_OF_S = 1'b0;
+			Exp_UF_S = 1'b0;
+			Mant_res_norm_D = {1'b0, defs_div_sqrt_mvp_C_MANT_NAN_FP64};
+			Exp_res_norm_D = 1'sb1;
+			Mant_forround_D = 1'sb0;
+			Sign_res_D = 1'b0;
+			NV_OP_S = 1'b1;
+		end
+		else if (Exp_in_DI[defs_div_sqrt_mvp_C_EXP_FP64:0] == {12 {1'sb0}}) begin
+			if (Mant_in_DI != {57 {1'sb0}}) begin
+				Div_Zero_S = 1'b0;
+				Exp_OF_S = 1'b0;
+				Exp_UF_S = 1'b1;
+				Mant_res_norm_D = {1'b0, Mant_in_DI[56:5]};
+				Exp_res_norm_D = 1'sb0;
+				Mant_forround_D = {Mant_in_DI[4:0], {defs_div_sqrt_mvp_C_MANT_FP64 {1'b0}}};
+				Sign_res_D = Sign_in_DI;
+				NV_OP_S = 1'b0;
+			end
+			else begin
+				Div_Zero_S = 1'b0;
+				Exp_OF_S = 1'b0;
+				Exp_UF_S = 1'b0;
+				Mant_res_norm_D = 1'sb0;
+				Exp_res_norm_D = 1'sb0;
+				Mant_forround_D = 1'sb0;
+				Sign_res_D = Sign_in_DI;
+				NV_OP_S = 1'b0;
+			end
+		end
+		else if ((Exp_in_DI[defs_div_sqrt_mvp_C_EXP_FP64:0] == defs_div_sqrt_mvp_C_EXP_ONE_FP64) && ~Mant_in_DI[56]) begin
+			Div_Zero_S = 1'b0;
+			Exp_OF_S = 1'b0;
+			Exp_UF_S = 1'b1;
+			Mant_res_norm_D = Mant_in_DI[56:4];
+			Exp_res_norm_D = 1'sb0;
+			Mant_forround_D = {Mant_in_DI[3:0], {53 {1'b0}}};
+			Sign_res_D = Sign_in_DI;
+			NV_OP_S = 1'b0;
+		end
+		else if (Exp_in_DI[12]) begin
+			Div_Zero_S = 1'b0;
+			Exp_OF_S = 1'b0;
+			Exp_UF_S = 1'b1;
+			Mant_res_norm_D = {Mant_RS_D[defs_div_sqrt_mvp_C_MANT_FP64:0]};
+			Exp_res_norm_D = 1'sb0;
+			Mant_forround_D = {Mant_forsticky_D[56:0]};
+			Sign_res_D = Sign_in_DI;
+			NV_OP_S = 1'b0;
+		end
+		else if ((((Exp_in_DI[defs_div_sqrt_mvp_C_EXP_FP32] && FP32_SI) | (Exp_in_DI[defs_div_sqrt_mvp_C_EXP_FP64] && FP64_SI)) | (Exp_in_DI[defs_div_sqrt_mvp_C_EXP_FP16] && FP16_SI)) | (Exp_in_DI[defs_div_sqrt_mvp_C_EXP_FP16ALT] && FP16ALT_SI)) begin
+			Div_Zero_S = 1'b0;
+			Exp_OF_S = 1'b1;
+			Exp_UF_S = 1'b0;
+			Mant_res_norm_D = 1'sb0;
+			Exp_res_norm_D = 1'sb1;
+			Mant_forround_D = 1'sb0;
+			Sign_res_D = Sign_in_DI;
+			NV_OP_S = 1'b0;
+		end
+		else if (((((Exp_in_DI[7:0] == {8 {1'sb1}}) && FP32_SI) | ((Exp_in_DI[10:0] == {11 {1'sb1}}) && FP64_SI)) | ((Exp_in_DI[4:0] == {5 {1'sb1}}) && FP16_SI)) | ((Exp_in_DI[7:0] == {8 {1'sb1}}) && FP16ALT_SI)) begin
+			if (~Mant_in_DI[56]) begin
+				Div_Zero_S = 1'b0;
+				Exp_OF_S = 1'b0;
+				Exp_UF_S = 1'b0;
+				Mant_res_norm_D = Mant_in_DI[55:3];
+				Exp_res_norm_D = Exp_subOne_D;
+				Mant_forround_D = {Mant_in_DI[2:0], {54 {1'b0}}};
+				Sign_res_D = Sign_in_DI;
+				NV_OP_S = 1'b0;
+			end
+			else if (Mant_in_DI != {57 {1'sb0}}) begin
+				Div_Zero_S = 1'b0;
+				Exp_OF_S = 1'b1;
+				Exp_UF_S = 1'b0;
+				Mant_res_norm_D = 1'sb0;
+				Exp_res_norm_D = 1'sb1;
+				Mant_forround_D = 1'sb0;
+				Sign_res_D = Sign_in_DI;
+				NV_OP_S = 1'b0;
+			end
+			else begin
+				Div_Zero_S = 1'b0;
+				Exp_OF_S = 1'b1;
+				Exp_UF_S = 1'b0;
+				Mant_res_norm_D = 1'sb0;
+				Exp_res_norm_D = 1'sb1;
+				Mant_forround_D = 1'sb0;
+				Sign_res_D = Sign_in_DI;
+				NV_OP_S = 1'b0;
+			end
+		end
+		else if (Mant_in_DI[56]) begin
+			Div_Zero_S = 1'b0;
+			Exp_OF_S = 1'b0;
+			Exp_UF_S = 1'b0;
+			Mant_res_norm_D = Mant_in_DI[56:4];
+			Exp_res_norm_D = Exp_in_DI[10:0];
+			Mant_forround_D = {Mant_in_DI[3:0], {53 {1'b0}}};
+			Sign_res_D = Sign_in_DI;
+			NV_OP_S = 1'b0;
+		end
+		else begin
+			Div_Zero_S = 1'b0;
+			Exp_OF_S = 1'b0;
+			Exp_UF_S = 1'b0;
+			Mant_res_norm_D = Mant_in_DI[55:3];
+			Exp_res_norm_D = Exp_subOne_D;
+			Mant_forround_D = {Mant_in_DI[2:0], {54 {1'b0}}};
+			Sign_res_D = Sign_in_DI;
+			NV_OP_S = 1'b0;
+		end
+	end
+	reg [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_upper_D;
+	wire [53:0] Mant_upperRounded_D;
+	reg Mant_roundUp_S;
+	wire Mant_rounded_S;
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		if (FP32_SI) begin
+			Mant_upper_D = {Mant_res_norm_D[defs_div_sqrt_mvp_C_MANT_FP64:29], {29 {1'b0}}};
+			Mant_lower_D = Mant_res_norm_D[28:27];
+			Mant_sticky_bit_D = |Mant_res_norm_D[26:0];
+		end
+		else if (FP64_SI) begin
+			Mant_upper_D = Mant_res_norm_D[defs_div_sqrt_mvp_C_MANT_FP64:0];
+			Mant_lower_D = Mant_forround_D[56:55];
+			Mant_sticky_bit_D = |Mant_forround_D[55:0];
+		end
+		else if (FP16_SI) begin
+			Mant_upper_D = {Mant_res_norm_D[defs_div_sqrt_mvp_C_MANT_FP64:42], {42 {1'b0}}};
+			Mant_lower_D = Mant_res_norm_D[41:40];
+			Mant_sticky_bit_D = |Mant_res_norm_D[39:30];
+		end
+		else begin
+			Mant_upper_D = {Mant_res_norm_D[defs_div_sqrt_mvp_C_MANT_FP64:45], {45 {1'b0}}};
+			Mant_lower_D = Mant_res_norm_D[44:43];
+			Mant_sticky_bit_D = |Mant_res_norm_D[42:30];
+		end
+	end
+	assign Mant_rounded_S = |Mant_lower_D | Mant_sticky_bit_D;
+	localparam defs_div_sqrt_mvp_C_RM_MINUSINF = 3'h3;
+	localparam defs_div_sqrt_mvp_C_RM_NEAREST = 3'h0;
+	localparam defs_div_sqrt_mvp_C_RM_PLUSINF = 3'h2;
+	localparam defs_div_sqrt_mvp_C_RM_TRUNC = 3'h1;
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		Mant_roundUp_S = 1'b0;
+		case (RM_SI)
+			defs_div_sqrt_mvp_C_RM_NEAREST: Mant_roundUp_S = Mant_lower_D[1] && ((Mant_lower_D[0] | Mant_sticky_bit_D) | ((((FP32_SI && Mant_upper_D[29]) | (FP64_SI && Mant_upper_D[0])) | (FP16_SI && Mant_upper_D[42])) | (FP16ALT_SI && Mant_upper_D[45])));
+			defs_div_sqrt_mvp_C_RM_TRUNC: Mant_roundUp_S = 0;
+			defs_div_sqrt_mvp_C_RM_PLUSINF: Mant_roundUp_S = Mant_rounded_S & ~Sign_in_DI;
+			defs_div_sqrt_mvp_C_RM_MINUSINF: Mant_roundUp_S = Mant_rounded_S & Sign_in_DI;
+			default: Mant_roundUp_S = 0;
+		endcase
+	end
+	wire Mant_renorm_S;
+	wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_roundUp_Vector_S;
+	assign Mant_roundUp_Vector_S = {7'h00, FP16ALT_SI && Mant_roundUp_S, 2'h0, FP16_SI && Mant_roundUp_S, 12'h000, FP32_SI && Mant_roundUp_S, 28'h0000000, FP64_SI && Mant_roundUp_S};
+	assign Mant_upperRounded_D = Mant_upper_D + Mant_roundUp_Vector_S;
+	assign Mant_renorm_S = Mant_upperRounded_D[53];
+	wire [51:0] Mant_res_round_D;
+	wire [10:0] Exp_res_round_D;
+	assign Mant_res_round_D = (Mant_renorm_S ? Mant_upperRounded_D[defs_div_sqrt_mvp_C_MANT_FP64:1] : Mant_upperRounded_D[51:0]);
+	assign Exp_res_round_D = Exp_res_norm_D + Mant_renorm_S;
+	wire [51:0] Mant_before_format_ctl_D;
+	wire [10:0] Exp_before_format_ctl_D;
+	assign Mant_before_format_ctl_D = (Full_precision_SI ? Mant_res_round_D : Mant_res_norm_D);
+	assign Exp_before_format_ctl_D = (Full_precision_SI ? Exp_res_round_D : Exp_res_norm_D);
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		if (FP32_SI)
+			Result_DO = {32'hffffffff, Sign_res_D, Exp_before_format_ctl_D[7:0], Mant_before_format_ctl_D[51:29]};
+		else if (FP64_SI)
+			Result_DO = {Sign_res_D, Exp_before_format_ctl_D[10:0], Mant_before_format_ctl_D[51:0]};
+		else if (FP16_SI)
+			Result_DO = {48'hffffffffffff, Sign_res_D, Exp_before_format_ctl_D[4:0], Mant_before_format_ctl_D[51:42]};
+		else
+			Result_DO = {48'hffffffffffff, Sign_res_D, Exp_before_format_ctl_D[7:0], Mant_before_format_ctl_D[51:45]};
+	end
+	assign In_Exact_S = ~Full_precision_SI | Mant_rounded_S;
+	assign Fflags_SO = {NV_OP_S, Div_Zero_S, Exp_OF_S, Exp_UF_S, In_Exact_S};
+	initial _sv2v_0 = 0;
 endmodule
-module fpnew_divsqrt_th_32_3DF01_FC8AC (
+module preprocess_mvp (
+	Clk_CI,
+	Rst_RBI,
+	Div_start_SI,
+	Sqrt_start_SI,
+	Ready_SI,
+	Operand_a_DI,
+	Operand_b_DI,
+	RM_SI,
+	Format_sel_SI,
+	Start_SO,
+	Exp_a_DO_norm,
+	Exp_b_DO_norm,
+	Mant_a_DO_norm,
+	Mant_b_DO_norm,
+	RM_dly_SO,
+	Sign_z_DO,
+	Inf_a_SO,
+	Inf_b_SO,
+	Zero_a_SO,
+	Zero_b_SO,
+	NaN_a_SO,
+	NaN_b_SO,
+	SNaN_SO,
+	Special_case_SBO,
+	Special_case_dly_SBO
+);
+	reg _sv2v_0;
+	input wire Clk_CI;
+	input wire Rst_RBI;
+	input wire Div_start_SI;
+	input wire Sqrt_start_SI;
+	input wire Ready_SI;
+	localparam defs_div_sqrt_mvp_C_OP_FP64 = 64;
+	input wire [63:0] Operand_a_DI;
+	input wire [63:0] Operand_b_DI;
+	localparam defs_div_sqrt_mvp_C_RM = 3;
+	input wire [2:0] RM_SI;
+	localparam defs_div_sqrt_mvp_C_FS = 2;
+	input wire [1:0] Format_sel_SI;
+	output wire Start_SO;
+	localparam defs_div_sqrt_mvp_C_EXP_FP64 = 11;
+	output wire [defs_div_sqrt_mvp_C_EXP_FP64:0] Exp_a_DO_norm;
+	output wire [defs_div_sqrt_mvp_C_EXP_FP64:0] Exp_b_DO_norm;
+	localparam defs_div_sqrt_mvp_C_MANT_FP64 = 52;
+	output wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_a_DO_norm;
+	output wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_b_DO_norm;
+	output wire [2:0] RM_dly_SO;
+	output wire Sign_z_DO;
+	output wire Inf_a_SO;
+	output wire Inf_b_SO;
+	output wire Zero_a_SO;
+	output wire Zero_b_SO;
+	output wire NaN_a_SO;
+	output wire NaN_b_SO;
+	output wire SNaN_SO;
+	output wire Special_case_SBO;
+	output reg Special_case_dly_SBO;
+	wire Hb_a_D;
+	wire Hb_b_D;
+	reg [10:0] Exp_a_D;
+	reg [10:0] Exp_b_D;
+	reg [51:0] Mant_a_NonH_D;
+	reg [51:0] Mant_b_NonH_D;
+	wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_a_D;
+	wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_b_D;
+	reg Sign_a_D;
+	reg Sign_b_D;
+	wire Start_S;
+	localparam defs_div_sqrt_mvp_C_MANT_FP16 = 10;
+	localparam defs_div_sqrt_mvp_C_MANT_FP16ALT = 7;
+	localparam defs_div_sqrt_mvp_C_MANT_FP32 = 23;
+	localparam defs_div_sqrt_mvp_C_OP_FP16 = 16;
+	localparam defs_div_sqrt_mvp_C_OP_FP16ALT = 16;
+	localparam defs_div_sqrt_mvp_C_OP_FP32 = 32;
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		case (Format_sel_SI)
+			2'b00: begin
+				Sign_a_D = Operand_a_DI[31];
+				Sign_b_D = Operand_b_DI[31];
+				Exp_a_D = {3'h0, Operand_a_DI[30:defs_div_sqrt_mvp_C_MANT_FP32]};
+				Exp_b_D = {3'h0, Operand_b_DI[30:defs_div_sqrt_mvp_C_MANT_FP32]};
+				Mant_a_NonH_D = {Operand_a_DI[22:0], 29'h00000000};
+				Mant_b_NonH_D = {Operand_b_DI[22:0], 29'h00000000};
+			end
+			2'b01: begin
+				Sign_a_D = Operand_a_DI[63];
+				Sign_b_D = Operand_b_DI[63];
+				Exp_a_D = Operand_a_DI[62:defs_div_sqrt_mvp_C_MANT_FP64];
+				Exp_b_D = Operand_b_DI[62:defs_div_sqrt_mvp_C_MANT_FP64];
+				Mant_a_NonH_D = Operand_a_DI[51:0];
+				Mant_b_NonH_D = Operand_b_DI[51:0];
+			end
+			2'b10: begin
+				Sign_a_D = Operand_a_DI[15];
+				Sign_b_D = Operand_b_DI[15];
+				Exp_a_D = {6'h00, Operand_a_DI[14:defs_div_sqrt_mvp_C_MANT_FP16]};
+				Exp_b_D = {6'h00, Operand_b_DI[14:defs_div_sqrt_mvp_C_MANT_FP16]};
+				Mant_a_NonH_D = {Operand_a_DI[9:0], 42'h00000000000};
+				Mant_b_NonH_D = {Operand_b_DI[9:0], 42'h00000000000};
+			end
+			2'b11: begin
+				Sign_a_D = Operand_a_DI[15];
+				Sign_b_D = Operand_b_DI[15];
+				Exp_a_D = {3'h0, Operand_a_DI[14:defs_div_sqrt_mvp_C_MANT_FP16ALT]};
+				Exp_b_D = {3'h0, Operand_b_DI[14:defs_div_sqrt_mvp_C_MANT_FP16ALT]};
+				Mant_a_NonH_D = {Operand_a_DI[6:0], 45'h000000000000};
+				Mant_b_NonH_D = {Operand_b_DI[6:0], 45'h000000000000};
+			end
+		endcase
+	end
+	assign Mant_a_D = {Hb_a_D, Mant_a_NonH_D};
+	assign Mant_b_D = {Hb_b_D, Mant_b_NonH_D};
+	assign Hb_a_D = |Exp_a_D;
+	assign Hb_b_D = |Exp_b_D;
+	assign Start_S = Div_start_SI | Sqrt_start_SI;
+	reg Mant_a_prenorm_zero_S;
+	reg Mant_b_prenorm_zero_S;
+	wire Exp_a_prenorm_zero_S;
+	wire Exp_b_prenorm_zero_S;
+	assign Exp_a_prenorm_zero_S = ~Hb_a_D;
+	assign Exp_b_prenorm_zero_S = ~Hb_b_D;
+	reg Exp_a_prenorm_Inf_NaN_S;
+	reg Exp_b_prenorm_Inf_NaN_S;
+	wire Mant_a_prenorm_QNaN_S;
+	wire Mant_a_prenorm_SNaN_S;
+	wire Mant_b_prenorm_QNaN_S;
+	wire Mant_b_prenorm_SNaN_S;
+	assign Mant_a_prenorm_QNaN_S = Mant_a_NonH_D[51] && ~(|Mant_a_NonH_D[50:0]);
+	assign Mant_a_prenorm_SNaN_S = ~Mant_a_NonH_D[51] && |Mant_a_NonH_D[50:0];
+	assign Mant_b_prenorm_QNaN_S = Mant_b_NonH_D[51] && ~(|Mant_b_NonH_D[50:0]);
+	assign Mant_b_prenorm_SNaN_S = ~Mant_b_NonH_D[51] && |Mant_b_NonH_D[50:0];
+	localparam defs_div_sqrt_mvp_C_EXP_INF_FP16 = 5'h1f;
+	localparam defs_div_sqrt_mvp_C_EXP_INF_FP16ALT = 8'hff;
+	localparam defs_div_sqrt_mvp_C_EXP_INF_FP32 = 8'hff;
+	localparam defs_div_sqrt_mvp_C_EXP_INF_FP64 = 11'h7ff;
+	localparam defs_div_sqrt_mvp_C_MANT_ZERO_FP16 = 10'h000;
+	localparam defs_div_sqrt_mvp_C_MANT_ZERO_FP16ALT = 7'h00;
+	localparam defs_div_sqrt_mvp_C_MANT_ZERO_FP32 = 23'h000000;
+	localparam defs_div_sqrt_mvp_C_MANT_ZERO_FP64 = 52'h0000000000000;
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		case (Format_sel_SI)
+			2'b00: begin
+				Mant_a_prenorm_zero_S = Operand_a_DI[22:0] == defs_div_sqrt_mvp_C_MANT_ZERO_FP32;
+				Mant_b_prenorm_zero_S = Operand_b_DI[22:0] == defs_div_sqrt_mvp_C_MANT_ZERO_FP32;
+				Exp_a_prenorm_Inf_NaN_S = Operand_a_DI[30:defs_div_sqrt_mvp_C_MANT_FP32] == defs_div_sqrt_mvp_C_EXP_INF_FP32;
+				Exp_b_prenorm_Inf_NaN_S = Operand_b_DI[30:defs_div_sqrt_mvp_C_MANT_FP32] == defs_div_sqrt_mvp_C_EXP_INF_FP32;
+			end
+			2'b01: begin
+				Mant_a_prenorm_zero_S = Operand_a_DI[51:0] == defs_div_sqrt_mvp_C_MANT_ZERO_FP64;
+				Mant_b_prenorm_zero_S = Operand_b_DI[51:0] == defs_div_sqrt_mvp_C_MANT_ZERO_FP64;
+				Exp_a_prenorm_Inf_NaN_S = Operand_a_DI[62:defs_div_sqrt_mvp_C_MANT_FP64] == defs_div_sqrt_mvp_C_EXP_INF_FP64;
+				Exp_b_prenorm_Inf_NaN_S = Operand_b_DI[62:defs_div_sqrt_mvp_C_MANT_FP64] == defs_div_sqrt_mvp_C_EXP_INF_FP64;
+			end
+			2'b10: begin
+				Mant_a_prenorm_zero_S = Operand_a_DI[9:0] == defs_div_sqrt_mvp_C_MANT_ZERO_FP16;
+				Mant_b_prenorm_zero_S = Operand_b_DI[9:0] == defs_div_sqrt_mvp_C_MANT_ZERO_FP16;
+				Exp_a_prenorm_Inf_NaN_S = Operand_a_DI[14:defs_div_sqrt_mvp_C_MANT_FP16] == defs_div_sqrt_mvp_C_EXP_INF_FP16;
+				Exp_b_prenorm_Inf_NaN_S = Operand_b_DI[14:defs_div_sqrt_mvp_C_MANT_FP16] == defs_div_sqrt_mvp_C_EXP_INF_FP16;
+			end
+			2'b11: begin
+				Mant_a_prenorm_zero_S = Operand_a_DI[6:0] == defs_div_sqrt_mvp_C_MANT_ZERO_FP16ALT;
+				Mant_b_prenorm_zero_S = Operand_b_DI[6:0] == defs_div_sqrt_mvp_C_MANT_ZERO_FP16ALT;
+				Exp_a_prenorm_Inf_NaN_S = Operand_a_DI[14:defs_div_sqrt_mvp_C_MANT_FP16ALT] == defs_div_sqrt_mvp_C_EXP_INF_FP16ALT;
+				Exp_b_prenorm_Inf_NaN_S = Operand_b_DI[14:defs_div_sqrt_mvp_C_MANT_FP16ALT] == defs_div_sqrt_mvp_C_EXP_INF_FP16ALT;
+			end
+		endcase
+	end
+	wire Zero_a_SN;
+	reg Zero_a_SP;
+	wire Zero_b_SN;
+	reg Zero_b_SP;
+	wire Inf_a_SN;
+	reg Inf_a_SP;
+	wire Inf_b_SN;
+	reg Inf_b_SP;
+	wire NaN_a_SN;
+	reg NaN_a_SP;
+	wire NaN_b_SN;
+	reg NaN_b_SP;
+	wire SNaN_SN;
+	reg SNaN_SP;
+	assign Zero_a_SN = (Start_S && Ready_SI ? Exp_a_prenorm_zero_S && Mant_a_prenorm_zero_S : Zero_a_SP);
+	assign Zero_b_SN = (Start_S && Ready_SI ? Exp_b_prenorm_zero_S && Mant_b_prenorm_zero_S : Zero_b_SP);
+	assign Inf_a_SN = (Start_S && Ready_SI ? Exp_a_prenorm_Inf_NaN_S && Mant_a_prenorm_zero_S : Inf_a_SP);
+	assign Inf_b_SN = (Start_S && Ready_SI ? Exp_b_prenorm_Inf_NaN_S && Mant_b_prenorm_zero_S : Inf_b_SP);
+	assign NaN_a_SN = (Start_S && Ready_SI ? Exp_a_prenorm_Inf_NaN_S && ~Mant_a_prenorm_zero_S : NaN_a_SP);
+	assign NaN_b_SN = (Start_S && Ready_SI ? Exp_b_prenorm_Inf_NaN_S && ~Mant_b_prenorm_zero_S : NaN_b_SP);
+	assign SNaN_SN = (Start_S && Ready_SI ? (Mant_a_prenorm_SNaN_S && NaN_a_SN) | (Mant_b_prenorm_SNaN_S && NaN_b_SN) : SNaN_SP);
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI) begin
+			Zero_a_SP <= 1'sb0;
+			Zero_b_SP <= 1'sb0;
+			Inf_a_SP <= 1'sb0;
+			Inf_b_SP <= 1'sb0;
+			NaN_a_SP <= 1'sb0;
+			NaN_b_SP <= 1'sb0;
+			SNaN_SP <= 1'sb0;
+		end
+		else begin
+			Inf_a_SP <= Inf_a_SN;
+			Inf_b_SP <= Inf_b_SN;
+			Zero_a_SP <= Zero_a_SN;
+			Zero_b_SP <= Zero_b_SN;
+			NaN_a_SP <= NaN_a_SN;
+			NaN_b_SP <= NaN_b_SN;
+			SNaN_SP <= SNaN_SN;
+		end
+	assign Special_case_SBO = ~{(Div_start_SI ? ((((Zero_a_SN | Zero_b_SN) | Inf_a_SN) | Inf_b_SN) | NaN_a_SN) | NaN_b_SN : ((Zero_a_SN | Inf_a_SN) | NaN_a_SN) | Sign_a_D)} && (Start_S && Ready_SI);
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Special_case_dly_SBO <= 1'sb0;
+		else if (Start_S && Ready_SI)
+			Special_case_dly_SBO <= Special_case_SBO;
+		else if (Special_case_dly_SBO)
+			Special_case_dly_SBO <= 1'b1;
+		else
+			Special_case_dly_SBO <= 1'sb0;
+	reg Sign_z_DN;
+	reg Sign_z_DP;
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		if (Div_start_SI && Ready_SI)
+			Sign_z_DN = Sign_a_D ^ Sign_b_D;
+		else if (Sqrt_start_SI && Ready_SI)
+			Sign_z_DN = Sign_a_D;
+		else
+			Sign_z_DN = Sign_z_DP;
+	end
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Sign_z_DP <= 1'sb0;
+		else
+			Sign_z_DP <= Sign_z_DN;
+	reg [2:0] RM_DN;
+	reg [2:0] RM_DP;
+	always @(*) begin
+		if (_sv2v_0)
+			;
+		if (Start_S && Ready_SI)
+			RM_DN = RM_SI;
+		else
+			RM_DN = RM_DP;
+	end
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			RM_DP <= 1'sb0;
+		else
+			RM_DP <= RM_DN;
+	assign RM_dly_SO = RM_DP;
+	wire [5:0] Mant_leadingOne_a;
+	wire [5:0] Mant_leadingOne_b;
+	wire Mant_zero_S_a;
+	wire Mant_zero_S_b;
+	lzc #(
+		.WIDTH(53),
+		.MODE(1)
+	) LOD_Ua(
+		.in_i(Mant_a_D),
+		.cnt_o(Mant_leadingOne_a),
+		.empty_o(Mant_zero_S_a)
+	);
+	wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_a_norm_DN;
+	reg [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_a_norm_DP;
+	assign Mant_a_norm_DN = (Start_S && Ready_SI ? Mant_a_D << Mant_leadingOne_a : Mant_a_norm_DP);
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Mant_a_norm_DP <= 1'sb0;
+		else
+			Mant_a_norm_DP <= Mant_a_norm_DN;
+	wire [defs_div_sqrt_mvp_C_EXP_FP64:0] Exp_a_norm_DN;
+	reg [defs_div_sqrt_mvp_C_EXP_FP64:0] Exp_a_norm_DP;
+	assign Exp_a_norm_DN = (Start_S && Ready_SI ? (Exp_a_D - Mant_leadingOne_a) + |Mant_leadingOne_a : Exp_a_norm_DP);
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Exp_a_norm_DP <= 1'sb0;
+		else
+			Exp_a_norm_DP <= Exp_a_norm_DN;
+	lzc #(
+		.WIDTH(53),
+		.MODE(1)
+	) LOD_Ub(
+		.in_i(Mant_b_D),
+		.cnt_o(Mant_leadingOne_b),
+		.empty_o(Mant_zero_S_b)
+	);
+	wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_b_norm_DN;
+	reg [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_b_norm_DP;
+	assign Mant_b_norm_DN = (Start_S && Ready_SI ? Mant_b_D << Mant_leadingOne_b : Mant_b_norm_DP);
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Mant_b_norm_DP <= 1'sb0;
+		else
+			Mant_b_norm_DP <= Mant_b_norm_DN;
+	wire [defs_div_sqrt_mvp_C_EXP_FP64:0] Exp_b_norm_DN;
+	reg [defs_div_sqrt_mvp_C_EXP_FP64:0] Exp_b_norm_DP;
+	assign Exp_b_norm_DN = (Start_S && Ready_SI ? (Exp_b_D - Mant_leadingOne_b) + |Mant_leadingOne_b : Exp_b_norm_DP);
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI)
+			Exp_b_norm_DP <= 1'sb0;
+		else
+			Exp_b_norm_DP <= Exp_b_norm_DN;
+	assign Start_SO = Start_S;
+	assign Exp_a_DO_norm = Exp_a_norm_DP;
+	assign Exp_b_DO_norm = Exp_b_norm_DP;
+	assign Mant_a_DO_norm = Mant_a_norm_DP;
+	assign Mant_b_DO_norm = Mant_b_norm_DP;
+	assign Sign_z_DO = Sign_z_DP;
+	assign Inf_a_SO = Inf_a_SP;
+	assign Inf_b_SO = Inf_b_SP;
+	assign Zero_a_SO = Zero_a_SP;
+	assign Zero_b_SO = Zero_b_SP;
+	assign NaN_a_SO = NaN_a_SP;
+	assign NaN_b_SO = NaN_b_SP;
+	assign SNaN_SO = SNaN_SP;
+	initial _sv2v_0 = 0;
+endmodule
+module nrbd_nrsc_mvp (
+	Clk_CI,
+	Rst_RBI,
+	Div_start_SI,
+	Sqrt_start_SI,
+	Start_SI,
+	Kill_SI,
+	Special_case_SBI,
+	Special_case_dly_SBI,
+	Precision_ctl_SI,
+	Format_sel_SI,
+	Mant_a_DI,
+	Mant_b_DI,
+	Exp_a_DI,
+	Exp_b_DI,
+	Div_enable_SO,
+	Sqrt_enable_SO,
+	Full_precision_SO,
+	FP32_SO,
+	FP64_SO,
+	FP16_SO,
+	FP16ALT_SO,
+	Ready_SO,
+	Done_SO,
+	Mant_z_DO,
+	Exp_z_DO
+);
+	input wire Clk_CI;
+	input wire Rst_RBI;
+	input wire Div_start_SI;
+	input wire Sqrt_start_SI;
+	input wire Start_SI;
+	input wire Kill_SI;
+	input wire Special_case_SBI;
+	input wire Special_case_dly_SBI;
+	localparam defs_div_sqrt_mvp_C_PC = 6;
+	input wire [5:0] Precision_ctl_SI;
+	input wire [1:0] Format_sel_SI;
+	localparam defs_div_sqrt_mvp_C_MANT_FP64 = 52;
+	input wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_a_DI;
+	input wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_b_DI;
+	localparam defs_div_sqrt_mvp_C_EXP_FP64 = 11;
+	input wire [defs_div_sqrt_mvp_C_EXP_FP64:0] Exp_a_DI;
+	input wire [defs_div_sqrt_mvp_C_EXP_FP64:0] Exp_b_DI;
+	output wire Div_enable_SO;
+	output wire Sqrt_enable_SO;
+	output wire Full_precision_SO;
+	output wire FP32_SO;
+	output wire FP64_SO;
+	output wire FP16_SO;
+	output wire FP16ALT_SO;
+	output wire Ready_SO;
+	output wire Done_SO;
+	output wire [56:0] Mant_z_DO;
+	output wire [12:0] Exp_z_DO;
+	wire Div_start_dly_S;
+	wire Sqrt_start_dly_S;
+	control_mvp control_U0(
+		.Clk_CI(Clk_CI),
+		.Rst_RBI(Rst_RBI),
+		.Div_start_SI(Div_start_SI),
+		.Sqrt_start_SI(Sqrt_start_SI),
+		.Start_SI(Start_SI),
+		.Kill_SI(Kill_SI),
+		.Special_case_SBI(Special_case_SBI),
+		.Special_case_dly_SBI(Special_case_dly_SBI),
+		.Precision_ctl_SI(Precision_ctl_SI),
+		.Format_sel_SI(Format_sel_SI),
+		.Numerator_DI(Mant_a_DI),
+		.Exp_num_DI(Exp_a_DI),
+		.Denominator_DI(Mant_b_DI),
+		.Exp_den_DI(Exp_b_DI),
+		.Div_start_dly_SO(Div_start_dly_S),
+		.Sqrt_start_dly_SO(Sqrt_start_dly_S),
+		.Div_enable_SO(Div_enable_SO),
+		.Sqrt_enable_SO(Sqrt_enable_SO),
+		.Full_precision_SO(Full_precision_SO),
+		.FP32_SO(FP32_SO),
+		.FP64_SO(FP64_SO),
+		.FP16_SO(FP16_SO),
+		.FP16ALT_SO(FP16ALT_SO),
+		.Ready_SO(Ready_SO),
+		.Done_SO(Done_SO),
+		.Mant_result_prenorm_DO(Mant_z_DO),
+		.Exp_result_prenorm_DO(Exp_z_DO)
+	);
+endmodule
+module div_sqrt_top_mvp (
+	Clk_CI,
+	Rst_RBI,
+	Div_start_SI,
+	Sqrt_start_SI,
+	Operand_a_DI,
+	Operand_b_DI,
+	RM_SI,
+	Precision_ctl_SI,
+	Format_sel_SI,
+	Kill_SI,
+	Result_DO,
+	Fflags_SO,
+	Ready_SO,
+	Done_SO
+);
+	input wire Clk_CI;
+	input wire Rst_RBI;
+	input wire Div_start_SI;
+	input wire Sqrt_start_SI;
+	localparam defs_div_sqrt_mvp_C_OP_FP64 = 64;
+	input wire [63:0] Operand_a_DI;
+	input wire [63:0] Operand_b_DI;
+	localparam defs_div_sqrt_mvp_C_RM = 3;
+	input wire [2:0] RM_SI;
+	localparam defs_div_sqrt_mvp_C_PC = 6;
+	input wire [5:0] Precision_ctl_SI;
+	localparam defs_div_sqrt_mvp_C_FS = 2;
+	input wire [1:0] Format_sel_SI;
+	input wire Kill_SI;
+	output wire [63:0] Result_DO;
+	output wire [4:0] Fflags_SO;
+	output wire Ready_SO;
+	output wire Done_SO;
+	localparam defs_div_sqrt_mvp_C_EXP_FP64 = 11;
+	wire [defs_div_sqrt_mvp_C_EXP_FP64:0] Exp_a_D;
+	wire [defs_div_sqrt_mvp_C_EXP_FP64:0] Exp_b_D;
+	localparam defs_div_sqrt_mvp_C_MANT_FP64 = 52;
+	wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_a_D;
+	wire [defs_div_sqrt_mvp_C_MANT_FP64:0] Mant_b_D;
+	wire [12:0] Exp_z_D;
+	wire [56:0] Mant_z_D;
+	wire Sign_z_D;
+	wire Start_S;
+	wire [2:0] RM_dly_S;
+	wire Div_enable_S;
+	wire Sqrt_enable_S;
+	wire Inf_a_S;
+	wire Inf_b_S;
+	wire Zero_a_S;
+	wire Zero_b_S;
+	wire NaN_a_S;
+	wire NaN_b_S;
+	wire SNaN_S;
+	wire Special_case_SB;
+	wire Special_case_dly_SB;
+	wire Full_precision_S;
+	wire FP32_S;
+	wire FP64_S;
+	wire FP16_S;
+	wire FP16ALT_S;
+	preprocess_mvp preprocess_U0(
+		.Clk_CI(Clk_CI),
+		.Rst_RBI(Rst_RBI),
+		.Div_start_SI(Div_start_SI),
+		.Sqrt_start_SI(Sqrt_start_SI),
+		.Ready_SI(Ready_SO),
+		.Operand_a_DI(Operand_a_DI),
+		.Operand_b_DI(Operand_b_DI),
+		.RM_SI(RM_SI),
+		.Format_sel_SI(Format_sel_SI),
+		.Start_SO(Start_S),
+		.Exp_a_DO_norm(Exp_a_D),
+		.Exp_b_DO_norm(Exp_b_D),
+		.Mant_a_DO_norm(Mant_a_D),
+		.Mant_b_DO_norm(Mant_b_D),
+		.RM_dly_SO(RM_dly_S),
+		.Sign_z_DO(Sign_z_D),
+		.Inf_a_SO(Inf_a_S),
+		.Inf_b_SO(Inf_b_S),
+		.Zero_a_SO(Zero_a_S),
+		.Zero_b_SO(Zero_b_S),
+		.NaN_a_SO(NaN_a_S),
+		.NaN_b_SO(NaN_b_S),
+		.SNaN_SO(SNaN_S),
+		.Special_case_SBO(Special_case_SB),
+		.Special_case_dly_SBO(Special_case_dly_SB)
+	);
+	nrbd_nrsc_mvp nrbd_nrsc_U0(
+		.Clk_CI(Clk_CI),
+		.Rst_RBI(Rst_RBI),
+		.Div_start_SI(Div_start_SI),
+		.Sqrt_start_SI(Sqrt_start_SI),
+		.Start_SI(Start_S),
+		.Kill_SI(Kill_SI),
+		.Special_case_SBI(Special_case_SB),
+		.Special_case_dly_SBI(Special_case_dly_SB),
+		.Div_enable_SO(Div_enable_S),
+		.Sqrt_enable_SO(Sqrt_enable_S),
+		.Precision_ctl_SI(Precision_ctl_SI),
+		.Format_sel_SI(Format_sel_SI),
+		.Exp_a_DI(Exp_a_D),
+		.Exp_b_DI(Exp_b_D),
+		.Mant_a_DI(Mant_a_D),
+		.Mant_b_DI(Mant_b_D),
+		.Full_precision_SO(Full_precision_S),
+		.FP32_SO(FP32_S),
+		.FP64_SO(FP64_S),
+		.FP16_SO(FP16_S),
+		.FP16ALT_SO(FP16ALT_S),
+		.Ready_SO(Ready_SO),
+		.Done_SO(Done_SO),
+		.Exp_z_DO(Exp_z_D),
+		.Mant_z_DO(Mant_z_D)
+	);
+	norm_div_sqrt_mvp fpu_norm_U0(
+		.Mant_in_DI(Mant_z_D),
+		.Exp_in_DI(Exp_z_D),
+		.Sign_in_DI(Sign_z_D),
+		.Div_enable_SI(Div_enable_S),
+		.Sqrt_enable_SI(Sqrt_enable_S),
+		.Inf_a_SI(Inf_a_S),
+		.Inf_b_SI(Inf_b_S),
+		.Zero_a_SI(Zero_a_S),
+		.Zero_b_SI(Zero_b_S),
+		.NaN_a_SI(NaN_a_S),
+		.NaN_b_SI(NaN_b_S),
+		.SNaN_SI(SNaN_S),
+		.RM_SI(RM_dly_S),
+		.Full_precision_SI(Full_precision_S),
+		.FP32_SI(FP32_S),
+		.FP64_SI(FP64_S),
+		.FP16_SI(FP16_S),
+		.FP16ALT_SI(FP16ALT_S),
+		.Result_DO(Result_DO),
+		.Fflags_SO(Fflags_SO)
+	);
+endmodule
+module div_sqrt_mvp_wrapper (
+	Clk_CI,
+	Rst_RBI,
+	Div_start_SI,
+	Sqrt_start_SI,
+	Operand_a_DI,
+	Operand_b_DI,
+	RM_SI,
+	Precision_ctl_SI,
+	Format_sel_SI,
+	Kill_SI,
+	Result_DO,
+	Fflags_SO,
+	Ready_SO,
+	Done_SO
+);
+	parameter PrePipeline_depth_S = 0;
+	parameter PostPipeline_depth_S = 2;
+	input wire Clk_CI;
+	input wire Rst_RBI;
+	input wire Div_start_SI;
+	input wire Sqrt_start_SI;
+	localparam defs_div_sqrt_mvp_C_OP_FP64 = 64;
+	input wire [63:0] Operand_a_DI;
+	input wire [63:0] Operand_b_DI;
+	localparam defs_div_sqrt_mvp_C_RM = 3;
+	input wire [2:0] RM_SI;
+	localparam defs_div_sqrt_mvp_C_PC = 6;
+	input wire [5:0] Precision_ctl_SI;
+	localparam defs_div_sqrt_mvp_C_FS = 2;
+	input wire [1:0] Format_sel_SI;
+	input wire Kill_SI;
+	output wire [63:0] Result_DO;
+	output wire [4:0] Fflags_SO;
+	output wire Ready_SO;
+	output wire Done_SO;
+	reg Div_start_S_S;
+	reg Sqrt_start_S_S;
+	reg [63:0] Operand_a_S_D;
+	reg [63:0] Operand_b_S_D;
+	reg [2:0] RM_S_S;
+	reg [5:0] Precision_ctl_S_S;
+	reg [1:0] Format_sel_S_S;
+	reg Kill_S_S;
+	wire [63:0] Result_D;
+	wire Ready_S;
+	wire Done_S;
+	wire [4:0] Fflags_S;
+	generate
+		if (PrePipeline_depth_S == 1) begin : genblk1
+			div_sqrt_top_mvp div_top_U0(
+				.Clk_CI(Clk_CI),
+				.Rst_RBI(Rst_RBI),
+				.Div_start_SI(Div_start_S_S),
+				.Sqrt_start_SI(Sqrt_start_S_S),
+				.Operand_a_DI(Operand_a_S_D),
+				.Operand_b_DI(Operand_b_S_D),
+				.RM_SI(RM_S_S),
+				.Precision_ctl_SI(Precision_ctl_S_S),
+				.Format_sel_SI(Format_sel_S_S),
+				.Kill_SI(Kill_S_S),
+				.Result_DO(Result_D),
+				.Fflags_SO(Fflags_S),
+				.Ready_SO(Ready_S),
+				.Done_SO(Done_S)
+			);
+			always @(posedge Clk_CI or negedge Rst_RBI)
+				if (~Rst_RBI) begin
+					Div_start_S_S <= 1'sb0;
+					Sqrt_start_S_S <= 1'b0;
+					Operand_a_S_D <= 1'sb0;
+					Operand_b_S_D <= 1'sb0;
+					RM_S_S <= 1'b0;
+					Precision_ctl_S_S <= 1'sb0;
+					Format_sel_S_S <= 1'sb0;
+					Kill_S_S <= 1'sb0;
+				end
+				else begin
+					Div_start_S_S <= Div_start_SI;
+					Sqrt_start_S_S <= Sqrt_start_SI;
+					Operand_a_S_D <= Operand_a_DI;
+					Operand_b_S_D <= Operand_b_DI;
+					RM_S_S <= RM_SI;
+					Precision_ctl_S_S <= Precision_ctl_SI;
+					Format_sel_S_S <= Format_sel_SI;
+					Kill_S_S <= Kill_SI;
+				end
+		end
+		else begin : genblk1
+			div_sqrt_top_mvp div_top_U0(
+				.Clk_CI(Clk_CI),
+				.Rst_RBI(Rst_RBI),
+				.Div_start_SI(Div_start_SI),
+				.Sqrt_start_SI(Sqrt_start_SI),
+				.Operand_a_DI(Operand_a_DI),
+				.Operand_b_DI(Operand_b_DI),
+				.RM_SI(RM_SI),
+				.Precision_ctl_SI(Precision_ctl_SI),
+				.Format_sel_SI(Format_sel_SI),
+				.Kill_SI(Kill_SI),
+				.Result_DO(Result_D),
+				.Fflags_SO(Fflags_S),
+				.Ready_SO(Ready_S),
+				.Done_SO(Done_S)
+			);
+		end
+	endgenerate
+	reg [63:0] Result_dly_S_D;
+	reg Ready_dly_S_S;
+	reg Done_dly_S_S;
+	reg [4:0] Fflags_dly_S_S;
+	always @(posedge Clk_CI or negedge Rst_RBI)
+		if (~Rst_RBI) begin
+			Result_dly_S_D <= 1'sb0;
+			Ready_dly_S_S <= 1'b0;
+			Done_dly_S_S <= 1'b0;
+			Fflags_dly_S_S <= 1'b0;
+		end
+		else begin
+			Result_dly_S_D <= Result_D;
+			Ready_dly_S_S <= Ready_S;
+			Done_dly_S_S <= Done_S;
+			Fflags_dly_S_S <= Fflags_S;
+		end
+	reg [63:0] Result_dly_D_D;
+	reg Ready_dly_D_S;
+	reg Done_dly_D_S;
+	reg [4:0] Fflags_dly_D_S;
+	generate
+		if (PostPipeline_depth_S == 2) begin : genblk2
+			always @(posedge Clk_CI or negedge Rst_RBI)
+				if (~Rst_RBI) begin
+					Result_dly_D_D <= 1'sb0;
+					Ready_dly_D_S <= 1'b0;
+					Done_dly_D_S <= 1'b0;
+					Fflags_dly_D_S <= 1'b0;
+				end
+				else begin
+					Result_dly_D_D <= Result_dly_S_D;
+					Ready_dly_D_S <= Ready_dly_S_S;
+					Done_dly_D_S <= Done_dly_S_S;
+					Fflags_dly_D_S <= Fflags_dly_S_S;
+				end
+			assign Result_DO = Result_dly_D_D;
+			assign Ready_SO = Ready_dly_D_S;
+			assign Done_SO = Done_dly_D_S;
+			assign Fflags_SO = Fflags_dly_D_S;
+		end
+		else begin : genblk2
+			assign Result_DO = Result_dly_S_D;
+			assign Ready_SO = Ready_dly_S_S;
+			assign Done_SO = Done_dly_S_S;
+			assign Fflags_SO = Fflags_dly_S_S;
+		end
+	endgenerate
+endmodule
+module fpnew_divsqrt_multi_E225A_B8CF6 (
 	clk_i,
 	rst_ni,
 	operands_i,
 	is_boxed_i,
 	rnd_mode_i,
 	op_i,
+	dst_fmt_i,
 	tag_i,
 	mask_i,
 	aux_i,
+	vectorial_op_i,
 	in_valid_i,
 	in_ready_o,
+	divsqrt_done_o,
+	simd_synch_done_i,
+	divsqrt_ready_o,
+	simd_synch_rdy_i,
 	flush_i,
 	result_o,
 	status_o,
@@ -17245,26 +20123,62 @@ module fpnew_divsqrt_th_32_3DF01_FC8AC (
 );
 	parameter [31:0] AuxType_AUX_BITS = 0;
 	reg _sv2v_0;
-	parameter [31:0] NumPipeRegs = 0;
-	parameter [1:0] PipeConfig = 2'd0;
-	localparam [31:0] WIDTH = 32;
 	localparam [31:0] fpnew_pkg_NUM_FP_FORMATS = 5;
+	parameter [0:4] FpFmtConfig = 1'sb1;
+	parameter [31:0] NumPipeRegs = 0;
+	parameter [1:0] PipeConfig = 2'd1;
+	localparam [31:0] fpnew_pkg_FP_FORMAT_BITS = 3;
+	localparam [319:0] fpnew_pkg_FP_ENCODINGS = 320'h8000000170000000b00000034000000050000000a00000005000000020000000800000007;
+	function automatic [31:0] fpnew_pkg_fp_width;
+		input reg [2:0] fmt;
+		fpnew_pkg_fp_width = (fpnew_pkg_FP_ENCODINGS[((4 - fmt) * 64) + 63-:32] + fpnew_pkg_FP_ENCODINGS[((4 - fmt) * 64) + 31-:32]) + 1;
+	endfunction
+	function automatic signed [31:0] fpnew_pkg_maximum;
+		input reg signed [31:0] a;
+		input reg signed [31:0] b;
+		fpnew_pkg_maximum = (a > b ? a : b);
+	endfunction
+	function automatic [2:0] sv2v_cast_5D882;
+		input reg [2:0] inp;
+		sv2v_cast_5D882 = inp;
+	endfunction
+	function automatic [31:0] fpnew_pkg_max_fp_width;
+		input reg [0:4] cfg;
+		reg [31:0] res;
+		begin
+			res = 0;
+			begin : sv2v_autoblock_1
+				reg [31:0] i;
+				for (i = 0; i < fpnew_pkg_NUM_FP_FORMATS; i = i + 1)
+					if (cfg[i])
+						res = $unsigned(fpnew_pkg_maximum(res, fpnew_pkg_fp_width(sv2v_cast_5D882(i))));
+			end
+			fpnew_pkg_max_fp_width = res;
+		end
+	endfunction
+	localparam [31:0] WIDTH = fpnew_pkg_max_fp_width(FpFmtConfig);
 	localparam [31:0] NUM_FORMATS = fpnew_pkg_NUM_FP_FORMATS;
 	localparam [31:0] ExtRegEnaWidth = (NumPipeRegs == 0 ? 1 : NumPipeRegs);
 	input wire clk_i;
 	input wire rst_ni;
-	input wire [63:0] operands_i;
+	input wire [(2 * WIDTH) - 1:0] operands_i;
 	input wire [9:0] is_boxed_i;
 	input wire [2:0] rnd_mode_i;
 	localparam [31:0] fpnew_pkg_OP_BITS = 4;
 	input wire [3:0] op_i;
+	input wire [2:0] dst_fmt_i;
 	input wire tag_i;
 	input wire mask_i;
 	input wire [AuxType_AUX_BITS - 1:0] aux_i;
+	input wire vectorial_op_i;
 	input wire in_valid_i;
 	output wire in_ready_o;
+	output wire divsqrt_done_o;
+	input wire simd_synch_done_i;
+	output wire divsqrt_ready_o;
+	input wire simd_synch_rdy_i;
 	input wire flush_i;
-	output wire [31:0] result_o;
+	output wire [WIDTH - 1:0] result_o;
 	output wire [4:0] status_o;
 	output wire extension_bit_o;
 	output wire tag_o;
@@ -17277,41 +20191,50 @@ module fpnew_divsqrt_th_32_3DF01_FC8AC (
 	output wire early_out_valid_o;
 	localparam NUM_INP_REGS = (PipeConfig == 2'd0 ? NumPipeRegs : (PipeConfig == 2'd3 ? NumPipeRegs / 2 : 0));
 	localparam NUM_OUT_REGS = ((PipeConfig == 2'd1) || (PipeConfig == 2'd2) ? NumPipeRegs : (PipeConfig == 2'd3 ? (NumPipeRegs + 1) / 2 : 0));
-	wire [63:0] operands_q;
+	wire [(2 * WIDTH) - 1:0] operands_q;
 	wire [2:0] rnd_mode_q;
 	wire [3:0] op_q;
+	wire [2:0] dst_fmt_q;
 	wire in_valid_q;
-	reg [((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) - (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0)) + 1) * 32) + (((0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) * 32) - 1) : ((((0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)) + 1) * 32) + (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) * 32) - 1)):((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) * 32 : (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) * 32)] inp_pipe_operands_q;
+	reg [((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) - (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0)) + 1) * WIDTH) + (((0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) * WIDTH) - 1) : ((((0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)) + 1) * WIDTH) + (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) * WIDTH) - 1)):((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) * WIDTH : (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) * WIDTH)] inp_pipe_operands_q;
 	reg [(0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 3) + ((NUM_INP_REGS * 3) - 1) : ((NUM_INP_REGS + 1) * 3) - 1):(0 >= NUM_INP_REGS ? NUM_INP_REGS * 3 : 0)] inp_pipe_rnd_mode_q;
 	reg [(0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * fpnew_pkg_OP_BITS) + ((NUM_INP_REGS * fpnew_pkg_OP_BITS) - 1) : ((NUM_INP_REGS + 1) * fpnew_pkg_OP_BITS) - 1):(0 >= NUM_INP_REGS ? NUM_INP_REGS * fpnew_pkg_OP_BITS : 0)] inp_pipe_op_q;
+	reg [(0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * fpnew_pkg_FP_FORMAT_BITS) + ((NUM_INP_REGS * fpnew_pkg_FP_FORMAT_BITS) - 1) : ((NUM_INP_REGS + 1) * fpnew_pkg_FP_FORMAT_BITS) - 1):(0 >= NUM_INP_REGS ? NUM_INP_REGS * fpnew_pkg_FP_FORMAT_BITS : 0)] inp_pipe_dst_fmt_q;
 	reg [0:NUM_INP_REGS] inp_pipe_tag_q;
 	reg [0:NUM_INP_REGS] inp_pipe_mask_q;
 	reg [(0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * AuxType_AUX_BITS) + ((NUM_INP_REGS * AuxType_AUX_BITS) - 1) : ((NUM_INP_REGS + 1) * AuxType_AUX_BITS) - 1):(0 >= NUM_INP_REGS ? NUM_INP_REGS * AuxType_AUX_BITS : 0)] inp_pipe_aux_q;
+	reg [0:NUM_INP_REGS] inp_pipe_vec_op_q;
 	reg [0:NUM_INP_REGS] inp_pipe_valid_q;
-	reg [0:NUM_INP_REGS] inp_pipe_ready;
-	wire [64:1] sv2v_tmp_D1F38;
-	assign sv2v_tmp_D1F38 = operands_i;
-	always @(*) inp_pipe_operands_q[32 * ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * 2 : ((0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * 2) + 1) : (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * 2 : ((0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * 2) + 1) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)))+:64] = sv2v_tmp_D1F38;
-	wire [3:1] sv2v_tmp_A5988;
-	assign sv2v_tmp_A5988 = rnd_mode_i;
-	always @(*) inp_pipe_rnd_mode_q[(0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * 3+:3] = sv2v_tmp_A5988;
-	wire [4:1] sv2v_tmp_76106;
-	assign sv2v_tmp_76106 = op_i;
-	always @(*) inp_pipe_op_q[(0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * fpnew_pkg_OP_BITS+:fpnew_pkg_OP_BITS] = sv2v_tmp_76106;
+	wire [0:NUM_INP_REGS] inp_pipe_ready;
+	wire [2 * WIDTH:1] sv2v_tmp_44D18;
+	assign sv2v_tmp_44D18 = operands_i;
+	always @(*) inp_pipe_operands_q[WIDTH * ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * 2 : ((0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * 2) + 1) : (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * 2 : ((0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * 2) + 1) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)))+:WIDTH * 2] = sv2v_tmp_44D18;
+	wire [3:1] sv2v_tmp_27FE8;
+	assign sv2v_tmp_27FE8 = rnd_mode_i;
+	always @(*) inp_pipe_rnd_mode_q[(0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * 3+:3] = sv2v_tmp_27FE8;
+	wire [4:1] sv2v_tmp_72726;
+	assign sv2v_tmp_72726 = op_i;
+	always @(*) inp_pipe_op_q[(0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * fpnew_pkg_OP_BITS+:fpnew_pkg_OP_BITS] = sv2v_tmp_72726;
+	wire [3:1] sv2v_tmp_014AE;
+	assign sv2v_tmp_014AE = dst_fmt_i;
+	always @(*) inp_pipe_dst_fmt_q[(0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * fpnew_pkg_FP_FORMAT_BITS+:fpnew_pkg_FP_FORMAT_BITS] = sv2v_tmp_014AE;
 	wire [1:1] sv2v_tmp_DE624;
 	assign sv2v_tmp_DE624 = tag_i;
 	always @(*) inp_pipe_tag_q[0] = sv2v_tmp_DE624;
 	wire [1:1] sv2v_tmp_AE6A6;
 	assign sv2v_tmp_AE6A6 = mask_i;
 	always @(*) inp_pipe_mask_q[0] = sv2v_tmp_AE6A6;
-	wire [AuxType_AUX_BITS * 1:1] sv2v_tmp_B1FC2;
-	assign sv2v_tmp_B1FC2 = aux_i;
-	always @(*) inp_pipe_aux_q[(0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * AuxType_AUX_BITS+:AuxType_AUX_BITS] = sv2v_tmp_B1FC2;
+	wire [AuxType_AUX_BITS * 1:1] sv2v_tmp_AD642;
+	assign sv2v_tmp_AD642 = aux_i;
+	always @(*) inp_pipe_aux_q[(0 >= NUM_INP_REGS ? 0 : NUM_INP_REGS) * AuxType_AUX_BITS+:AuxType_AUX_BITS] = sv2v_tmp_AD642;
+	wire [1:1] sv2v_tmp_8F475;
+	assign sv2v_tmp_8F475 = vectorial_op_i;
+	always @(*) inp_pipe_vec_op_q[0] = sv2v_tmp_8F475;
 	wire [1:1] sv2v_tmp_CFC25;
 	assign sv2v_tmp_CFC25 = in_valid_i;
 	always @(*) inp_pipe_valid_q[0] = sv2v_tmp_CFC25;
 	assign in_ready_o = inp_pipe_ready[0];
-	genvar _gv_i_5;
+	genvar _gv_i_6;
 	function automatic [3:0] sv2v_cast_4CD2E;
 		input reg [3:0] inp;
 		sv2v_cast_4CD2E = inp;
@@ -17321,12 +20244,10 @@ module fpnew_divsqrt_th_32_3DF01_FC8AC (
 		sv2v_cast_533F1 = inp;
 	endfunction
 	generate
-		for (_gv_i_5 = 0; _gv_i_5 < NUM_INP_REGS; _gv_i_5 = _gv_i_5 + 1) begin : gen_input_pipeline
-			localparam i = _gv_i_5;
+		for (_gv_i_6 = 0; _gv_i_6 < NUM_INP_REGS; _gv_i_6 = _gv_i_6 + 1) begin : gen_input_pipeline
+			localparam i = _gv_i_6;
 			wire reg_ena;
-			wire [1:1] sv2v_tmp_FF0D2;
-			assign sv2v_tmp_FF0D2 = inp_pipe_ready[i + 1] | ~inp_pipe_valid_q[i + 1];
-			always @(*) inp_pipe_ready[i] = sv2v_tmp_FF0D2;
+			assign inp_pipe_ready[i] = inp_pipe_ready[i + 1] | ~inp_pipe_valid_q[i + 1];
 			always @(posedge clk_i or negedge rst_ni)
 				if (!rst_ni)
 					inp_pipe_valid_q[i + 1] <= 1'b0;
@@ -17335,9 +20256,9 @@ module fpnew_divsqrt_th_32_3DF01_FC8AC (
 			assign reg_ena = (inp_pipe_ready[i] & inp_pipe_valid_q[i]) | reg_ena_i[i];
 			always @(posedge clk_i or negedge rst_ni)
 				if (!rst_ni)
-					inp_pipe_operands_q[32 * ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2 : ((0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2) + 1) : (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2 : ((0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2) + 1) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)))+:64] <= 1'sb0;
+					inp_pipe_operands_q[WIDTH * ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2 : ((0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2) + 1) : (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2 : ((0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2) + 1) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)))+:WIDTH * 2] <= 1'sb0;
 				else
-					inp_pipe_operands_q[32 * ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2 : ((0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2) + 1) : (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2 : ((0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2) + 1) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)))+:64] <= (reg_ena ? inp_pipe_operands_q[32 * ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i : NUM_INP_REGS - i) * 2 : ((0 >= NUM_INP_REGS ? i : NUM_INP_REGS - i) * 2) + 1) : (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i : NUM_INP_REGS - i) * 2 : ((0 >= NUM_INP_REGS ? i : NUM_INP_REGS - i) * 2) + 1) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)))+:64] : inp_pipe_operands_q[32 * ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2 : ((0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2) + 1) : (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2 : ((0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2) + 1) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)))+:64]);
+					inp_pipe_operands_q[WIDTH * ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2 : ((0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2) + 1) : (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2 : ((0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2) + 1) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)))+:WIDTH * 2] <= (reg_ena ? inp_pipe_operands_q[WIDTH * ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i : NUM_INP_REGS - i) * 2 : ((0 >= NUM_INP_REGS ? i : NUM_INP_REGS - i) * 2) + 1) : (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i : NUM_INP_REGS - i) * 2 : ((0 >= NUM_INP_REGS ? i : NUM_INP_REGS - i) * 2) + 1) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)))+:WIDTH * 2] : inp_pipe_operands_q[WIDTH * ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2 : ((0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2) + 1) : (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2 : ((0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 2) + 1) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)))+:WIDTH * 2]);
 			always @(posedge clk_i or negedge rst_ni)
 				if (!rst_ni)
 					inp_pipe_rnd_mode_q[(0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * 3+:3] <= 3'b000;
@@ -17348,6 +20269,11 @@ module fpnew_divsqrt_th_32_3DF01_FC8AC (
 					inp_pipe_op_q[(0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * fpnew_pkg_OP_BITS+:fpnew_pkg_OP_BITS] <= sv2v_cast_4CD2E(0);
 				else
 					inp_pipe_op_q[(0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * fpnew_pkg_OP_BITS+:fpnew_pkg_OP_BITS] <= (reg_ena ? inp_pipe_op_q[(0 >= NUM_INP_REGS ? i : NUM_INP_REGS - i) * fpnew_pkg_OP_BITS+:fpnew_pkg_OP_BITS] : inp_pipe_op_q[(0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * fpnew_pkg_OP_BITS+:fpnew_pkg_OP_BITS]);
+			always @(posedge clk_i or negedge rst_ni)
+				if (!rst_ni)
+					inp_pipe_dst_fmt_q[(0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * fpnew_pkg_FP_FORMAT_BITS+:fpnew_pkg_FP_FORMAT_BITS] <= sv2v_cast_5D882(0);
+				else
+					inp_pipe_dst_fmt_q[(0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * fpnew_pkg_FP_FORMAT_BITS+:fpnew_pkg_FP_FORMAT_BITS] <= (reg_ena ? inp_pipe_dst_fmt_q[(0 >= NUM_INP_REGS ? i : NUM_INP_REGS - i) * fpnew_pkg_FP_FORMAT_BITS+:fpnew_pkg_FP_FORMAT_BITS] : inp_pipe_dst_fmt_q[(0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * fpnew_pkg_FP_FORMAT_BITS+:fpnew_pkg_FP_FORMAT_BITS]);
 			always @(posedge clk_i or negedge rst_ni)
 				if (!rst_ni)
 					inp_pipe_tag_q[i + 1] <= 1'b0;
@@ -17363,95 +20289,133 @@ module fpnew_divsqrt_th_32_3DF01_FC8AC (
 					inp_pipe_aux_q[(0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * AuxType_AUX_BITS+:AuxType_AUX_BITS] <= sv2v_cast_533F1(1'sb0);
 				else
 					inp_pipe_aux_q[(0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * AuxType_AUX_BITS+:AuxType_AUX_BITS] <= (reg_ena ? inp_pipe_aux_q[(0 >= NUM_INP_REGS ? i : NUM_INP_REGS - i) * AuxType_AUX_BITS+:AuxType_AUX_BITS] : inp_pipe_aux_q[(0 >= NUM_INP_REGS ? i + 1 : NUM_INP_REGS - (i + 1)) * AuxType_AUX_BITS+:AuxType_AUX_BITS]);
+			always @(posedge clk_i or negedge rst_ni)
+				if (!rst_ni)
+					inp_pipe_vec_op_q[i + 1] <= sv2v_cast_533F1(1'sb0);
+				else
+					inp_pipe_vec_op_q[i + 1] <= (reg_ena ? inp_pipe_vec_op_q[i] : inp_pipe_vec_op_q[i + 1]);
 		end
 	endgenerate
-	assign operands_q = inp_pipe_operands_q[32 * ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? NUM_INP_REGS : NUM_INP_REGS - NUM_INP_REGS) * 2 : ((0 >= NUM_INP_REGS ? NUM_INP_REGS : NUM_INP_REGS - NUM_INP_REGS) * 2) + 1) : (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? NUM_INP_REGS : NUM_INP_REGS - NUM_INP_REGS) * 2 : ((0 >= NUM_INP_REGS ? NUM_INP_REGS : NUM_INP_REGS - NUM_INP_REGS) * 2) + 1) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)))+:64];
+	assign operands_q = inp_pipe_operands_q[WIDTH * ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? ((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? NUM_INP_REGS : NUM_INP_REGS - NUM_INP_REGS) * 2 : ((0 >= NUM_INP_REGS ? NUM_INP_REGS : NUM_INP_REGS - NUM_INP_REGS) * 2) + 1) : (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) - (((0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1) >= (0 >= NUM_INP_REGS ? NUM_INP_REGS * 2 : 0) ? (0 >= NUM_INP_REGS ? NUM_INP_REGS : NUM_INP_REGS - NUM_INP_REGS) * 2 : ((0 >= NUM_INP_REGS ? NUM_INP_REGS : NUM_INP_REGS - NUM_INP_REGS) * 2) + 1) - (0 >= NUM_INP_REGS ? ((1 - NUM_INP_REGS) * 2) + ((NUM_INP_REGS * 2) - 1) : ((NUM_INP_REGS + 1) * 2) - 1)))+:WIDTH * 2];
 	assign rnd_mode_q = inp_pipe_rnd_mode_q[(0 >= NUM_INP_REGS ? NUM_INP_REGS : NUM_INP_REGS - NUM_INP_REGS) * 3+:3];
 	assign op_q = inp_pipe_op_q[(0 >= NUM_INP_REGS ? NUM_INP_REGS : NUM_INP_REGS - NUM_INP_REGS) * fpnew_pkg_OP_BITS+:fpnew_pkg_OP_BITS];
+	assign dst_fmt_q = inp_pipe_dst_fmt_q[(0 >= NUM_INP_REGS ? NUM_INP_REGS : NUM_INP_REGS - NUM_INP_REGS) * fpnew_pkg_FP_FORMAT_BITS+:fpnew_pkg_FP_FORMAT_BITS];
 	assign in_valid_q = inp_pipe_valid_q[NUM_INP_REGS];
+	reg ext_op_start_q;
+	always @(posedge clk_i or negedge rst_ni)
+		if (!rst_ni)
+			ext_op_start_q <= 1'b0;
+		else
+			ext_op_start_q <= reg_ena_i[NUM_INP_REGS - 1];
+	reg [1:0] divsqrt_fmt;
+	reg [127:0] divsqrt_operands;
+	reg input_is_fp8;
+	always @(*) begin : translate_fmt
+		if (_sv2v_0)
+			;
+		(* full_case, parallel_case *)
+		case (dst_fmt_q)
+			sv2v_cast_5D882('d0): divsqrt_fmt = 2'b00;
+			sv2v_cast_5D882('d1): divsqrt_fmt = 2'b01;
+			sv2v_cast_5D882('d2): divsqrt_fmt = 2'b10;
+			sv2v_cast_5D882('d4): divsqrt_fmt = 2'b11;
+			default: divsqrt_fmt = 2'b10;
+		endcase
+		input_is_fp8 = FpFmtConfig[sv2v_cast_5D882('d3)] & (dst_fmt_q == sv2v_cast_5D882('d3));
+		divsqrt_operands[0+:64] = (input_is_fp8 ? operands_q[0+:WIDTH] << 8 : operands_q[0+:WIDTH]);
+		divsqrt_operands[64+:64] = (input_is_fp8 ? operands_q[WIDTH+:WIDTH] << 8 : operands_q[WIDTH+:WIDTH]);
+	end
 	reg in_ready;
-	wire div_op;
-	wire sqrt_op;
-	reg unit_ready_q;
-	reg unit_done;
+	wire div_valid;
+	wire sqrt_valid;
+	wire unit_ready;
+	wire unit_done;
+	reg unit_done_q;
 	wire op_starting;
 	reg out_valid;
 	wire out_ready;
-	reg hold_result;
-	reg data_is_held;
 	reg unit_busy;
+	wire simd_synch_done;
 	reg [1:0] state_q;
 	reg [1:0] state_d;
-	assign div_op = ((in_valid_q & (op_q == sv2v_cast_4CD2E(4))) & in_ready) & ~flush_i;
-	assign sqrt_op = ((in_valid_q & (op_q == sv2v_cast_4CD2E(5))) & in_ready) & ~flush_i;
-	assign op_starting = div_op | sqrt_op;
-	wire fdsu_fpu_ex1_stall;
-	reg fdsu_fpu_ex1_stall_q;
-	wire div_op_d;
-	reg div_op_q;
-	wire sqrt_op_d;
-	reg sqrt_op_q;
-	assign div_op_d = (fdsu_fpu_ex1_stall ? div_op : 1'b0);
-	assign sqrt_op_d = (fdsu_fpu_ex1_stall ? sqrt_op : 1'b0);
+	assign div_valid = (((in_valid_q & in_ready) & ~flush_i) | ext_op_start_q) & (op_q == sv2v_cast_4CD2E(4));
+	assign sqrt_valid = (((in_valid_q & in_ready) & ~flush_i) | ext_op_start_q) & (op_q != sv2v_cast_4CD2E(4));
+	assign op_starting = div_valid | sqrt_valid;
+	reg result_is_fp8_q;
+	reg result_tag_q;
+	reg result_mask_q;
+	reg [AuxType_AUX_BITS - 1:0] result_aux_q;
+	reg result_vec_op_q;
 	always @(posedge clk_i or negedge rst_ni)
 		if (!rst_ni)
-			fdsu_fpu_ex1_stall_q <= 1'sb0;
+			result_is_fp8_q <= 1'sb0;
 		else
-			fdsu_fpu_ex1_stall_q <= fdsu_fpu_ex1_stall;
+			result_is_fp8_q <= (op_starting ? input_is_fp8 : result_is_fp8_q);
 	always @(posedge clk_i or negedge rst_ni)
 		if (!rst_ni)
-			div_op_q <= 1'sb0;
+			result_tag_q <= 1'sb0;
 		else
-			div_op_q <= div_op_d;
+			result_tag_q <= (op_starting ? inp_pipe_tag_q[NUM_INP_REGS] : result_tag_q);
 	always @(posedge clk_i or negedge rst_ni)
 		if (!rst_ni)
-			sqrt_op_q <= 1'sb0;
+			result_mask_q <= 1'sb0;
 		else
-			sqrt_op_q <= sqrt_op_d;
+			result_mask_q <= (op_starting ? inp_pipe_mask_q[NUM_INP_REGS] : result_mask_q);
+	always @(posedge clk_i or negedge rst_ni)
+		if (!rst_ni)
+			result_aux_q <= 1'sb0;
+		else
+			result_aux_q <= (op_starting ? inp_pipe_aux_q[(0 >= NUM_INP_REGS ? NUM_INP_REGS : NUM_INP_REGS - NUM_INP_REGS) * AuxType_AUX_BITS+:AuxType_AUX_BITS] : result_aux_q);
+	always @(posedge clk_i or negedge rst_ni)
+		if (!rst_ni)
+			result_vec_op_q <= 1'sb0;
+		else
+			result_vec_op_q <= (op_starting ? inp_pipe_vec_op_q[NUM_INP_REGS] : result_vec_op_q);
+	assign simd_synch_done = simd_synch_done_i || ~result_vec_op_q;
+	wire unit_done_clear;
+	always @(posedge clk_i or negedge rst_ni)
+		if (!rst_ni)
+			unit_done_q <= 1'b0;
+		else
+			unit_done_q <= (unit_done_clear ? 1'b0 : (unit_done ? unit_done : unit_done_q));
+	assign unit_done_clear = simd_synch_done | reg_ena_i[NUM_INP_REGS - 1];
+	assign divsqrt_done_o = (unit_done_q | unit_done) & result_vec_op_q;
+	assign divsqrt_ready_o = in_ready;
+	assign inp_pipe_ready[NUM_INP_REGS] = (result_vec_op_q ? simd_synch_rdy_i : in_ready);
 	always @(*) begin : flag_fsm
 		if (_sv2v_0)
 			;
 		in_ready = 1'b0;
 		out_valid = 1'b0;
-		hold_result = 1'b0;
-		data_is_held = 1'b0;
 		unit_busy = 1'b0;
 		state_d = state_q;
-		inp_pipe_ready[NUM_INP_REGS] = unit_ready_q;
 		(* full_case, parallel_case *)
 		case (state_q)
 			2'd0: begin
-				in_ready = unit_ready_q;
-				if (in_valid_q && unit_ready_q) begin
-					inp_pipe_ready[NUM_INP_REGS] = unit_ready_q && !fdsu_fpu_ex1_stall;
+				in_ready = 1'b1;
+				if (in_valid_q && unit_ready)
 					state_d = 2'd1;
-				end
 			end
 			2'd1: begin
-				inp_pipe_ready[NUM_INP_REGS] = fdsu_fpu_ex1_stall_q;
 				unit_busy = 1'b1;
-				if (unit_done) begin
+				if (simd_synch_done_i || (~result_vec_op_q && unit_done)) begin
 					out_valid = 1'b1;
 					if (out_ready) begin
 						state_d = 2'd0;
-						if (in_valid_q && unit_ready_q) begin
-							in_ready = 1'b1;
+						in_ready = 1'b1;
+						if (in_valid_q && unit_ready)
 							state_d = 2'd1;
-						end
 					end
-					else begin
-						hold_result = 1'b1;
+					else
 						state_d = 2'd2;
-					end
 				end
 			end
 			2'd2: begin
 				unit_busy = 1'b1;
-				data_is_held = 1'b1;
 				out_valid = 1'b1;
 				if (out_ready) begin
 					state_d = 2'd0;
-					if (in_valid_q && unit_ready_q) begin
+					if (in_valid_q && unit_ready) begin
 						in_ready = 1'b1;
 						state_d = 2'd1;
 					end
@@ -17470,225 +20434,67 @@ module fpnew_divsqrt_th_32_3DF01_FC8AC (
 			state_q <= 2'd0;
 		else
 			state_q <= state_d;
-	reg result_tag_q;
-	reg [AuxType_AUX_BITS - 1:0] result_aux_q;
-	reg result_mask_q;
-	always @(posedge clk_i or negedge rst_ni)
-		if (!rst_ni)
-			result_tag_q <= 1'sb0;
-		else
-			result_tag_q <= (op_starting ? inp_pipe_tag_q[NUM_INP_REGS] : result_tag_q);
-	always @(posedge clk_i or negedge rst_ni)
-		if (!rst_ni)
-			result_mask_q <= 1'sb0;
-		else
-			result_mask_q <= (op_starting ? inp_pipe_mask_q[NUM_INP_REGS] : result_mask_q);
-	always @(posedge clk_i or negedge rst_ni)
-		if (!rst_ni)
-			result_aux_q <= 1'sb0;
-		else
-			result_aux_q <= (op_starting ? inp_pipe_aux_q[(0 >= NUM_INP_REGS ? NUM_INP_REGS : NUM_INP_REGS - NUM_INP_REGS) * AuxType_AUX_BITS+:AuxType_AUX_BITS] : result_aux_q);
-	reg [31:0] unit_result;
-	reg [31:0] held_result_q;
-	reg [4:0] unit_status;
+	wire [63:0] unit_result;
+	wire [WIDTH - 1:0] adjusted_result;
+	reg [WIDTH - 1:0] held_result_q;
+	wire [4:0] unit_status;
 	reg [4:0] held_status_q;
-	reg ctrl_fdsu_ex1_sel;
-	wire fdsu_fpu_ex1_cmplt;
-	wire [4:0] fdsu_fpu_ex1_fflags;
-	wire [7:0] fdsu_fpu_ex1_special_sel;
-	wire [3:0] fdsu_fpu_ex1_special_sign;
-	wire fdsu_fpu_no_op;
-	reg [2:0] idu_fpu_ex1_eu_sel;
-	wire [31:0] fdsu_frbus_data;
-	wire [4:0] fdsu_frbus_fflags;
-	wire fdsu_frbus_wb_vld;
-	wire [31:0] dp_frbus_ex2_data;
-	wire [4:0] dp_frbus_ex2_fflags;
-	wire [2:0] dp_xx_ex1_cnan;
-	wire [2:0] dp_xx_ex1_id;
-	wire [2:0] dp_xx_ex1_inf;
-	wire [2:0] dp_xx_ex1_norm;
-	wire [2:0] dp_xx_ex1_qnan;
-	wire [2:0] dp_xx_ex1_snan;
-	wire [2:0] dp_xx_ex1_zero;
-	wire ex2_inst_wb;
-	wire ex2_inst_wb_vld_d;
-	reg ex2_inst_wb_vld_q;
-	wire [31:0] fpu_idu_fwd_data;
-	wire [4:0] fpu_idu_fwd_fflags;
-	wire fpu_idu_fwd_vld;
-	reg unit_ready_d;
-	always @(*) begin
-		if (_sv2v_0)
-			;
-		if (op_starting && unit_ready_q) begin
-			if (ex2_inst_wb && ex2_inst_wb_vld_q)
-				unit_ready_d = 1'b1;
-			else
-				unit_ready_d = 1'b0;
-		end
-		else if (fpu_idu_fwd_vld | flush_i)
-			unit_ready_d = 1'b1;
-		else
-			unit_ready_d = unit_ready_q;
-	end
-	always @(posedge clk_i or negedge rst_ni)
-		if (!rst_ni)
-			unit_ready_q <= 1'b1;
-		else
-			unit_ready_q <= unit_ready_d;
-	always @(*) begin
-		if (_sv2v_0)
-			;
-		ctrl_fdsu_ex1_sel = 1'b0;
-		idu_fpu_ex1_eu_sel = 3'h0;
-		if (op_starting) begin
-			ctrl_fdsu_ex1_sel = 1'b1;
-			idu_fpu_ex1_eu_sel = 3'h4;
-		end
-		else if (fdsu_fpu_ex1_stall_q) begin
-			ctrl_fdsu_ex1_sel = 1'b1;
-			idu_fpu_ex1_eu_sel = 3'h4;
-		end
-		else begin
-			ctrl_fdsu_ex1_sel = 1'b0;
-			idu_fpu_ex1_eu_sel = 3'h0;
-		end
-	end
-	pa_fdsu_top i_divsqrt_thead(
-		.cp0_fpu_icg_en(1'b0),
-		.cp0_fpu_xx_dqnan(1'b0),
-		.cp0_yy_clk_en(1'b1),
-		.cpurst_b(rst_ni),
-		.ctrl_fdsu_ex1_sel(ctrl_fdsu_ex1_sel),
-		.ctrl_xx_ex1_cmplt_dp(ctrl_fdsu_ex1_sel),
-		.ctrl_xx_ex1_inst_vld(ctrl_fdsu_ex1_sel),
-		.ctrl_xx_ex1_stall(fdsu_fpu_ex1_stall),
-		.ctrl_xx_ex1_warm_up(1'b0),
-		.ctrl_xx_ex2_warm_up(1'b0),
-		.ctrl_xx_ex3_warm_up(1'b0),
-		.dp_xx_ex1_cnan(dp_xx_ex1_cnan),
-		.dp_xx_ex1_id(dp_xx_ex1_id),
-		.dp_xx_ex1_inf(dp_xx_ex1_inf),
-		.dp_xx_ex1_qnan(dp_xx_ex1_qnan),
-		.dp_xx_ex1_rm(rnd_mode_q),
-		.dp_xx_ex1_snan(dp_xx_ex1_snan),
-		.dp_xx_ex1_zero(dp_xx_ex1_zero),
-		.fdsu_fpu_ex1_cmplt(fdsu_fpu_ex1_cmplt),
-		.fdsu_fpu_ex1_cmplt_dp(),
-		.fdsu_fpu_ex1_fflags(fdsu_fpu_ex1_fflags),
-		.fdsu_fpu_ex1_special_sel(fdsu_fpu_ex1_special_sel),
-		.fdsu_fpu_ex1_special_sign(fdsu_fpu_ex1_special_sign),
-		.fdsu_fpu_ex1_stall(fdsu_fpu_ex1_stall),
-		.fdsu_fpu_no_op(fdsu_fpu_no_op),
-		.fdsu_frbus_data(fdsu_frbus_data),
-		.fdsu_frbus_fflags(fdsu_frbus_fflags),
-		.fdsu_frbus_freg(),
-		.fdsu_frbus_wb_vld(fdsu_frbus_wb_vld),
-		.forever_cpuclk(clk_i),
-		.frbus_fdsu_wb_grant(fdsu_frbus_wb_vld),
-		.idu_fpu_ex1_dst_freg(5'h0f),
-		.idu_fpu_ex1_eu_sel(idu_fpu_ex1_eu_sel),
-		.idu_fpu_ex1_func({8'b00000000, div_op | div_op_q, sqrt_op | sqrt_op_q}),
-		.idu_fpu_ex1_srcf0(operands_q[31-:32]),
-		.idu_fpu_ex1_srcf1(operands_q[63-:32]),
-		.pad_yy_icg_scan_en(1'b0),
-		.rtu_xx_ex1_cancel(1'b0),
-		.rtu_xx_ex2_cancel(1'b0),
-		.rtu_yy_xx_async_flush(flush_i),
-		.rtu_yy_xx_flush(1'b0)
+	wire hold_en;
+	localparam [5:0] sv2v_uu_i_divsqrt_lei_ext_Precision_ctl_SI_0 = 1'sb0;
+	div_sqrt_top_mvp i_divsqrt_lei(
+		.Clk_CI(clk_i),
+		.Rst_RBI(rst_ni),
+		.Div_start_SI(div_valid),
+		.Sqrt_start_SI(sqrt_valid),
+		.Operand_a_DI(divsqrt_operands[0+:64]),
+		.Operand_b_DI(divsqrt_operands[64+:64]),
+		.RM_SI(rnd_mode_q),
+		.Precision_ctl_SI(sv2v_uu_i_divsqrt_lei_ext_Precision_ctl_SI_0),
+		.Format_sel_SI(divsqrt_fmt),
+		.Kill_SI(flush_i | reg_ena_i[NUM_INP_REGS - 1]),
+		.Result_DO(unit_result),
+		.Fflags_SO(unit_status),
+		.Ready_SO(unit_ready),
+		.Done_SO(unit_done)
 	);
-	localparam [31:0] sv2v_uu_x_pa_fpu_dp_ext_idu_fpu_ex1_srcf2_0 = 1'sb0;
-	pa_fpu_dp x_pa_fpu_dp(
-		.cp0_fpu_icg_en(1'b0),
-		.cp0_fpu_xx_rm(rnd_mode_q),
-		.cp0_yy_clk_en(1'b1),
-		.ctrl_xx_ex1_inst_vld(ctrl_fdsu_ex1_sel),
-		.ctrl_xx_ex1_stall(1'b0),
-		.ctrl_xx_ex1_warm_up(1'b0),
-		.dp_frbus_ex2_data(dp_frbus_ex2_data),
-		.dp_frbus_ex2_fflags(dp_frbus_ex2_fflags),
-		.dp_xx_ex1_cnan(dp_xx_ex1_cnan),
-		.dp_xx_ex1_id(dp_xx_ex1_id),
-		.dp_xx_ex1_inf(dp_xx_ex1_inf),
-		.dp_xx_ex1_norm(dp_xx_ex1_norm),
-		.dp_xx_ex1_qnan(dp_xx_ex1_qnan),
-		.dp_xx_ex1_snan(dp_xx_ex1_snan),
-		.dp_xx_ex1_zero(dp_xx_ex1_zero),
-		.ex2_inst_wb(ex2_inst_wb),
-		.fdsu_fpu_ex1_fflags(fdsu_fpu_ex1_fflags),
-		.fdsu_fpu_ex1_special_sel(fdsu_fpu_ex1_special_sel),
-		.fdsu_fpu_ex1_special_sign(fdsu_fpu_ex1_special_sign),
-		.forever_cpuclk(clk_i),
-		.idu_fpu_ex1_eu_sel(idu_fpu_ex1_eu_sel),
-		.idu_fpu_ex1_func({8'b00000000, div_op, sqrt_op}),
-		.idu_fpu_ex1_gateclk_vld(fdsu_fpu_ex1_cmplt),
-		.idu_fpu_ex1_rm(rnd_mode_q),
-		.idu_fpu_ex1_srcf0(operands_q[31-:32]),
-		.idu_fpu_ex1_srcf1(operands_q[63-:32]),
-		.idu_fpu_ex1_srcf2(sv2v_uu_x_pa_fpu_dp_ext_idu_fpu_ex1_srcf2_0),
-		.pad_yy_icg_scan_en(1'b0)
-	);
-	assign ex2_inst_wb_vld_d = ctrl_fdsu_ex1_sel;
-	always @(posedge clk_i or negedge rst_ni)
-		if (!rst_ni)
-			ex2_inst_wb_vld_q <= 1'sb0;
-		else
-			ex2_inst_wb_vld_q <= ex2_inst_wb_vld_d;
-	pa_fpu_frbus x_pa_fpu_frbus(
-		.ctrl_frbus_ex2_wb_req(ex2_inst_wb & ex2_inst_wb_vld_q),
-		.dp_frbus_ex2_data(dp_frbus_ex2_data),
-		.dp_frbus_ex2_fflags(dp_frbus_ex2_fflags),
-		.fdsu_frbus_data(fdsu_frbus_data),
-		.fdsu_frbus_fflags(fdsu_frbus_fflags),
-		.fdsu_frbus_wb_vld(fdsu_frbus_wb_vld),
-		.fpu_idu_fwd_data(fpu_idu_fwd_data),
-		.fpu_idu_fwd_fflags(fpu_idu_fwd_fflags),
-		.fpu_idu_fwd_vld(fpu_idu_fwd_vld)
-	);
-	always @(*) begin
-		if (_sv2v_0)
-			;
-		unit_result[31:0] = fpu_idu_fwd_data[31:0];
-		unit_status[4:0] = fpu_idu_fwd_fflags[4:0];
-		unit_done = fpu_idu_fwd_vld;
-	end
-	always @(posedge clk_i) held_result_q <= (hold_result ? unit_result : held_result_q);
-	always @(posedge clk_i) held_status_q <= (hold_result ? unit_status : held_status_q);
-	wire [31:0] result_d;
+	assign adjusted_result = (result_is_fp8_q ? unit_result >> 8 : unit_result);
+	assign hold_en = (unit_done & (~simd_synch_done_i | ~out_ready)) & ~(~result_vec_op_q & out_ready);
+	always @(posedge clk_i) held_result_q <= (hold_en ? adjusted_result : held_result_q);
+	always @(posedge clk_i) held_status_q <= (hold_en ? unit_status : held_status_q);
+	wire [WIDTH - 1:0] result_d;
 	wire [4:0] status_d;
-	assign result_d = (data_is_held ? held_result_q : unit_result);
-	assign status_d = (data_is_held ? held_status_q : unit_status);
+	assign result_d = (unit_done_q ? held_result_q : adjusted_result);
+	assign status_d = (unit_done_q ? held_status_q : unit_status);
 	reg [(0 >= NUM_OUT_REGS ? ((1 - NUM_OUT_REGS) * WIDTH) + ((NUM_OUT_REGS * WIDTH) - 1) : ((NUM_OUT_REGS + 1) * WIDTH) - 1):(0 >= NUM_OUT_REGS ? NUM_OUT_REGS * WIDTH : 0)] out_pipe_result_q;
 	reg [(0 >= NUM_OUT_REGS ? ((1 - NUM_OUT_REGS) * 5) + ((NUM_OUT_REGS * 5) - 1) : ((NUM_OUT_REGS + 1) * 5) - 1):(0 >= NUM_OUT_REGS ? NUM_OUT_REGS * 5 : 0)] out_pipe_status_q;
 	reg [0:NUM_OUT_REGS] out_pipe_tag_q;
-	reg [(0 >= NUM_OUT_REGS ? ((1 - NUM_OUT_REGS) * AuxType_AUX_BITS) + ((NUM_OUT_REGS * AuxType_AUX_BITS) - 1) : ((NUM_OUT_REGS + 1) * AuxType_AUX_BITS) - 1):(0 >= NUM_OUT_REGS ? NUM_OUT_REGS * AuxType_AUX_BITS : 0)] out_pipe_aux_q;
 	reg [0:NUM_OUT_REGS] out_pipe_mask_q;
+	reg [(0 >= NUM_OUT_REGS ? ((1 - NUM_OUT_REGS) * AuxType_AUX_BITS) + ((NUM_OUT_REGS * AuxType_AUX_BITS) - 1) : ((NUM_OUT_REGS + 1) * AuxType_AUX_BITS) - 1):(0 >= NUM_OUT_REGS ? NUM_OUT_REGS * AuxType_AUX_BITS : 0)] out_pipe_aux_q;
 	reg [0:NUM_OUT_REGS] out_pipe_valid_q;
 	wire [0:NUM_OUT_REGS] out_pipe_ready;
-	wire [32:1] sv2v_tmp_F1632;
-	assign sv2v_tmp_F1632 = result_d;
-	always @(*) out_pipe_result_q[(0 >= NUM_OUT_REGS ? 0 : NUM_OUT_REGS) * WIDTH+:WIDTH] = sv2v_tmp_F1632;
-	wire [5:1] sv2v_tmp_03440;
-	assign sv2v_tmp_03440 = status_d;
-	always @(*) out_pipe_status_q[(0 >= NUM_OUT_REGS ? 0 : NUM_OUT_REGS) * 5+:5] = sv2v_tmp_03440;
+	wire [WIDTH * 1:1] sv2v_tmp_8E412;
+	assign sv2v_tmp_8E412 = result_d;
+	always @(*) out_pipe_result_q[(0 >= NUM_OUT_REGS ? 0 : NUM_OUT_REGS) * WIDTH+:WIDTH] = sv2v_tmp_8E412;
+	wire [5:1] sv2v_tmp_F3F80;
+	assign sv2v_tmp_F3F80 = status_d;
+	always @(*) out_pipe_status_q[(0 >= NUM_OUT_REGS ? 0 : NUM_OUT_REGS) * 5+:5] = sv2v_tmp_F3F80;
 	wire [1:1] sv2v_tmp_AFEEA;
 	assign sv2v_tmp_AFEEA = result_tag_q;
 	always @(*) out_pipe_tag_q[0] = sv2v_tmp_AFEEA;
 	wire [1:1] sv2v_tmp_0A048;
 	assign sv2v_tmp_0A048 = result_mask_q;
 	always @(*) out_pipe_mask_q[0] = sv2v_tmp_0A048;
-	wire [AuxType_AUX_BITS * 1:1] sv2v_tmp_EB2CC;
-	assign sv2v_tmp_EB2CC = result_aux_q;
-	always @(*) out_pipe_aux_q[(0 >= NUM_OUT_REGS ? 0 : NUM_OUT_REGS) * AuxType_AUX_BITS+:AuxType_AUX_BITS] = sv2v_tmp_EB2CC;
+	wire [AuxType_AUX_BITS * 1:1] sv2v_tmp_A6ECC;
+	assign sv2v_tmp_A6ECC = result_aux_q;
+	always @(*) out_pipe_aux_q[(0 >= NUM_OUT_REGS ? 0 : NUM_OUT_REGS) * AuxType_AUX_BITS+:AuxType_AUX_BITS] = sv2v_tmp_A6ECC;
 	wire [1:1] sv2v_tmp_F96BC;
 	assign sv2v_tmp_F96BC = out_valid;
 	always @(*) out_pipe_valid_q[0] = sv2v_tmp_F96BC;
 	assign out_ready = out_pipe_ready[0];
-	genvar _gv_i_6;
+	genvar _gv_i_7;
 	generate
-		for (_gv_i_6 = 0; _gv_i_6 < NUM_OUT_REGS; _gv_i_6 = _gv_i_6 + 1) begin : gen_output_pipeline
-			localparam i = _gv_i_6;
+		for (_gv_i_7 = 0; _gv_i_7 < NUM_OUT_REGS; _gv_i_7 = _gv_i_7 + 1) begin : gen_output_pipeline
+			localparam i = _gv_i_7;
 			wire reg_ena;
 			assign out_pipe_ready[i] = out_pipe_ready[i + 1] | ~out_pipe_valid_q[i + 1];
 			always @(posedge clk_i or negedge rst_ni)
@@ -17880,14 +20686,14 @@ module fpnew_fma_EA93F (
 	assign sv2v_tmp_CFC25 = in_valid_i;
 	always @(*) inp_pipe_valid_q[0] = sv2v_tmp_CFC25;
 	assign in_ready_o = inp_pipe_ready[0];
-	genvar _gv_i_7;
+	genvar _gv_i_8;
 	function automatic [3:0] sv2v_cast_4CD2E;
 		input reg [3:0] inp;
 		sv2v_cast_4CD2E = inp;
 	endfunction
 	generate
-		for (_gv_i_7 = 0; _gv_i_7 < NUM_INP_REGS; _gv_i_7 = _gv_i_7 + 1) begin : gen_input_pipeline
-			localparam i = _gv_i_7;
+		for (_gv_i_8 = 0; _gv_i_8 < NUM_INP_REGS; _gv_i_8 = _gv_i_8 + 1) begin : gen_input_pipeline
+			localparam i = _gv_i_8;
 			wire reg_ena;
 			assign inp_pipe_ready[i] = inp_pipe_ready[i + 1] | ~inp_pipe_valid_q[i + 1];
 			always @(posedge clk_i or negedge rst_ni)
@@ -18175,10 +20981,10 @@ module fpnew_fma_EA93F (
 	assign sv2v_tmp_C7159 = inp_pipe_valid_q[NUM_INP_REGS];
 	always @(*) mid_pipe_valid_q[0] = sv2v_tmp_C7159;
 	assign inp_pipe_ready[NUM_INP_REGS] = mid_pipe_ready[0];
-	genvar _gv_i_8;
+	genvar _gv_i_9;
 	generate
-		for (_gv_i_8 = 0; _gv_i_8 < NUM_MID_REGS; _gv_i_8 = _gv_i_8 + 1) begin : gen_inside_pipeline
-			localparam i = _gv_i_8;
+		for (_gv_i_9 = 0; _gv_i_9 < NUM_MID_REGS; _gv_i_9 = _gv_i_9 + 1) begin : gen_inside_pipeline
+			localparam i = _gv_i_9;
 			wire reg_ena;
 			assign mid_pipe_ready[i] = mid_pipe_ready[i + 1] | ~mid_pipe_valid_q[i + 1];
 			always @(posedge clk_i or negedge rst_ni)
@@ -18404,10 +21210,10 @@ module fpnew_fma_EA93F (
 	assign sv2v_tmp_E45E7 = mid_pipe_valid_q[NUM_MID_REGS];
 	always @(*) out_pipe_valid_q[0] = sv2v_tmp_E45E7;
 	assign mid_pipe_ready[NUM_MID_REGS] = out_pipe_ready[0];
-	genvar _gv_i_9;
+	genvar _gv_i_10;
 	generate
-		for (_gv_i_9 = 0; _gv_i_9 < NUM_OUT_REGS; _gv_i_9 = _gv_i_9 + 1) begin : gen_output_pipeline
-			localparam i = _gv_i_9;
+		for (_gv_i_10 = 0; _gv_i_10 < NUM_OUT_REGS; _gv_i_10 = _gv_i_10 + 1) begin : gen_output_pipeline
+			localparam i = _gv_i_10;
 			wire reg_ena;
 			assign out_pipe_ready[i] = out_pipe_ready[i + 1] | ~out_pipe_valid_q[i + 1];
 			always @(posedge clk_i or negedge rst_ni)
@@ -18652,7 +21458,7 @@ module fpnew_fma_multi_B5D6B_2D261 (
 	assign sv2v_tmp_CFC25 = in_valid_i;
 	always @(*) inp_pipe_valid_q[0] = sv2v_tmp_CFC25;
 	assign in_ready_o = inp_pipe_ready[0];
-	genvar _gv_i_10;
+	genvar _gv_i_11;
 	function automatic [3:0] sv2v_cast_4CD2E;
 		input reg [3:0] inp;
 		sv2v_cast_4CD2E = inp;
@@ -18662,8 +21468,8 @@ module fpnew_fma_multi_B5D6B_2D261 (
 		sv2v_cast_533F1 = inp;
 	endfunction
 	generate
-		for (_gv_i_10 = 0; _gv_i_10 < NUM_INP_REGS; _gv_i_10 = _gv_i_10 + 1) begin : gen_input_pipeline
-			localparam i = _gv_i_10;
+		for (_gv_i_11 = 0; _gv_i_11 < NUM_INP_REGS; _gv_i_11 = _gv_i_11 + 1) begin : gen_input_pipeline
+			localparam i = _gv_i_11;
 			wire reg_ena;
 			assign inp_pipe_ready[i] = inp_pipe_ready[i + 1] | ~inp_pipe_valid_q[i + 1];
 			always @(posedge clk_i or negedge rst_ni)
@@ -19079,10 +21885,10 @@ module fpnew_fma_multi_B5D6B_2D261 (
 	assign sv2v_tmp_C7159 = inp_pipe_valid_q[NUM_INP_REGS];
 	always @(*) mid_pipe_valid_q[0] = sv2v_tmp_C7159;
 	assign inp_pipe_ready[NUM_INP_REGS] = mid_pipe_ready[0];
-	genvar _gv_i_11;
+	genvar _gv_i_12;
 	generate
-		for (_gv_i_11 = 0; _gv_i_11 < NUM_MID_REGS; _gv_i_11 = _gv_i_11 + 1) begin : gen_inside_pipeline
-			localparam i = _gv_i_11;
+		for (_gv_i_12 = 0; _gv_i_12 < NUM_MID_REGS; _gv_i_12 = _gv_i_12 + 1) begin : gen_inside_pipeline
+			localparam i = _gv_i_12;
 			wire reg_ena;
 			assign mid_pipe_ready[i] = mid_pipe_ready[i + 1] | ~mid_pipe_valid_q[i + 1];
 			always @(posedge clk_i or negedge rst_ni)
@@ -19371,10 +22177,10 @@ module fpnew_fma_multi_B5D6B_2D261 (
 	assign sv2v_tmp_E45E7 = mid_pipe_valid_q[NUM_MID_REGS];
 	always @(*) out_pipe_valid_q[0] = sv2v_tmp_E45E7;
 	assign mid_pipe_ready[NUM_MID_REGS] = out_pipe_ready[0];
-	genvar _gv_i_12;
+	genvar _gv_i_13;
 	generate
-		for (_gv_i_12 = 0; _gv_i_12 < NUM_OUT_REGS; _gv_i_12 = _gv_i_12 + 1) begin : gen_output_pipeline
-			localparam i = _gv_i_12;
+		for (_gv_i_13 = 0; _gv_i_13 < NUM_OUT_REGS; _gv_i_13 = _gv_i_13 + 1) begin : gen_output_pipeline
+			localparam i = _gv_i_13;
 			wire reg_ena;
 			assign out_pipe_ready[i] = out_pipe_ready[i + 1] | ~out_pipe_valid_q[i + 1];
 			always @(posedge clk_i or negedge rst_ni)
@@ -19557,14 +22363,14 @@ module fpnew_noncomp_DE16F (
 	assign sv2v_tmp_CFC25 = in_valid_i;
 	always @(*) inp_pipe_valid_q[0] = sv2v_tmp_CFC25;
 	assign in_ready_o = inp_pipe_ready[0];
-	genvar _gv_i_13;
+	genvar _gv_i_14;
 	function automatic [3:0] sv2v_cast_4CD2E;
 		input reg [3:0] inp;
 		sv2v_cast_4CD2E = inp;
 	endfunction
 	generate
-		for (_gv_i_13 = 0; _gv_i_13 < NUM_INP_REGS; _gv_i_13 = _gv_i_13 + 1) begin : gen_input_pipeline
-			localparam i = _gv_i_13;
+		for (_gv_i_14 = 0; _gv_i_14 < NUM_INP_REGS; _gv_i_14 = _gv_i_14 + 1) begin : gen_input_pipeline
+			localparam i = _gv_i_14;
 			wire reg_ena;
 			assign inp_pipe_ready[i] = inp_pipe_ready[i + 1] | ~inp_pipe_valid_q[i + 1];
 			always @(posedge clk_i or negedge rst_ni)
@@ -19832,10 +22638,10 @@ module fpnew_noncomp_DE16F (
 	assign sv2v_tmp_B2A17 = inp_pipe_valid_q[NUM_INP_REGS];
 	always @(*) out_pipe_valid_q[0] = sv2v_tmp_B2A17;
 	assign inp_pipe_ready[NUM_INP_REGS] = out_pipe_ready[0];
-	genvar _gv_i_14;
+	genvar _gv_i_15;
 	generate
-		for (_gv_i_14 = 0; _gv_i_14 < NUM_OUT_REGS; _gv_i_14 = _gv_i_14 + 1) begin : gen_output_pipeline
-			localparam i = _gv_i_14;
+		for (_gv_i_15 = 0; _gv_i_15 < NUM_OUT_REGS; _gv_i_15 = _gv_i_15 + 1) begin : gen_output_pipeline
+			localparam i = _gv_i_15;
 			wire reg_ena;
 			assign out_pipe_ready[i] = out_pipe_ready[i + 1] | ~out_pipe_valid_q[i + 1];
 			always @(posedge clk_i or negedge rst_ni)
@@ -20736,7 +23542,7 @@ module fpnew_opgroup_multifmt_slice_23084 (
 				end
 			end
 			else if ((DivSqrtSel == 2'd2) && (FpFmtConfig[3] == 1'b1)) begin : genblk1
-				initial $display("Warning [elaboration] /OpenROAD-flow-scripts/HighTide/designs/src/coralnpu/dev/repo/bazel-bin/hdl/chisel/src/coralnpu/CoreMiniAxi.sv:31271:7 - fpnew_opgroup_multifmt_slice.genblk1.genblk1\n msg: ", "The DivSqrt unit of C910 (instantiated by DivSqrtSel = THMULTI) does not support FP8. Please use the PULP DivSqrt unit when in need of div/sqrt operations on FP8.");
+				initial $display("Warning [elaboration] /home/mrg/HighTide/issues/designs/src/coralnpu/dev/repo/bazel-bin/hdl/chisel/src/coralnpu/CoreMiniAxi.sv:35255:7 - fpnew_opgroup_multifmt_slice.genblk1.genblk1\n msg: ", "The DivSqrt unit of C910 (instantiated by DivSqrtSel = THMULTI) does not support FP8. Please use the PULP DivSqrt unit when in need of div/sqrt operations on FP8.");
 			end
 		end
 	endgenerate
@@ -20795,8 +23601,14 @@ module fpnew_opgroup_multifmt_slice_23084 (
 		input reg [1:0] DivSqrtSel;
 		reg [0:4] cfg_tmp;
 		begin
-			cfg_tmp = (DivSqrtSel == 2'd2 ? cfg & 5'b11101 : cfg);
-			fpnew_pkg_num_divsqrt_lanes = (vec ? width / fpnew_pkg_min_fp_width(cfg_tmp) : 1);
+			if (DivSqrtSel == 2'd2)
+				cfg_tmp = cfg & 5'b11101;
+			else
+				cfg_tmp = cfg;
+			if (vec)
+				fpnew_pkg_num_divsqrt_lanes = width / fpnew_pkg_min_fp_width(cfg_tmp);
+			else
+				fpnew_pkg_num_divsqrt_lanes = 1;
 		end
 	endfunction
 	localparam [31:0] NUM_DIVSQRT_LANES = fpnew_pkg_num_divsqrt_lanes(Width, FpFmtConfig, 1'b1, DivSqrtSel);
@@ -21275,9 +24087,9 @@ module fpnew_opgroup_multifmt_slice_23084 (
 			wire [1:1] sv2v_tmp_967FD;
 			assign sv2v_tmp_967FD = in_valid_i & vectorial_op;
 			always @(*) byp_pipe_valid_q[0] = sv2v_tmp_967FD;
-			genvar _gv_i_15;
-			for (_gv_i_15 = 0; _gv_i_15 < NumPipeRegs; _gv_i_15 = _gv_i_15 + 1) begin : gen_bypass_pipeline
-				localparam i = _gv_i_15;
+			genvar _gv_i_16;
+			for (_gv_i_16 = 0; _gv_i_16 < NumPipeRegs; _gv_i_16 = _gv_i_16 + 1) begin : gen_bypass_pipeline
+				localparam i = _gv_i_16;
 				wire reg_ena;
 				assign byp_pipe_ready[i] = byp_pipe_ready[i + 1] | ~byp_pipe_valid_q[i + 1];
 				always @(posedge clk_i or negedge rst_ni)
@@ -21682,6 +24494,8 @@ module FloatCoreWrapper (
 	op_i,
 	op_mod_i,
 	rnd_mode_i,
+	src_fmt_i,
+	dst_fmt_i,
 	flush_i,
 	out_valid_o,
 	out_ready_i,
@@ -21704,6 +24518,8 @@ module FloatCoreWrapper (
 	input wire [3:0] op_i;
 	input wire op_mod_i;
 	input wire [2:0] rnd_mode_i;
+	input wire [2:0] src_fmt_i;
+	input wire [2:0] dst_fmt_i;
 	input wire flush_i;
 	output wire out_valid_o;
 	input wire out_ready_i;
@@ -21740,10 +24556,9 @@ module FloatCoreWrapper (
 		sv2v_cast_18D94 = inp;
 	endfunction
 	localparam [(((fpnew_pkg_NUM_OPGROUPS * fpnew_pkg_NUM_FP_FORMATS) * 32) + ((fpnew_pkg_NUM_OPGROUPS * fpnew_pkg_NUM_FP_FORMATS) * 2)) + 1:0] impl = {sv2v_cast_52F10({fpnew_pkg_NUM_OPGROUPS {sv2v_cast_C3475('d3)}}), sv2v_cast_18D94({{fpnew_pkg_NUM_FP_FORMATS {2'd1}}, {fpnew_pkg_NUM_FP_FORMATS {2'd2}}, {fpnew_pkg_NUM_FP_FORMATS {2'd1}}, {fpnew_pkg_NUM_FP_FORMATS {2'd2}}}), 2'd3};
-	localparam [31:0] fpnew_pkg_FP_FORMAT_BITS = 3;
 	localparam [31:0] fpnew_pkg_NUM_INT_FORMATS = 4;
 	localparam [31:0] fpnew_pkg_INT_FORMAT_BITS = 2;
-	localparam [42:0] fpnew_pkg_RV32F = 43'h00000010302;
+	localparam [31:0] fpnew_pkg_FP_FORMAT_BITS = 3;
 	localparam [31:0] fpnew_pkg_OP_BITS = 4;
 	function automatic [3:0] sv2v_cast_4CD2E;
 		input reg [3:0] inp;
@@ -21758,9 +24573,15 @@ module FloatCoreWrapper (
 		sv2v_cast_CDB06 = inp;
 	endfunction
 	fpnew_top #(
-		.Features(fpnew_pkg_RV32F),
+		.Features('{
+			Width: 32,
+			EnableVectors: 1'b0,
+			EnableNanBox: 1'b1,
+			FpFmtMask: 5'b10001,
+			IntFmtMask: 4'b0010
+		}),
 		.Implementation(impl),
-		.DivSqrtSel(2'd1)
+		.DivSqrtSel(2'd0)
 	) core(
 		.clk_i(clk_i),
 		.rst_ni(rst_ni),
@@ -21768,8 +24589,8 @@ module FloatCoreWrapper (
 		.rnd_mode_i(rnd_mode_i),
 		.op_i(sv2v_cast_4CD2E(op_i)),
 		.op_mod_i(op_mod_i),
-		.src_fmt_i(sv2v_cast_5D882('d0)),
-		.dst_fmt_i(sv2v_cast_5D882('d0)),
+		.src_fmt_i(sv2v_cast_5D882(src_fmt_i)),
+		.dst_fmt_i(sv2v_cast_5D882(dst_fmt_i)),
 		.int_fmt_i(sv2v_cast_CDB06(2)),
 		.vectorial_op_i(1'b0),
 		.tag_i(1'b0),
@@ -21786,55 +24607,42 @@ module FloatCoreWrapper (
 		.early_valid_o(early_valid_o)
 	);
 endmodule
-module Sram_512x128 (
+module Sram (
 	clock,
 	enable,
 	write,
 	addr,
 	wdata,
 	wmask,
-	rdata
+	rdata,
+	rvalid
 );
+	parameter NUM_ENTRIES = 128;
+	parameter GLOBAL_BASE_ADDR = 0;
 	input clock;
 	input enable;
 	input write;
-	input [8:0] addr;
+	input [$clog2(NUM_ENTRIES) - 1:0] addr;
 	input [127:0] wdata;
 	input [15:0] wmask;
 	output wire [127:0] rdata;
-	fakeram_512x128 sramModules_0(
-		.clock(clock),
-		.enable(enable),
-		.write(write),
-		.addr(addr),
-		.wdata(wdata),
-		.wmask(wmask),
-		.rdata(rdata)
-	);
-endmodule
-module Sram_2048x128 (
-	clock,
-	enable,
-	write,
-	addr,
-	wdata,
-	wmask,
-	rdata
-);
-	input clock;
-	input enable;
-	input write;
-	input [10:0] addr;
-	input [127:0] wdata;
-	input [15:0] wmask;
-	output wire [127:0] rdata;
-	fakeram_512x128 sramModules_0(
-		.clock(clock),
-		.enable(enable),
-		.write(write),
-		.addr(addr),
-		.wdata(wdata),
-		.wmask(wmask),
-		.rdata(rdata)
-	);
+	output wire rvalid;
+	localparam SRAM_WIDTH_BYTES = 16;
+	localparam ADDR_WIDTH = $clog2(NUM_ENTRIES);
+	reg rvalid_reg;
+	always @(posedge clock) rvalid_reg <= enable;
+	assign rvalid = rvalid_reg;
+	reg [127:0] mem [0:NUM_ENTRIES - 1];
+	reg [ADDR_WIDTH - 1:0] raddr;
+	assign rdata = mem[raddr];
+	always @(posedge clock) begin
+		begin : mem_write
+			integer i;
+			for (i = 0; i < 16; i = i + 1)
+				if ((enable & write) & wmask[i])
+					mem[addr][i * 8+:8] <= wdata[8 * i+:8];
+		end
+		if (enable & ~write)
+			raddr <= addr;
+	end
 endmodule

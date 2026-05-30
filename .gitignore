@@ -1,6 +1,7 @@
 .venv
 sv2v
 **/dev/liteeth_builds
+designs/src/coralnpu/dev/packages/
 **/dev/litedram_build_*
 **/litedram_core.v.orig
 **/dev/bender

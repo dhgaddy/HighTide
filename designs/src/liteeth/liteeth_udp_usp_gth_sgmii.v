@@ -8,8 +8,8 @@
 //
 // Filename   : liteeth_core.v
 // Device     : 
-// LiteX sha1 : 1d28199
-// Date       : 2026-01-16 02:28:58
+// LiteX sha1 : 4a114b30
+// Date       : 2026-05-30 16:18:45
 //------------------------------------------------------------------------------
 
 `timescale 1ns / 1ps
@@ -87,8 +87,8 @@ UDPCore
 │    │    └─── fsm (FSM)
 │    └─── pll (GTHChannelPLL)
 │    └─── gearbox (PCSGearbox)
-│    └─── [GTHE4_CHANNEL]
 │    └─── [BUFG_GT]
+│    └─── [GTHE4_CHANNEL]
 │    └─── [BUFG_GT]
 │    └─── [BUFG_GT]
 │    └─── [BUFG_GT]
@@ -1554,14 +1554,14 @@ wire          core_mac_core_tx_converter_source_source_valid;
 wire          core_mac_core_tx_converter_source_valid;
 wire    [3:0] core_mac_core_tx_crc_be;
 reg           core_mac_core_tx_crc_ce = 1'd0;
+reg    [31:0] core_mac_core_tx_crc_crc_packet = 32'd0;
+reg    [31:0] core_mac_core_tx_crc_crc_packet_liteethmac_clockdomainsrenamer1_next_value0 = 32'd0;
+reg           core_mac_core_tx_crc_crc_packet_liteethmac_clockdomainsrenamer1_next_value_ce0 = 1'd0;
 wire   [31:0] core_mac_core_tx_crc_data;
-reg    [31:0] core_mac_core_tx_crc_description = 32'd0;
-reg    [31:0] core_mac_core_tx_crc_description_liteethmac_clockdomainsrenamer1_next_value0 = 32'd0;
-reg           core_mac_core_tx_crc_description_liteethmac_clockdomainsrenamer1_next_value_ce0 = 1'd0;
 reg           core_mac_core_tx_crc_error = 1'd0;
-reg     [3:0] core_mac_core_tx_crc_fsm = 4'd0;
-reg     [3:0] core_mac_core_tx_crc_fsm_liteethmac_clockdomainsrenamer1_next_value1 = 4'd0;
-reg           core_mac_core_tx_crc_fsm_liteethmac_clockdomainsrenamer1_next_value_ce1 = 1'd0;
+reg     [3:0] core_mac_core_tx_crc_last_be = 4'd0;
+reg     [3:0] core_mac_core_tx_crc_last_be_liteethmac_clockdomainsrenamer1_next_value1 = 4'd0;
+reg           core_mac_core_tx_crc_last_be_liteethmac_clockdomainsrenamer1_next_value_ce1 = 1'd0;
 reg    [31:0] core_mac_core_tx_crc_liteethmaccrcengine0_crc_next = 32'd0;
 wire   [31:0] core_mac_core_tx_crc_liteethmaccrcengine0_crc_prev;
 wire    [7:0] core_mac_core_tx_crc_liteethmaccrcengine0_data;
@@ -2824,16 +2824,6 @@ reg           udpcore_usp_gth_1000basex_pcsrx_source_source_ready = 1'd0;
 wire          udpcore_usp_gth_1000basex_pcsrx_source_source_valid;
 reg           udpcore_usp_gth_1000basex_pcsrx_source_valid = 1'd0;
 wire          udpcore_usp_gth_1000basex_pcsrx_timer_ce;
-reg           udpcore_usp_gth_1000basex_pcstx_alt7_rd0 = 1'd0;
-reg           udpcore_usp_gth_1000basex_pcstx_alt7_rd1 = 1'd0;
-reg           udpcore_usp_gth_1000basex_pcstx_ce0 = 1'd1;
-wire          udpcore_usp_gth_1000basex_pcstx_ce1;
-reg     [3:0] udpcore_usp_gth_1000basex_pcstx_code4b = 4'd0;
-reg           udpcore_usp_gth_1000basex_pcstx_code4b_flip = 1'd0;
-reg           udpcore_usp_gth_1000basex_pcstx_code4b_unbalanced = 1'd0;
-reg     [5:0] udpcore_usp_gth_1000basex_pcstx_code6b = 6'd0;
-reg           udpcore_usp_gth_1000basex_pcstx_code6b_flip = 1'd0;
-reg           udpcore_usp_gth_1000basex_pcstx_code6b_unbalanced = 1'd0;
 reg    [15:0] udpcore_usp_gth_1000basex_pcstx_config_reg = 16'd0;
 reg           udpcore_usp_gth_1000basex_pcstx_config_valid = 1'd0;
 reg           udpcore_usp_gth_1000basex_pcstx_count0 = 1'd0;
@@ -2843,21 +2833,31 @@ reg     [6:0] udpcore_usp_gth_1000basex_pcstx_count1 = 7'd0;
 reg           udpcore_usp_gth_1000basex_pcstx_ctype = 1'd0;
 reg           udpcore_usp_gth_1000basex_pcstx_ctype_clockdomainsrenamer0_next_value1 = 1'd0;
 reg           udpcore_usp_gth_1000basex_pcstx_ctype_clockdomainsrenamer0_next_value_ce1 = 1'd0;
-reg     [7:0] udpcore_usp_gth_1000basex_pcstx_d0 = 8'd0;
-wire    [7:0] udpcore_usp_gth_1000basex_pcstx_d1;
-reg           udpcore_usp_gth_1000basex_pcstx_disp_in = 1'd0;
-wire          udpcore_usp_gth_1000basex_pcstx_disp_inter;
-reg           udpcore_usp_gth_1000basex_pcstx_disp_out = 1'd0;
-reg           udpcore_usp_gth_1000basex_pcstx_disparity = 1'd0;
 wire          udpcore_usp_gth_1000basex_pcstx_done;
 reg           udpcore_usp_gth_1000basex_pcstx_enable = 1'd0;
-reg           udpcore_usp_gth_1000basex_pcstx_k0 = 1'd0;
-wire          udpcore_usp_gth_1000basex_pcstx_k1;
-reg     [9:0] udpcore_usp_gth_1000basex_pcstx_output0 = 10'd0;
-reg     [9:0] udpcore_usp_gth_1000basex_pcstx_output1 = 10'd0;
-reg     [3:0] udpcore_usp_gth_1000basex_pcstx_output_4b = 4'd0;
-reg     [5:0] udpcore_usp_gth_1000basex_pcstx_output_6b = 6'd0;
-wire    [9:0] udpcore_usp_gth_1000basex_pcstx_output_msb_first;
+reg     [7:0] udpcore_usp_gth_1000basex_pcstx_encoder0 = 8'd0;
+reg           udpcore_usp_gth_1000basex_pcstx_encoder1 = 1'd0;
+reg     [9:0] udpcore_usp_gth_1000basex_pcstx_encoder2 = 10'd0;
+reg           udpcore_usp_gth_1000basex_pcstx_encoder3 = 1'd0;
+reg           udpcore_usp_gth_1000basex_pcstx_encoder_alt7_rd0 = 1'd0;
+reg           udpcore_usp_gth_1000basex_pcstx_encoder_alt7_rd1 = 1'd0;
+reg           udpcore_usp_gth_1000basex_pcstx_encoder_ce0 = 1'd1;
+wire          udpcore_usp_gth_1000basex_pcstx_encoder_ce1;
+reg     [3:0] udpcore_usp_gth_1000basex_pcstx_encoder_code4b = 4'd0;
+reg           udpcore_usp_gth_1000basex_pcstx_encoder_code4b_flip = 1'd0;
+reg           udpcore_usp_gth_1000basex_pcstx_encoder_code4b_unbalanced = 1'd0;
+reg     [5:0] udpcore_usp_gth_1000basex_pcstx_encoder_code6b = 6'd0;
+reg           udpcore_usp_gth_1000basex_pcstx_encoder_code6b_flip = 1'd0;
+reg           udpcore_usp_gth_1000basex_pcstx_encoder_code6b_unbalanced = 1'd0;
+wire    [7:0] udpcore_usp_gth_1000basex_pcstx_encoder_d;
+reg           udpcore_usp_gth_1000basex_pcstx_encoder_disp_in = 1'd0;
+wire          udpcore_usp_gth_1000basex_pcstx_encoder_disp_inter;
+reg           udpcore_usp_gth_1000basex_pcstx_encoder_disp_out = 1'd0;
+wire          udpcore_usp_gth_1000basex_pcstx_encoder_k;
+reg     [9:0] udpcore_usp_gth_1000basex_pcstx_encoder_output = 10'd0;
+reg     [3:0] udpcore_usp_gth_1000basex_pcstx_encoder_output_4b = 4'd0;
+reg     [5:0] udpcore_usp_gth_1000basex_pcstx_encoder_output_6b = 6'd0;
+wire    [9:0] udpcore_usp_gth_1000basex_pcstx_encoder_output_msb_first;
 reg           udpcore_usp_gth_1000basex_pcstx_parity = 1'd0;
 reg     [1:0] udpcore_usp_gth_1000basex_pcstx_sgmii_speed = 2'd0;
 wire          udpcore_usp_gth_1000basex_pcstx_sink_first;
@@ -2869,7 +2869,6 @@ reg           udpcore_usp_gth_1000basex_phase_half = 1'd0;
 reg           udpcore_usp_gth_1000basex_phase_half_rereg = 1'd0;
 wire          udpcore_usp_gth_1000basex_pll_locked;
 reg           udpcore_usp_gth_1000basex_pll_reset = 1'd1;
-wire   [19:0] udpcore_usp_gth_1000basex_refclk_or_clk_pads;
 wire          udpcore_usp_gth_1000basex_reset;
 reg    [12:0] udpcore_usp_gth_1000basex_reset_counter = 13'd0;
 reg           udpcore_usp_gth_1000basex_restart = 1'd0;
@@ -2885,7 +2884,8 @@ wire          udpcore_usp_gth_1000basex_rx_config_reg_ack_toggle_o;
 reg           udpcore_usp_gth_1000basex_rx_config_reg_ack_toggle_o_r = 1'd0;
 reg     [3:0] udpcore_usp_gth_1000basex_rx_config_reg_count = 4'd0;
 reg    [15:0] udpcore_usp_gth_1000basex_rx_config_reg_last = 16'd0;
-reg     [9:0] udpcore_usp_gth_1000basex_rx_data = 10'd0;
+wire   [19:0] udpcore_usp_gth_1000basex_rx_data0;
+reg     [9:0] udpcore_usp_gth_1000basex_rx_data1 = 10'd0;
 wire   [19:0] udpcore_usp_gth_1000basex_rx_data_half;
 wire          udpcore_usp_gth_1000basex_rx_reset;
 wire          udpcore_usp_gth_1000basex_rx_reset_done;
@@ -2895,7 +2895,6 @@ wire          udpcore_usp_gth_1000basex_seen_valid_ci_o;
 reg           udpcore_usp_gth_1000basex_seen_valid_ci_toggle_i = 1'd0;
 wire          udpcore_usp_gth_1000basex_seen_valid_ci_toggle_o;
 reg           udpcore_usp_gth_1000basex_seen_valid_ci_toggle_o_r = 1'd0;
-wire   [19:0] udpcore_usp_gth_1000basex_self;
 wire          udpcore_usp_gth_1000basex_sink_sink_first;
 wire          udpcore_usp_gth_1000basex_sink_sink_last;
 wire    [7:0] udpcore_usp_gth_1000basex_sink_sink_payload_data;
@@ -2910,7 +2909,8 @@ wire          udpcore_usp_gth_1000basex_source_source_payload_error;
 reg           udpcore_usp_gth_1000basex_source_source_payload_last_be = 1'd0;
 wire          udpcore_usp_gth_1000basex_source_source_ready;
 wire          udpcore_usp_gth_1000basex_source_source_valid;
-wire    [9:0] udpcore_usp_gth_1000basex_tx_data;
+wire   [19:0] udpcore_usp_gth_1000basex_tx_data0;
+wire    [9:0] udpcore_usp_gth_1000basex_tx_data1;
 reg    [19:0] udpcore_usp_gth_1000basex_tx_data_half = 20'd0;
 wire          udpcore_usp_gth_1000basex_tx_reset;
 wire          udpcore_usp_gth_1000basex_tx_reset_done;
@@ -2927,58 +2927,58 @@ reg           udpcore_usp_gth_1000basex_waittimer2_wait = 1'd0;
 wire          we;
 reg           wishbone2csr_next_state = 1'd0;
 reg           wishbone2csr_state = 1'd0;
-wire          xilinxasyncresetsynchronizerimpl0;
+wire          xilinxasyncresetsynchronizerimpl0_async_reset;
 wire          xilinxasyncresetsynchronizerimpl0_rst_meta;
-wire          xilinxasyncresetsynchronizerimpl1;
+wire          xilinxasyncresetsynchronizerimpl1_async_reset;
 wire          xilinxasyncresetsynchronizerimpl1_rst_meta;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl0_regs0 = 1'd0;
+reg           xilinxmultiregimpl00 = 1'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl0_regs1 = 1'd0;
+reg           xilinxmultiregimpl01 = 1'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl10_regs0 = 1'd0;
-(* async_reg = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl10_regs1 = 1'd0;
+reg           xilinxmultiregimpl10 = 1'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl11_regs0 = 1'd0;
+reg           xilinxmultiregimpl100 = 1'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl11_regs1 = 1'd0;
+reg           xilinxmultiregimpl101 = 1'd0;
+(* async_reg = "true", dont_touch = "true" *)
+reg           xilinxmultiregimpl11 = 1'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl1_regs0 = 1'd0;
+reg           xilinxmultiregimpl110 = 1'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl1_regs1 = 1'd0;
+reg           xilinxmultiregimpl111 = 1'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg    [15:0] xilinxmultiregimpl2_regs0 = 16'd0;
+reg    [15:0] xilinxmultiregimpl20 = 16'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg    [15:0] xilinxmultiregimpl2_regs1 = 16'd0;
+reg    [15:0] xilinxmultiregimpl21 = 16'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl3_regs0 = 1'd0;
+reg           xilinxmultiregimpl30 = 1'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl3_regs1 = 1'd0;
+reg           xilinxmultiregimpl31 = 1'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl4_regs0 = 1'd0;
+reg           xilinxmultiregimpl40 = 1'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl4_regs1 = 1'd0;
+reg           xilinxmultiregimpl41 = 1'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl5_regs0 = 1'd0;
+reg           xilinxmultiregimpl50 = 1'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg           xilinxmultiregimpl5_regs1 = 1'd0;
+reg           xilinxmultiregimpl51 = 1'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg     [5:0] xilinxmultiregimpl6_regs0 = 6'd0;
+reg     [5:0] xilinxmultiregimpl60 = 6'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg     [5:0] xilinxmultiregimpl6_regs1 = 6'd0;
+reg     [5:0] xilinxmultiregimpl61 = 6'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg     [5:0] xilinxmultiregimpl7_regs0 = 6'd0;
+reg     [5:0] xilinxmultiregimpl70 = 6'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg     [5:0] xilinxmultiregimpl7_regs1 = 6'd0;
+reg     [5:0] xilinxmultiregimpl71 = 6'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg     [5:0] xilinxmultiregimpl8_regs0 = 6'd0;
+reg     [5:0] xilinxmultiregimpl80 = 6'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg     [5:0] xilinxmultiregimpl8_regs1 = 6'd0;
+reg     [5:0] xilinxmultiregimpl81 = 6'd0;
 (* async_reg = "true", mr_ff = "true", dont_touch = "true" *)
-reg     [5:0] xilinxmultiregimpl9_regs0 = 6'd0;
+reg     [5:0] xilinxmultiregimpl90 = 6'd0;
 (* async_reg = "true", dont_touch = "true" *)
-reg     [5:0] xilinxmultiregimpl9_regs1 = 6'd0;
+reg     [5:0] xilinxmultiregimpl91 = 6'd0;
 
 //------------------------------------------------------------------------------
 // Combinatorial Logic
@@ -3005,10 +3005,10 @@ assign por_clk = sys_clock;
 assign sys_rst = udpcore_int_rst;
 assign udpcore_usp_gth_1000basex_tx_reset = ((udpcore_usp_gth_1000basex_pll_reset | (~udpcore_usp_gth_1000basex_pll_locked)) | udpcore_usp_gth_1000basex_reset);
 assign udpcore_usp_gth_1000basex_rx_reset = (((udpcore_usp_gth_1000basex_pll_reset | (~udpcore_usp_gth_1000basex_pll_locked)) | udpcore_usp_gth_1000basex_restart) | udpcore_usp_gth_1000basex_reset);
-assign udpcore_usp_gth_1000basex_refclk_or_clk_pads = udpcore_usp_gth_1000basex_tx_data_half;
-assign udpcore_usp_gth_1000basex_rx_data_half = udpcore_usp_gth_1000basex_self;
-assign udpcore_usp_gth_1000basex_tx_data = udpcore_usp_gth_1000basex_pcstx_output0;
-assign udpcore_usp_gth_1000basex_pcsrx_decoder_input = udpcore_usp_gth_1000basex_rx_data;
+assign udpcore_usp_gth_1000basex_tx_data0 = udpcore_usp_gth_1000basex_tx_data_half;
+assign udpcore_usp_gth_1000basex_rx_data_half = udpcore_usp_gth_1000basex_rx_data0;
+assign udpcore_usp_gth_1000basex_tx_data1 = udpcore_usp_gth_1000basex_pcstx_encoder2;
+assign udpcore_usp_gth_1000basex_pcsrx_decoder_input = udpcore_usp_gth_1000basex_rx_data1;
 assign udpcore_usp_gth_1000basex_pcstx_sink_valid = udpcore_usp_gth_1000basex_sink_sink_valid;
 assign udpcore_usp_gth_1000basex_sink_sink_ready = udpcore_usp_gth_1000basex_pcstx_sink_ready;
 assign udpcore_usp_gth_1000basex_pcstx_sink_first = udpcore_usp_gth_1000basex_sink_sink_first;
@@ -3044,51 +3044,51 @@ always @(*) begin
         udpcore_usp_gth_1000basex_pcstx_config_reg[14] <= udpcore_usp_gth_1000basex_autoneg_ack;
     end
 end
-assign udpcore_usp_gth_1000basex_pcstx_ce1 = udpcore_usp_gth_1000basex_pcstx_ce0;
-assign udpcore_usp_gth_1000basex_pcstx_d1 = udpcore_usp_gth_1000basex_pcstx_d0;
-assign udpcore_usp_gth_1000basex_pcstx_k1 = udpcore_usp_gth_1000basex_pcstx_k0;
-assign udpcore_usp_gth_1000basex_pcstx_disp_inter = (udpcore_usp_gth_1000basex_pcstx_disp_in ^ udpcore_usp_gth_1000basex_pcstx_code6b_unbalanced);
+assign udpcore_usp_gth_1000basex_pcstx_encoder_ce1 = udpcore_usp_gth_1000basex_pcstx_encoder_ce0;
+assign udpcore_usp_gth_1000basex_pcstx_encoder_d = udpcore_usp_gth_1000basex_pcstx_encoder0;
+assign udpcore_usp_gth_1000basex_pcstx_encoder_k = udpcore_usp_gth_1000basex_pcstx_encoder1;
+assign udpcore_usp_gth_1000basex_pcstx_encoder_disp_inter = (udpcore_usp_gth_1000basex_pcstx_encoder_disp_in ^ udpcore_usp_gth_1000basex_pcstx_encoder_code6b_unbalanced);
 always @(*) begin
-    udpcore_usp_gth_1000basex_pcstx_output_6b <= 6'd0;
-    if (((~udpcore_usp_gth_1000basex_pcstx_disp_in) & udpcore_usp_gth_1000basex_pcstx_code6b_flip)) begin
-        udpcore_usp_gth_1000basex_pcstx_output_6b <= (~udpcore_usp_gth_1000basex_pcstx_code6b);
+    udpcore_usp_gth_1000basex_pcstx_encoder_output_6b <= 6'd0;
+    if (((~udpcore_usp_gth_1000basex_pcstx_encoder_disp_in) & udpcore_usp_gth_1000basex_pcstx_encoder_code6b_flip)) begin
+        udpcore_usp_gth_1000basex_pcstx_encoder_output_6b <= (~udpcore_usp_gth_1000basex_pcstx_encoder_code6b);
     end else begin
-        udpcore_usp_gth_1000basex_pcstx_output_6b <= udpcore_usp_gth_1000basex_pcstx_code6b;
+        udpcore_usp_gth_1000basex_pcstx_encoder_output_6b <= udpcore_usp_gth_1000basex_pcstx_encoder_code6b;
     end
 end
 always @(*) begin
-    udpcore_usp_gth_1000basex_pcstx_disp_out <= 1'd0;
-    udpcore_usp_gth_1000basex_pcstx_output_4b <= 4'd0;
-    if (((~udpcore_usp_gth_1000basex_pcstx_disp_inter) & udpcore_usp_gth_1000basex_pcstx_alt7_rd0)) begin
-        udpcore_usp_gth_1000basex_pcstx_disp_out <= (~udpcore_usp_gth_1000basex_pcstx_disp_inter);
-        udpcore_usp_gth_1000basex_pcstx_output_4b <= 3'd7;
+    udpcore_usp_gth_1000basex_pcstx_encoder_disp_out <= 1'd0;
+    udpcore_usp_gth_1000basex_pcstx_encoder_output_4b <= 4'd0;
+    if (((~udpcore_usp_gth_1000basex_pcstx_encoder_disp_inter) & udpcore_usp_gth_1000basex_pcstx_encoder_alt7_rd0)) begin
+        udpcore_usp_gth_1000basex_pcstx_encoder_disp_out <= (~udpcore_usp_gth_1000basex_pcstx_encoder_disp_inter);
+        udpcore_usp_gth_1000basex_pcstx_encoder_output_4b <= 3'd7;
     end else begin
-        if ((udpcore_usp_gth_1000basex_pcstx_disp_inter & udpcore_usp_gth_1000basex_pcstx_alt7_rd1)) begin
-            udpcore_usp_gth_1000basex_pcstx_disp_out <= (~udpcore_usp_gth_1000basex_pcstx_disp_inter);
-            udpcore_usp_gth_1000basex_pcstx_output_4b <= 4'd8;
+        if ((udpcore_usp_gth_1000basex_pcstx_encoder_disp_inter & udpcore_usp_gth_1000basex_pcstx_encoder_alt7_rd1)) begin
+            udpcore_usp_gth_1000basex_pcstx_encoder_disp_out <= (~udpcore_usp_gth_1000basex_pcstx_encoder_disp_inter);
+            udpcore_usp_gth_1000basex_pcstx_encoder_output_4b <= 4'd8;
         end else begin
-            udpcore_usp_gth_1000basex_pcstx_disp_out <= (udpcore_usp_gth_1000basex_pcstx_disp_inter ^ udpcore_usp_gth_1000basex_pcstx_code4b_unbalanced);
-            if (((~udpcore_usp_gth_1000basex_pcstx_disp_inter) & udpcore_usp_gth_1000basex_pcstx_code4b_flip)) begin
-                udpcore_usp_gth_1000basex_pcstx_output_4b <= (~udpcore_usp_gth_1000basex_pcstx_code4b);
+            udpcore_usp_gth_1000basex_pcstx_encoder_disp_out <= (udpcore_usp_gth_1000basex_pcstx_encoder_disp_inter ^ udpcore_usp_gth_1000basex_pcstx_encoder_code4b_unbalanced);
+            if (((~udpcore_usp_gth_1000basex_pcstx_encoder_disp_inter) & udpcore_usp_gth_1000basex_pcstx_encoder_code4b_flip)) begin
+                udpcore_usp_gth_1000basex_pcstx_encoder_output_4b <= (~udpcore_usp_gth_1000basex_pcstx_encoder_code4b);
             end else begin
-                udpcore_usp_gth_1000basex_pcstx_output_4b <= udpcore_usp_gth_1000basex_pcstx_code4b;
+                udpcore_usp_gth_1000basex_pcstx_encoder_output_4b <= udpcore_usp_gth_1000basex_pcstx_encoder_code4b;
             end
         end
     end
 end
-assign udpcore_usp_gth_1000basex_pcstx_output_msb_first = {udpcore_usp_gth_1000basex_pcstx_output_6b, udpcore_usp_gth_1000basex_pcstx_output_4b};
+assign udpcore_usp_gth_1000basex_pcstx_encoder_output_msb_first = {udpcore_usp_gth_1000basex_pcstx_encoder_output_6b, udpcore_usp_gth_1000basex_pcstx_encoder_output_4b};
 always @(*) begin
-    udpcore_usp_gth_1000basex_pcstx_output1 <= 10'd0;
-    udpcore_usp_gth_1000basex_pcstx_output1[0] <= udpcore_usp_gth_1000basex_pcstx_output_msb_first[9];
-    udpcore_usp_gth_1000basex_pcstx_output1[1] <= udpcore_usp_gth_1000basex_pcstx_output_msb_first[8];
-    udpcore_usp_gth_1000basex_pcstx_output1[2] <= udpcore_usp_gth_1000basex_pcstx_output_msb_first[7];
-    udpcore_usp_gth_1000basex_pcstx_output1[3] <= udpcore_usp_gth_1000basex_pcstx_output_msb_first[6];
-    udpcore_usp_gth_1000basex_pcstx_output1[4] <= udpcore_usp_gth_1000basex_pcstx_output_msb_first[5];
-    udpcore_usp_gth_1000basex_pcstx_output1[5] <= udpcore_usp_gth_1000basex_pcstx_output_msb_first[4];
-    udpcore_usp_gth_1000basex_pcstx_output1[6] <= udpcore_usp_gth_1000basex_pcstx_output_msb_first[3];
-    udpcore_usp_gth_1000basex_pcstx_output1[7] <= udpcore_usp_gth_1000basex_pcstx_output_msb_first[2];
-    udpcore_usp_gth_1000basex_pcstx_output1[8] <= udpcore_usp_gth_1000basex_pcstx_output_msb_first[1];
-    udpcore_usp_gth_1000basex_pcstx_output1[9] <= udpcore_usp_gth_1000basex_pcstx_output_msb_first[0];
+    udpcore_usp_gth_1000basex_pcstx_encoder_output <= 10'd0;
+    udpcore_usp_gth_1000basex_pcstx_encoder_output[0] <= udpcore_usp_gth_1000basex_pcstx_encoder_output_msb_first[9];
+    udpcore_usp_gth_1000basex_pcstx_encoder_output[1] <= udpcore_usp_gth_1000basex_pcstx_encoder_output_msb_first[8];
+    udpcore_usp_gth_1000basex_pcstx_encoder_output[2] <= udpcore_usp_gth_1000basex_pcstx_encoder_output_msb_first[7];
+    udpcore_usp_gth_1000basex_pcstx_encoder_output[3] <= udpcore_usp_gth_1000basex_pcstx_encoder_output_msb_first[6];
+    udpcore_usp_gth_1000basex_pcstx_encoder_output[4] <= udpcore_usp_gth_1000basex_pcstx_encoder_output_msb_first[5];
+    udpcore_usp_gth_1000basex_pcstx_encoder_output[5] <= udpcore_usp_gth_1000basex_pcstx_encoder_output_msb_first[4];
+    udpcore_usp_gth_1000basex_pcstx_encoder_output[6] <= udpcore_usp_gth_1000basex_pcstx_encoder_output_msb_first[3];
+    udpcore_usp_gth_1000basex_pcstx_encoder_output[7] <= udpcore_usp_gth_1000basex_pcstx_encoder_output_msb_first[2];
+    udpcore_usp_gth_1000basex_pcstx_encoder_output[8] <= udpcore_usp_gth_1000basex_pcstx_encoder_output_msb_first[1];
+    udpcore_usp_gth_1000basex_pcstx_encoder_output[9] <= udpcore_usp_gth_1000basex_pcstx_encoder_output_msb_first[0];
 end
 assign udpcore_usp_gth_1000basex_pcstx_done = (udpcore_usp_gth_1000basex_pcstx_count1 == 1'd0);
 always @(*) begin
@@ -3097,19 +3097,19 @@ always @(*) begin
     udpcore_usp_gth_1000basex_pcstx_count0_clockdomainsrenamer0_next_value_ce0 <= 1'd0;
     udpcore_usp_gth_1000basex_pcstx_ctype_clockdomainsrenamer0_next_value1 <= 1'd0;
     udpcore_usp_gth_1000basex_pcstx_ctype_clockdomainsrenamer0_next_value_ce1 <= 1'd0;
-    udpcore_usp_gth_1000basex_pcstx_d0 <= 8'd0;
     udpcore_usp_gth_1000basex_pcstx_enable <= 1'd0;
-    udpcore_usp_gth_1000basex_pcstx_k0 <= 1'd0;
+    udpcore_usp_gth_1000basex_pcstx_encoder0 <= 8'd0;
+    udpcore_usp_gth_1000basex_pcstx_encoder1 <= 1'd0;
     udpcore_usp_gth_1000basex_pcstx_sink_ready <= 1'd0;
     clockdomainsrenamer0_next_state <= clockdomainsrenamer0_state;
     case (clockdomainsrenamer0_state)
         1'd1: begin
             case (udpcore_usp_gth_1000basex_pcstx_ctype)
                 1'd0: begin
-                    udpcore_usp_gth_1000basex_pcstx_d0 <= 8'd181;
+                    udpcore_usp_gth_1000basex_pcstx_encoder0 <= 8'd181;
                 end
                 1'd1: begin
-                    udpcore_usp_gth_1000basex_pcstx_d0 <= 7'd66;
+                    udpcore_usp_gth_1000basex_pcstx_encoder0 <= 7'd66;
                 end
             endcase
             udpcore_usp_gth_1000basex_pcstx_ctype_clockdomainsrenamer0_next_value1 <= (~udpcore_usp_gth_1000basex_pcstx_ctype);
@@ -3121,10 +3121,10 @@ always @(*) begin
             udpcore_usp_gth_1000basex_pcstx_count0_clockdomainsrenamer0_next_value_ce0 <= 1'd1;
             case (udpcore_usp_gth_1000basex_pcstx_count0)
                 1'd0: begin
-                    udpcore_usp_gth_1000basex_pcstx_d0 <= udpcore_usp_gth_1000basex_pcstx_config_reg[7:0];
+                    udpcore_usp_gth_1000basex_pcstx_encoder0 <= udpcore_usp_gth_1000basex_pcstx_config_reg[7:0];
                 end
                 1'd1: begin
-                    udpcore_usp_gth_1000basex_pcstx_d0 <= udpcore_usp_gth_1000basex_pcstx_config_reg[15:8];
+                    udpcore_usp_gth_1000basex_pcstx_encoder0 <= udpcore_usp_gth_1000basex_pcstx_config_reg[15:8];
                 end
             endcase
             if ((udpcore_usp_gth_1000basex_pcstx_count0 == 1'd1)) begin
@@ -3132,12 +3132,12 @@ always @(*) begin
             end
         end
         2'd3: begin
-            case (udpcore_usp_gth_1000basex_pcstx_disparity)
+            case (udpcore_usp_gth_1000basex_pcstx_encoder3)
                 1'd0: begin
-                    udpcore_usp_gth_1000basex_pcstx_d0 <= 8'd197;
+                    udpcore_usp_gth_1000basex_pcstx_encoder0 <= 8'd197;
                 end
                 1'd1: begin
-                    udpcore_usp_gth_1000basex_pcstx_d0 <= 7'd80;
+                    udpcore_usp_gth_1000basex_pcstx_encoder0 <= 7'd80;
                 end
             endcase
             clockdomainsrenamer0_next_state <= 1'd0;
@@ -3146,23 +3146,23 @@ always @(*) begin
             udpcore_usp_gth_1000basex_pcstx_enable <= 1'd1;
             udpcore_usp_gth_1000basex_pcstx_sink_ready <= udpcore_usp_gth_1000basex_pcstx_done;
             if (udpcore_usp_gth_1000basex_pcstx_sink_valid) begin
-                udpcore_usp_gth_1000basex_pcstx_d0 <= udpcore_usp_gth_1000basex_pcstx_sink_payload_data;
+                udpcore_usp_gth_1000basex_pcstx_encoder0 <= udpcore_usp_gth_1000basex_pcstx_sink_payload_data;
             end else begin
-                udpcore_usp_gth_1000basex_pcstx_k0 <= 1'd1;
-                udpcore_usp_gth_1000basex_pcstx_d0 <= 8'd253;
+                udpcore_usp_gth_1000basex_pcstx_encoder1 <= 1'd1;
+                udpcore_usp_gth_1000basex_pcstx_encoder0 <= 8'd253;
                 clockdomainsrenamer0_next_state <= 3'd5;
             end
         end
         3'd5: begin
-            udpcore_usp_gth_1000basex_pcstx_k0 <= 1'd1;
-            udpcore_usp_gth_1000basex_pcstx_d0 <= 8'd247;
+            udpcore_usp_gth_1000basex_pcstx_encoder1 <= 1'd1;
+            udpcore_usp_gth_1000basex_pcstx_encoder0 <= 8'd247;
             if (udpcore_usp_gth_1000basex_pcstx_parity) begin
                 clockdomainsrenamer0_next_state <= 1'd0;
             end
         end
         default: begin
-            udpcore_usp_gth_1000basex_pcstx_k0 <= 1'd1;
-            udpcore_usp_gth_1000basex_pcstx_d0 <= 8'd188;
+            udpcore_usp_gth_1000basex_pcstx_encoder1 <= 1'd1;
+            udpcore_usp_gth_1000basex_pcstx_encoder0 <= 8'd188;
             if (udpcore_usp_gth_1000basex_pcstx_config_valid) begin
                 udpcore_usp_gth_1000basex_pcstx_count0_clockdomainsrenamer0_next_value0 <= 1'd0;
                 udpcore_usp_gth_1000basex_pcstx_count0_clockdomainsrenamer0_next_value_ce0 <= 1'd1;
@@ -3170,7 +3170,7 @@ always @(*) begin
             end else begin
                 if (udpcore_usp_gth_1000basex_pcstx_sink_valid) begin
                     udpcore_usp_gth_1000basex_pcstx_sink_ready <= udpcore_usp_gth_1000basex_pcstx_done;
-                    udpcore_usp_gth_1000basex_pcstx_d0 <= 8'd251;
+                    udpcore_usp_gth_1000basex_pcstx_encoder0 <= 8'd251;
                     clockdomainsrenamer0_next_state <= 3'd4;
                 end else begin
                     clockdomainsrenamer0_next_state <= 2'd3;
@@ -3670,10 +3670,10 @@ always @(*) begin
 end
 always @(*) begin
     core_mac_core_tx_crc_ce <= 1'd0;
-    core_mac_core_tx_crc_description_liteethmac_clockdomainsrenamer1_next_value0 <= 32'd0;
-    core_mac_core_tx_crc_description_liteethmac_clockdomainsrenamer1_next_value_ce0 <= 1'd0;
-    core_mac_core_tx_crc_fsm_liteethmac_clockdomainsrenamer1_next_value1 <= 4'd0;
-    core_mac_core_tx_crc_fsm_liteethmac_clockdomainsrenamer1_next_value_ce1 <= 1'd0;
+    core_mac_core_tx_crc_crc_packet_liteethmac_clockdomainsrenamer1_next_value0 <= 32'd0;
+    core_mac_core_tx_crc_crc_packet_liteethmac_clockdomainsrenamer1_next_value_ce0 <= 1'd0;
+    core_mac_core_tx_crc_last_be_liteethmac_clockdomainsrenamer1_next_value1 <= 4'd0;
+    core_mac_core_tx_crc_last_be_liteethmac_clockdomainsrenamer1_next_value_ce1 <= 1'd0;
     core_mac_core_tx_crc_reset <= 1'd0;
     core_mac_core_tx_crc_sink_ready <= 1'd0;
     core_mac_core_tx_crc_source_first <= 1'd0;
@@ -3718,14 +3718,14 @@ always @(*) begin
                 if ((1'd0 & (core_mac_core_tx_crc_sink_payload_last_be <= 4'd15))) begin
                     liteethmac_txdatapath_bufferizeendpoints_next_state <= 1'd0;
                 end else begin
-                    core_mac_core_tx_crc_description_liteethmac_clockdomainsrenamer1_next_value0 <= core_mac_core_tx_crc_value;
-                    core_mac_core_tx_crc_description_liteethmac_clockdomainsrenamer1_next_value_ce0 <= 1'd1;
+                    core_mac_core_tx_crc_crc_packet_liteethmac_clockdomainsrenamer1_next_value0 <= core_mac_core_tx_crc_value;
+                    core_mac_core_tx_crc_crc_packet_liteethmac_clockdomainsrenamer1_next_value_ce0 <= 1'd1;
                     if (1'd0) begin
-                        core_mac_core_tx_crc_fsm_liteethmac_clockdomainsrenamer1_next_value1 <= (core_mac_core_tx_crc_sink_payload_last_be >>> 3'd4);
-                        core_mac_core_tx_crc_fsm_liteethmac_clockdomainsrenamer1_next_value_ce1 <= 1'd1;
+                        core_mac_core_tx_crc_last_be_liteethmac_clockdomainsrenamer1_next_value1 <= (core_mac_core_tx_crc_sink_payload_last_be >>> 3'd4);
+                        core_mac_core_tx_crc_last_be_liteethmac_clockdomainsrenamer1_next_value_ce1 <= 1'd1;
                     end else begin
-                        core_mac_core_tx_crc_fsm_liteethmac_clockdomainsrenamer1_next_value1 <= core_mac_core_tx_crc_sink_payload_last_be;
-                        core_mac_core_tx_crc_fsm_liteethmac_clockdomainsrenamer1_next_value_ce1 <= 1'd1;
+                        core_mac_core_tx_crc_last_be_liteethmac_clockdomainsrenamer1_next_value1 <= core_mac_core_tx_crc_sink_payload_last_be;
+                        core_mac_core_tx_crc_last_be_liteethmac_clockdomainsrenamer1_next_value_ce1 <= 1'd1;
                     end
                     liteethmac_txdatapath_bufferizeendpoints_next_state <= 2'd2;
                 end
@@ -3735,18 +3735,18 @@ always @(*) begin
             core_mac_core_tx_crc_source_valid <= 1'd1;
             core_mac_core_tx_crc_source_last <= 1'd1;
             core_mac_core_tx_crc_source_payload_data <= core_mac_core_tx_crc_value;
-            core_mac_core_tx_crc_source_payload_last_be <= core_mac_core_tx_crc_fsm;
-            if (core_mac_core_tx_crc_fsm[0]) begin
-                core_mac_core_tx_crc_source_payload_data <= core_mac_core_tx_crc_description[31:24];
+            core_mac_core_tx_crc_source_payload_last_be <= core_mac_core_tx_crc_last_be;
+            if (core_mac_core_tx_crc_last_be[0]) begin
+                core_mac_core_tx_crc_source_payload_data <= core_mac_core_tx_crc_crc_packet[31:24];
             end
-            if (core_mac_core_tx_crc_fsm[1]) begin
-                core_mac_core_tx_crc_source_payload_data <= core_mac_core_tx_crc_description[31:16];
+            if (core_mac_core_tx_crc_last_be[1]) begin
+                core_mac_core_tx_crc_source_payload_data <= core_mac_core_tx_crc_crc_packet[31:16];
             end
-            if (core_mac_core_tx_crc_fsm[2]) begin
-                core_mac_core_tx_crc_source_payload_data <= core_mac_core_tx_crc_description[31:8];
+            if (core_mac_core_tx_crc_last_be[2]) begin
+                core_mac_core_tx_crc_source_payload_data <= core_mac_core_tx_crc_crc_packet[31:8];
             end
-            if (core_mac_core_tx_crc_fsm[3]) begin
-                core_mac_core_tx_crc_source_payload_data <= core_mac_core_tx_crc_description;
+            if (core_mac_core_tx_crc_last_be[3]) begin
+                core_mac_core_tx_crc_source_payload_data <= core_mac_core_tx_crc_crc_packet;
             end
             if (core_mac_core_tx_crc_source_ready) begin
                 liteethmac_txdatapath_bufferizeendpoints_next_state <= 1'd0;
@@ -8487,7 +8487,7 @@ always @(*) begin
 end
 always @(*) begin
     rhs_self0 <= 6'd0;
-    case (udpcore_usp_gth_1000basex_pcstx_d1[4:0])
+    case (udpcore_usp_gth_1000basex_pcstx_encoder_d[4:0])
         1'd0: begin
             rhs_self0 <= 5'd24;
         end
@@ -8588,7 +8588,7 @@ always @(*) begin
 end
 always @(*) begin
     rhs_self1 <= 1'd0;
-    case (udpcore_usp_gth_1000basex_pcstx_d1[4:0])
+    case (udpcore_usp_gth_1000basex_pcstx_encoder_d[4:0])
         1'd0: begin
             rhs_self1 <= 1'd1;
         end
@@ -8689,7 +8689,7 @@ always @(*) begin
 end
 always @(*) begin
     rhs_self2 <= 1'd0;
-    case (udpcore_usp_gth_1000basex_pcstx_d1[4:0])
+    case (udpcore_usp_gth_1000basex_pcstx_encoder_d[4:0])
         1'd0: begin
             rhs_self2 <= 1'd1;
         end
@@ -8790,7 +8790,7 @@ always @(*) begin
 end
 always @(*) begin
     rhs_self3 <= 4'd0;
-    case (udpcore_usp_gth_1000basex_pcstx_d1[7:5])
+    case (udpcore_usp_gth_1000basex_pcstx_encoder_d[7:5])
         1'd0: begin
             rhs_self3 <= 3'd4;
         end
@@ -8819,7 +8819,7 @@ always @(*) begin
 end
 always @(*) begin
     rhs_self4 <= 1'd0;
-    case (udpcore_usp_gth_1000basex_pcstx_d1[7:5])
+    case (udpcore_usp_gth_1000basex_pcstx_encoder_d[7:5])
         1'd0: begin
             rhs_self4 <= 1'd1;
         end
@@ -8848,7 +8848,7 @@ always @(*) begin
 end
 always @(*) begin
     rhs_self5 <= 1'd0;
-    case (udpcore_usp_gth_1000basex_pcstx_d1[7:5])
+    case (udpcore_usp_gth_1000basex_pcstx_encoder_d[7:5])
         1'd0: begin
             rhs_self5 <= 1'd1;
         end
@@ -8875,20 +8875,20 @@ always @(*) begin
         end
     endcase
 end
-assign udpcore_usp_gth_1000basex_lp_abi_ping_toggle_o = xilinxmultiregimpl0_regs1;
-assign udpcore_usp_gth_1000basex_lp_abi_pong_toggle_o = xilinxmultiregimpl1_regs1;
-assign udpcore_usp_gth_1000basex_lp_abi_obuffer = xilinxmultiregimpl2_regs1;
-assign udpcore_usp_gth_1000basex_seen_valid_ci_toggle_o = xilinxmultiregimpl3_regs1;
-assign udpcore_usp_gth_1000basex_rx_config_reg_abi_toggle_o = xilinxmultiregimpl4_regs1;
-assign udpcore_usp_gth_1000basex_rx_config_reg_ack_toggle_o = xilinxmultiregimpl5_regs1;
-assign xilinxasyncresetsynchronizerimpl0 = (~udpcore_usp_gth_1000basex_tx_reset_done);
-assign xilinxasyncresetsynchronizerimpl1 = (~udpcore_usp_gth_1000basex_rx_reset_done);
-assign core_mac_core_tx_cdc_cdc_produce_rdomain = xilinxmultiregimpl6_regs1;
-assign core_mac_core_tx_cdc_cdc_consume_wdomain = xilinxmultiregimpl7_regs1;
-assign core_mac_core_rx_cdc_cdc_produce_rdomain = xilinxmultiregimpl8_regs1;
-assign core_mac_core_rx_cdc_cdc_consume_wdomain = xilinxmultiregimpl9_regs1;
-assign core_mac_core_pulsesynchronizer0_toggle_o = xilinxmultiregimpl10_regs1;
-assign core_mac_core_pulsesynchronizer1_toggle_o = xilinxmultiregimpl11_regs1;
+assign udpcore_usp_gth_1000basex_lp_abi_ping_toggle_o = xilinxmultiregimpl01;
+assign udpcore_usp_gth_1000basex_lp_abi_pong_toggle_o = xilinxmultiregimpl11;
+assign udpcore_usp_gth_1000basex_lp_abi_obuffer = xilinxmultiregimpl21;
+assign udpcore_usp_gth_1000basex_seen_valid_ci_toggle_o = xilinxmultiregimpl31;
+assign udpcore_usp_gth_1000basex_rx_config_reg_abi_toggle_o = xilinxmultiregimpl41;
+assign udpcore_usp_gth_1000basex_rx_config_reg_ack_toggle_o = xilinxmultiregimpl51;
+assign xilinxasyncresetsynchronizerimpl0_async_reset = (~udpcore_usp_gth_1000basex_tx_reset_done);
+assign xilinxasyncresetsynchronizerimpl1_async_reset = (~udpcore_usp_gth_1000basex_rx_reset_done);
+assign core_mac_core_tx_cdc_cdc_produce_rdomain = xilinxmultiregimpl61;
+assign core_mac_core_tx_cdc_cdc_consume_wdomain = xilinxmultiregimpl71;
+assign core_mac_core_rx_cdc_cdc_produce_rdomain = xilinxmultiregimpl81;
+assign core_mac_core_rx_cdc_cdc_consume_wdomain = xilinxmultiregimpl91;
+assign core_mac_core_pulsesynchronizer0_toggle_o = xilinxmultiregimpl101;
+assign core_mac_core_pulsesynchronizer1_toggle_o = xilinxmultiregimpl111;
 
 
 //------------------------------------------------------------------------------
@@ -8993,9 +8993,9 @@ always @(posedge eth_rx_clk) begin
         udpcore_usp_gth_1000basex_rx_config_reg_ack_toggle_i <= (~udpcore_usp_gth_1000basex_rx_config_reg_ack_toggle_i);
     end
     if ((udpcore_usp_gth_1000basex_phase_half == udpcore_usp_gth_1000basex_phase_half_rereg)) begin
-        udpcore_usp_gth_1000basex_rx_data <= udpcore_usp_gth_1000basex_rx_data_half[19:10];
+        udpcore_usp_gth_1000basex_rx_data1 <= udpcore_usp_gth_1000basex_rx_data_half[19:10];
     end else begin
-        udpcore_usp_gth_1000basex_rx_data <= udpcore_usp_gth_1000basex_rx_data_half[9:0];
+        udpcore_usp_gth_1000basex_rx_data1 <= udpcore_usp_gth_1000basex_rx_data_half[9:0];
     end
     udpcore_usp_gth_1000basex_phase_half <= (~udpcore_usp_gth_1000basex_phase_half);
     if (core_mac_core_rx_converter_converter_source_ready) begin
@@ -9058,7 +9058,7 @@ always @(posedge eth_rx_clk) begin
         udpcore_usp_gth_1000basex_rx_config_reg_ack_i <= 1'd0;
         udpcore_usp_gth_1000basex_rx_config_reg_count <= 4'd0;
         udpcore_usp_gth_1000basex_rx_config_reg_last <= 16'd0;
-        udpcore_usp_gth_1000basex_rx_data <= 10'd0;
+        udpcore_usp_gth_1000basex_rx_data1 <= 10'd0;
         udpcore_usp_gth_1000basex_phase_half <= 1'd0;
         core_mac_core_rx_converter_converter_source_payload_data <= 40'd0;
         core_mac_core_rx_converter_converter_source_payload_valid_token_count <= 3'd0;
@@ -9068,10 +9068,10 @@ always @(posedge eth_rx_clk) begin
         core_mac_core_rx_cdc_cdc_graycounter0_q_binary <= 6'd0;
         clockdomainsrenamer1_state <= 3'd0;
     end
-    xilinxmultiregimpl1_regs0 <= udpcore_usp_gth_1000basex_lp_abi_pong_toggle_i;
-    xilinxmultiregimpl1_regs1 <= xilinxmultiregimpl1_regs0;
-    xilinxmultiregimpl9_regs0 <= core_mac_core_rx_cdc_cdc_graycounter1_q;
-    xilinxmultiregimpl9_regs1 <= xilinxmultiregimpl9_regs0;
+    xilinxmultiregimpl10 <= udpcore_usp_gth_1000basex_lp_abi_pong_toggle_i;
+    xilinxmultiregimpl11 <= xilinxmultiregimpl10;
+    xilinxmultiregimpl90 <= core_mac_core_rx_cdc_cdc_graycounter1_q;
+    xilinxmultiregimpl91 <= xilinxmultiregimpl90;
 end
 
 always @(posedge eth_rx_half_clk) begin
@@ -9093,42 +9093,42 @@ always @(posedge eth_tx_clk) begin
         udpcore_usp_gth_1000basex_checker_error <= 1'd1;
     end
     udpcore_usp_gth_1000basex_pcstx_parity <= (~udpcore_usp_gth_1000basex_pcstx_parity);
-    if (udpcore_usp_gth_1000basex_pcstx_ce0) begin
-        udpcore_usp_gth_1000basex_pcstx_disp_in <= udpcore_usp_gth_1000basex_pcstx_disp_out;
+    if (udpcore_usp_gth_1000basex_pcstx_encoder_ce0) begin
+        udpcore_usp_gth_1000basex_pcstx_encoder_disp_in <= udpcore_usp_gth_1000basex_pcstx_encoder_disp_out;
     end
-    if (udpcore_usp_gth_1000basex_pcstx_ce0) begin
-        udpcore_usp_gth_1000basex_pcstx_output0 <= udpcore_usp_gth_1000basex_pcstx_output1;
-        udpcore_usp_gth_1000basex_pcstx_disparity <= udpcore_usp_gth_1000basex_pcstx_disp_out;
+    if (udpcore_usp_gth_1000basex_pcstx_encoder_ce0) begin
+        udpcore_usp_gth_1000basex_pcstx_encoder2 <= udpcore_usp_gth_1000basex_pcstx_encoder_output;
+        udpcore_usp_gth_1000basex_pcstx_encoder3 <= udpcore_usp_gth_1000basex_pcstx_encoder_disp_out;
     end
-    if (udpcore_usp_gth_1000basex_pcstx_ce1) begin
-        if ((udpcore_usp_gth_1000basex_pcstx_k1 & (udpcore_usp_gth_1000basex_pcstx_d1[4:0] == 5'd28))) begin
-            udpcore_usp_gth_1000basex_pcstx_code6b <= 6'd48;
-            udpcore_usp_gth_1000basex_pcstx_code6b_unbalanced <= 1'd1;
-            udpcore_usp_gth_1000basex_pcstx_code6b_flip <= 1'd1;
+    if (udpcore_usp_gth_1000basex_pcstx_encoder_ce1) begin
+        if ((udpcore_usp_gth_1000basex_pcstx_encoder_k & (udpcore_usp_gth_1000basex_pcstx_encoder_d[4:0] == 5'd28))) begin
+            udpcore_usp_gth_1000basex_pcstx_encoder_code6b <= 6'd48;
+            udpcore_usp_gth_1000basex_pcstx_encoder_code6b_unbalanced <= 1'd1;
+            udpcore_usp_gth_1000basex_pcstx_encoder_code6b_flip <= 1'd1;
         end else begin
-            udpcore_usp_gth_1000basex_pcstx_code6b <= rhs_self0;
-            udpcore_usp_gth_1000basex_pcstx_code6b_unbalanced <= rhs_self1;
-            udpcore_usp_gth_1000basex_pcstx_code6b_flip <= rhs_self2;
+            udpcore_usp_gth_1000basex_pcstx_encoder_code6b <= rhs_self0;
+            udpcore_usp_gth_1000basex_pcstx_encoder_code6b_unbalanced <= rhs_self1;
+            udpcore_usp_gth_1000basex_pcstx_encoder_code6b_flip <= rhs_self2;
         end
-        udpcore_usp_gth_1000basex_pcstx_code4b <= rhs_self3;
-        udpcore_usp_gth_1000basex_pcstx_code4b_unbalanced <= rhs_self4;
-        if (udpcore_usp_gth_1000basex_pcstx_k1) begin
-            udpcore_usp_gth_1000basex_pcstx_code4b_flip <= 1'd1;
+        udpcore_usp_gth_1000basex_pcstx_encoder_code4b <= rhs_self3;
+        udpcore_usp_gth_1000basex_pcstx_encoder_code4b_unbalanced <= rhs_self4;
+        if (udpcore_usp_gth_1000basex_pcstx_encoder_k) begin
+            udpcore_usp_gth_1000basex_pcstx_encoder_code4b_flip <= 1'd1;
         end else begin
-            udpcore_usp_gth_1000basex_pcstx_code4b_flip <= rhs_self5;
+            udpcore_usp_gth_1000basex_pcstx_encoder_code4b_flip <= rhs_self5;
         end
-        udpcore_usp_gth_1000basex_pcstx_alt7_rd0 <= 1'd0;
-        udpcore_usp_gth_1000basex_pcstx_alt7_rd1 <= 1'd0;
-        if ((udpcore_usp_gth_1000basex_pcstx_d1[7:5] == 3'd7)) begin
-            if ((((udpcore_usp_gth_1000basex_pcstx_d1[4:0] == 5'd17) | (udpcore_usp_gth_1000basex_pcstx_d1[4:0] == 5'd18)) | (udpcore_usp_gth_1000basex_pcstx_d1[4:0] == 5'd20))) begin
-                udpcore_usp_gth_1000basex_pcstx_alt7_rd0 <= 1'd1;
+        udpcore_usp_gth_1000basex_pcstx_encoder_alt7_rd0 <= 1'd0;
+        udpcore_usp_gth_1000basex_pcstx_encoder_alt7_rd1 <= 1'd0;
+        if ((udpcore_usp_gth_1000basex_pcstx_encoder_d[7:5] == 3'd7)) begin
+            if ((((udpcore_usp_gth_1000basex_pcstx_encoder_d[4:0] == 5'd17) | (udpcore_usp_gth_1000basex_pcstx_encoder_d[4:0] == 5'd18)) | (udpcore_usp_gth_1000basex_pcstx_encoder_d[4:0] == 5'd20))) begin
+                udpcore_usp_gth_1000basex_pcstx_encoder_alt7_rd0 <= 1'd1;
             end
-            if ((((udpcore_usp_gth_1000basex_pcstx_d1[4:0] == 4'd11) | (udpcore_usp_gth_1000basex_pcstx_d1[4:0] == 4'd13)) | (udpcore_usp_gth_1000basex_pcstx_d1[4:0] == 4'd14))) begin
-                udpcore_usp_gth_1000basex_pcstx_alt7_rd1 <= 1'd1;
+            if ((((udpcore_usp_gth_1000basex_pcstx_encoder_d[4:0] == 4'd11) | (udpcore_usp_gth_1000basex_pcstx_encoder_d[4:0] == 4'd13)) | (udpcore_usp_gth_1000basex_pcstx_encoder_d[4:0] == 4'd14))) begin
+                udpcore_usp_gth_1000basex_pcstx_encoder_alt7_rd1 <= 1'd1;
             end
-            if (udpcore_usp_gth_1000basex_pcstx_k1) begin
-                udpcore_usp_gth_1000basex_pcstx_alt7_rd0 <= 1'd1;
-                udpcore_usp_gth_1000basex_pcstx_alt7_rd1 <= 1'd1;
+            if (udpcore_usp_gth_1000basex_pcstx_encoder_k) begin
+                udpcore_usp_gth_1000basex_pcstx_encoder_alt7_rd0 <= 1'd1;
+                udpcore_usp_gth_1000basex_pcstx_encoder_alt7_rd1 <= 1'd1;
             end
         end
     end
@@ -9186,7 +9186,7 @@ always @(posedge eth_tx_clk) begin
         udpcore_usp_gth_1000basex_waittimer2_count <= 18'd200000;
     end
     clockdomainsrenamer2_state <= clockdomainsrenamer2_next_state;
-    udpcore_usp_gth_1000basex_buf <= {udpcore_usp_gth_1000basex_tx_data, udpcore_usp_gth_1000basex_buf[19:10]};
+    udpcore_usp_gth_1000basex_buf <= {udpcore_usp_gth_1000basex_tx_data1, udpcore_usp_gth_1000basex_buf[19:10]};
     core_mac_core_tx_cdc_cdc_graycounter1_q_binary <= core_mac_core_tx_cdc_cdc_graycounter1_q_next_binary;
     core_mac_core_tx_cdc_cdc_graycounter1_q <= core_mac_core_tx_cdc_cdc_graycounter1_q_next;
     if ((core_mac_core_tx_converter_converter_source_valid & core_mac_core_tx_converter_converter_source_ready)) begin
@@ -9202,10 +9202,10 @@ always @(posedge eth_tx_clk) begin
         core_mac_core_tx_gap_counter <= core_mac_core_tx_gap_counter_liteethmac_clockdomainsrenamer3_next_value;
     end
     if (eth_tx_rst) begin
-        udpcore_usp_gth_1000basex_pcstx_disparity <= 1'd0;
-        udpcore_usp_gth_1000basex_pcstx_disp_in <= 1'd0;
-        udpcore_usp_gth_1000basex_pcstx_code6b_flip <= 1'd0;
-        udpcore_usp_gth_1000basex_pcstx_code4b_flip <= 1'd0;
+        udpcore_usp_gth_1000basex_pcstx_encoder3 <= 1'd0;
+        udpcore_usp_gth_1000basex_pcstx_encoder_disp_in <= 1'd0;
+        udpcore_usp_gth_1000basex_pcstx_encoder_code6b_flip <= 1'd0;
+        udpcore_usp_gth_1000basex_pcstx_encoder_code4b_flip <= 1'd0;
         udpcore_usp_gth_1000basex_pcstx_count0 <= 1'd0;
         udpcore_usp_gth_1000basex_pcstx_parity <= 1'd0;
         udpcore_usp_gth_1000basex_pcstx_ctype <= 1'd0;
@@ -9226,18 +9226,18 @@ always @(posedge eth_tx_clk) begin
         liteethmac_txdatapath_liteethmactxlastbe_state <= 1'd0;
         liteethmac_txdatapath_liteethmacgap_state <= 1'd0;
     end
-    xilinxmultiregimpl0_regs0 <= udpcore_usp_gth_1000basex_lp_abi_ping_toggle_i;
-    xilinxmultiregimpl0_regs1 <= xilinxmultiregimpl0_regs0;
-    xilinxmultiregimpl2_regs0 <= udpcore_usp_gth_1000basex_lp_abi_ibuffer;
-    xilinxmultiregimpl2_regs1 <= xilinxmultiregimpl2_regs0;
-    xilinxmultiregimpl3_regs0 <= udpcore_usp_gth_1000basex_seen_valid_ci_toggle_i;
-    xilinxmultiregimpl3_regs1 <= xilinxmultiregimpl3_regs0;
-    xilinxmultiregimpl4_regs0 <= udpcore_usp_gth_1000basex_rx_config_reg_abi_toggle_i;
-    xilinxmultiregimpl4_regs1 <= xilinxmultiregimpl4_regs0;
-    xilinxmultiregimpl5_regs0 <= udpcore_usp_gth_1000basex_rx_config_reg_ack_toggle_i;
-    xilinxmultiregimpl5_regs1 <= xilinxmultiregimpl5_regs0;
-    xilinxmultiregimpl6_regs0 <= core_mac_core_tx_cdc_cdc_graycounter0_q;
-    xilinxmultiregimpl6_regs1 <= xilinxmultiregimpl6_regs0;
+    xilinxmultiregimpl00 <= udpcore_usp_gth_1000basex_lp_abi_ping_toggle_i;
+    xilinxmultiregimpl01 <= xilinxmultiregimpl00;
+    xilinxmultiregimpl20 <= udpcore_usp_gth_1000basex_lp_abi_ibuffer;
+    xilinxmultiregimpl21 <= xilinxmultiregimpl20;
+    xilinxmultiregimpl30 <= udpcore_usp_gth_1000basex_seen_valid_ci_toggle_i;
+    xilinxmultiregimpl31 <= xilinxmultiregimpl30;
+    xilinxmultiregimpl40 <= udpcore_usp_gth_1000basex_rx_config_reg_abi_toggle_i;
+    xilinxmultiregimpl41 <= xilinxmultiregimpl40;
+    xilinxmultiregimpl50 <= udpcore_usp_gth_1000basex_rx_config_reg_ack_toggle_i;
+    xilinxmultiregimpl51 <= xilinxmultiregimpl50;
+    xilinxmultiregimpl60 <= core_mac_core_tx_cdc_cdc_graycounter0_q;
+    xilinxmultiregimpl61 <= xilinxmultiregimpl60;
 end
 
 always @(posedge eth_tx_half_clk) begin
@@ -9275,11 +9275,11 @@ always @(posedge sys_clk) begin
         core_mac_core_tx_crc_reg <= 32'd4294967295;
     end
     liteethmac_txdatapath_bufferizeendpoints_state <= liteethmac_txdatapath_bufferizeendpoints_next_state;
-    if (core_mac_core_tx_crc_description_liteethmac_clockdomainsrenamer1_next_value_ce0) begin
-        core_mac_core_tx_crc_description <= core_mac_core_tx_crc_description_liteethmac_clockdomainsrenamer1_next_value0;
+    if (core_mac_core_tx_crc_crc_packet_liteethmac_clockdomainsrenamer1_next_value_ce0) begin
+        core_mac_core_tx_crc_crc_packet <= core_mac_core_tx_crc_crc_packet_liteethmac_clockdomainsrenamer1_next_value0;
     end
-    if (core_mac_core_tx_crc_fsm_liteethmac_clockdomainsrenamer1_next_value_ce1) begin
-        core_mac_core_tx_crc_fsm <= core_mac_core_tx_crc_fsm_liteethmac_clockdomainsrenamer1_next_value1;
+    if (core_mac_core_tx_crc_last_be_liteethmac_clockdomainsrenamer1_next_value_ce1) begin
+        core_mac_core_tx_crc_last_be <= core_mac_core_tx_crc_last_be_liteethmac_clockdomainsrenamer1_next_value1;
     end
     if (((~core_mac_core_tx_crc_pipe_valid_source_valid) | core_mac_core_tx_crc_pipe_valid_source_ready)) begin
         core_mac_core_tx_crc_pipe_valid_source_valid <= core_mac_core_tx_crc_pipe_valid_sink_valid;
@@ -10223,14 +10223,14 @@ always @(posedge sys_clk) begin
         liteethudpstreamer_state <= 1'd0;
         wishbone2csr_state <= 1'd0;
     end
-    xilinxmultiregimpl7_regs0 <= core_mac_core_tx_cdc_cdc_graycounter1_q;
-    xilinxmultiregimpl7_regs1 <= xilinxmultiregimpl7_regs0;
-    xilinxmultiregimpl8_regs0 <= core_mac_core_rx_cdc_cdc_graycounter0_q;
-    xilinxmultiregimpl8_regs1 <= xilinxmultiregimpl8_regs0;
-    xilinxmultiregimpl10_regs0 <= core_mac_core_pulsesynchronizer0_toggle_i;
-    xilinxmultiregimpl10_regs1 <= xilinxmultiregimpl10_regs0;
-    xilinxmultiregimpl11_regs0 <= core_mac_core_pulsesynchronizer1_toggle_i;
-    xilinxmultiregimpl11_regs1 <= xilinxmultiregimpl11_regs0;
+    xilinxmultiregimpl70 <= core_mac_core_tx_cdc_cdc_graycounter1_q;
+    xilinxmultiregimpl71 <= xilinxmultiregimpl70;
+    xilinxmultiregimpl80 <= core_mac_core_rx_cdc_cdc_graycounter0_q;
+    xilinxmultiregimpl81 <= xilinxmultiregimpl80;
+    xilinxmultiregimpl100 <= core_mac_core_pulsesynchronizer0_toggle_i;
+    xilinxmultiregimpl101 <= xilinxmultiregimpl100;
+    xilinxmultiregimpl110 <= core_mac_core_pulsesynchronizer1_toggle_i;
+    xilinxmultiregimpl111 <= xilinxmultiregimpl110;
 end
 
 
@@ -10886,10 +10886,10 @@ GTHE4_CHANNEL_DUMMY #(
 	.TXCOMINIT            (1'd0),
 	.TXCOMSAS             (1'd0),
 	.TXCOMWAKE            (1'd0),
-	.TXCTRL0              ({udpcore_usp_gth_1000basex_refclk_or_clk_pads[18], udpcore_usp_gth_1000basex_refclk_or_clk_pads[8]}),
-	.TXCTRL1              ({udpcore_usp_gth_1000basex_refclk_or_clk_pads[19], udpcore_usp_gth_1000basex_refclk_or_clk_pads[9]}),
+	.TXCTRL0              ({udpcore_usp_gth_1000basex_tx_data0[18], udpcore_usp_gth_1000basex_tx_data0[8]}),
+	.TXCTRL1              ({udpcore_usp_gth_1000basex_tx_data0[19], udpcore_usp_gth_1000basex_tx_data0[9]}),
 	.TXCTRL2              (1'd0),
-	.TXDATA               ({udpcore_usp_gth_1000basex_refclk_or_clk_pads[17:10], udpcore_usp_gth_1000basex_refclk_or_clk_pads[7:0]}),
+	.TXDATA               ({udpcore_usp_gth_1000basex_tx_data0[17:10], udpcore_usp_gth_1000basex_tx_data0[7:0]}),
 	.TXDATAEXTENDRSVD     (1'd0),
 	.TXDEEMPH             (1'd0),
 	.TXDETECTRX           (1'd0),
@@ -10987,11 +10987,11 @@ GTHE4_CHANNEL_DUMMY #(
 	.RXCOMMADET           (udpcore_usp_gth_1000basex35),
 	.RXCOMSASDET          (udpcore_usp_gth_1000basex36),
 	.RXCOMWAKEDET         (udpcore_usp_gth_1000basex37),
-	.RXCTRL0              ({udpcore_usp_gth_1000basex_self[18], udpcore_usp_gth_1000basex_self[8]}),
-	.RXCTRL1              ({udpcore_usp_gth_1000basex_self[19], udpcore_usp_gth_1000basex_self[9]}),
+	.RXCTRL0              ({udpcore_usp_gth_1000basex_rx_data0[18], udpcore_usp_gth_1000basex_rx_data0[8]}),
+	.RXCTRL1              ({udpcore_usp_gth_1000basex_rx_data0[19], udpcore_usp_gth_1000basex_rx_data0[9]}),
 	.RXCTRL2              (udpcore_usp_gth_1000basex38),
 	.RXCTRL3              (udpcore_usp_gth_1000basex39),
-	.RXDATA               ({udpcore_usp_gth_1000basex_self[17:10], udpcore_usp_gth_1000basex_self[7:0]}),
+	.RXDATA               ({udpcore_usp_gth_1000basex_rx_data0[17:10], udpcore_usp_gth_1000basex_rx_data0[7:0]}),
 	.RXDATAEXTENDRSVD     (udpcore_usp_gth_1000basex40),
 	.RXDATAVALID          (udpcore_usp_gth_1000basex41),
 	.RXDLYSRESETDONE      (udpcore_usp_gth_1000basex42),
@@ -11277,7 +11277,7 @@ FDPE #(
 	.C   (eth_tx_clk),
 	.CE  (1'd1),
 	.D   (1'd0),
-	.PRE (xilinxasyncresetsynchronizerimpl0),
+	.PRE (xilinxasyncresetsynchronizerimpl0_async_reset),
 
 	// Outputs.
 	.Q   (xilinxasyncresetsynchronizerimpl0_rst_meta)
@@ -11295,7 +11295,7 @@ FDPE #(
 	.C   (eth_tx_clk),
 	.CE  (1'd1),
 	.D   (xilinxasyncresetsynchronizerimpl0_rst_meta),
-	.PRE (xilinxasyncresetsynchronizerimpl0),
+	.PRE (xilinxasyncresetsynchronizerimpl0_async_reset),
 
 	// Outputs.
 	.Q   (eth_tx_rst)
@@ -11313,7 +11313,7 @@ FDPE #(
 	.C   (eth_rx_clk),
 	.CE  (1'd1),
 	.D   (1'd0),
-	.PRE (xilinxasyncresetsynchronizerimpl1),
+	.PRE (xilinxasyncresetsynchronizerimpl1_async_reset),
 
 	// Outputs.
 	.Q   (xilinxasyncresetsynchronizerimpl1_rst_meta)
@@ -11331,7 +11331,7 @@ FDPE #(
 	.C   (eth_rx_clk),
 	.CE  (1'd1),
 	.D   (xilinxasyncresetsynchronizerimpl1_rst_meta),
-	.PRE (xilinxasyncresetsynchronizerimpl1),
+	.PRE (xilinxasyncresetsynchronizerimpl1_async_reset),
 
 	// Outputs.
 	.Q   (eth_rx_rst)
@@ -11340,5 +11340,5 @@ FDPE #(
 endmodule
 
 // -----------------------------------------------------------------------------
-//  Auto-Generated by LiteX on 2026-01-16 02:28:58.
+//  Auto-Generated by LiteX on 2026-05-30 16:18:45.
 //------------------------------------------------------------------------------

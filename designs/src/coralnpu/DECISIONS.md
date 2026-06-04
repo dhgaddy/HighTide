@@ -22,6 +22,7 @@ Mid-large NPU with several FakeRAM macros.  Hierarchical synthesis required for 
 
 ### Decisions
 - **2026-04-26 `643ba623`**: initial close.  Halo 6×6 chosen to keep std cells out of macro shadow but avoid wasting die area.
+- **2026-06-04**: validated on the bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64 upgrade. Closes clean: WNS +123 ps on the 3000 ps clock, util 40.5%, 156858 logic cells, 2 macros. No change needed.
 
 ### Known issues / open questions
 - None.
@@ -39,6 +40,7 @@ Mid-large NPU with several FakeRAM macros.  Hierarchical synthesis required for 
 
 ### Decisions
 - **2026-04-26 `643ba623`**: halo bumped to 40×40 (vs asap7's 6×6) — same number of stdcell tracks of macro clearance, just expressed in micrometers at nangate45's pitch.
+- **2026-06-04**: validated on the bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64 upgrade. Closes clean: WNS +998 ps on the 9 ns clock, util 40.3%, 140663 logic cells, 2 macros. No change needed.
 
 ### Known issues / open questions
 - None.

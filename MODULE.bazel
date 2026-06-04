@@ -3,9 +3,13 @@
 bazel-orfs lives at ./bazel-orfs as a git submodule.  Most Bazel
 settings (dep versions, patches, ORFS/OpenROAD/Qt commits) come from
 bazel-orfs's own MODULE.bazel; we re-declare the overrides at the
-root because git_override and single_version_override are only
-honored in the root module, and we reference patch files from the
-submodule to avoid duplication.
+root because git_override / archive_override / single_version_override
+and register_toolchains are only honored in the root module, and we
+reference patch files from the submodule (via //patches symlinks) to
+avoid duplication.
+
+Keep these root-only overrides in sync with bazel-orfs/MODULE.bazel
+whenever the submodule is bumped (current pin: 553c1c3).
 
 HighTide-specific additions on top:
   - yosys-slang plugin built from source and merged into yosys_share
@@ -31,42 +35,88 @@ local_path_override(
     path = "bazel-orfs/verilog",
 )
 
-# --- Non-BCR deps required by bazel-orfs (git_override is root-only) ---
+# --- Non-BCR deps required by bazel-orfs (overrides are root-only) ---
 # Commits + patch sets mirror bazel-orfs/MODULE.bazel at the pinned
 # submodule commit.  Keep in sync when bumping the submodule.
 #
 # patches/ holds symlinks into bazel-orfs/patches/ (bazel's
-# git_override only accepts patch labels from the main repo).
+# *_override only accepts patch labels from the root repo).
+
+bazel_dep(name = "abc", version = "0.64-yosyshq.bcr.1")
+bazel_dep(name = "yosys", version = "0.64")
 
 bazel_dep(name = "orfs")
-git_override(
+
+# Pinned via archive_override (HTTPS tarball) rather than git_override so
+# bzlmod resolution works in environments where git access to ORFS is
+# blocked.  Mirrors bazel-orfs/MODULE.bazel.
+archive_override(
     module_name = "orfs",
-    commit = "172bd233dabd45d04cd80062cd1894e5ac8e5d52",
+    integrity = "sha256-mAqlLynBNOx/poiXu+BLa7s1cJcpDR21u5leDEUF3JY=",
     patch_strip = 1,
     patches = [
-        "//patches:0035-fix-remove-non-root-overrides-from-MODULE.bazel.patch",
+        "//patches:0036-fix-bazel-orfs-bazel_dep-non-dev-for-load-visibility.patch",
     ],
-    remote = "https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts.git",
+    strip_prefix = "OpenROAD-flow-scripts-d90873f47b79f343c6be15210ce398e1383c08d2",
+    urls = ["https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts/archive/d90873f47b79f343c6be15210ce398e1383c08d2.tar.gz"],
 )
 
 bazel_dep(name = "openroad")
-git_override(
+archive_override(
     module_name = "openroad",
-    commit = "578be38ad2297637e938cbc9cb35e5a05d8936ff",
-    init_submodules = True,
-    patch_strip = 1,
-    patches = [
-        # CTS-0122 false skip in dbNet::getFirstOutput() — drops the
-        # driver of clock nets whose source pin is `clock: true`
-        # (macro clock-outs like PCIe `user_clk`, clock-buffer
-        # outputs).  Merged upstream as OpenROAD#10549 (commit
-        # cd4f5041); carry locally until bazel-orfs bumps the
-        # openroad pin past it, then delete this patch and the
-        # patches[] entry.  See patches/openroad-cts-0122-fix.patch.
-        "//patches:openroad-cts-0122-fix.patch",
+    integrity = "sha256-69usuVgG/PLsXp9KcGvsndunHbJJzLFUFrlVUjORu/8=",
+    # GitHub /archive/<sha>.tar.gz tarballs don't carry submodules,
+    # so vendor src/sta (OpenSTA) and third-party/abc from their own
+    # GitHub auto-archives at the SHAs OpenROAD's .gitmodules pins to.
+    patch_cmds = [
+        "curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o .openroad-submodule-src-sta-8575070292cd0eb0150d191795ba59ca7e610ec2.tar.gz https://github.com/The-OpenROAD-Project/OpenSTA/archive/8575070292cd0eb0150d191795ba59ca7e610ec2.tar.gz && echo '17c490baf588ae564067d639a4938f1b749e55734a82445b0e742397a0f34ba9  .openroad-submodule-src-sta-8575070292cd0eb0150d191795ba59ca7e610ec2.tar.gz' | sha256sum -c - && tar xzf .openroad-submodule-src-sta-8575070292cd0eb0150d191795ba59ca7e610ec2.tar.gz --strip-components=1 -C src/sta && rm .openroad-submodule-src-sta-8575070292cd0eb0150d191795ba59ca7e610ec2.tar.gz",
+        "curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o .openroad-submodule-third-party-abc-17cadca080b33edc5a13c8e6e8e8092f8c350b25.tar.gz https://github.com/The-OpenROAD-Project/abc/archive/17cadca080b33edc5a13c8e6e8e8092f8c350b25.tar.gz && echo 'bebf58d918646b0f6ebf62dd8cafaec5e04957388d19e99d3083456c971c211a  .openroad-submodule-third-party-abc-17cadca080b33edc5a13c8e6e8e8092f8c350b25.tar.gz' | sha256sum -c - && tar xzf .openroad-submodule-third-party-abc-17cadca080b33edc5a13c8e6e8e8092f8c350b25.tar.gz --strip-components=1 -C third-party/abc && rm .openroad-submodule-third-party-abc-17cadca080b33edc5a13c8e6e8e8092f8c350b25.tar.gz",
+        "curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o .openroad-submodule-third-party-slang-elab-82effc8d9541be69e1ed3ec44759a4449f5d9247.tar.gz https://github.com/povik/yosys-slang/archive/82effc8d9541be69e1ed3ec44759a4449f5d9247.tar.gz && echo 'd319a1f49116fb9f30341bf06324e40e0ceadfe05d0fa7b00aed4dc0dc6723f1  .openroad-submodule-third-party-slang-elab-82effc8d9541be69e1ed3ec44759a4449f5d9247.tar.gz' | sha256sum -c - && tar xzf .openroad-submodule-third-party-slang-elab-82effc8d9541be69e1ed3ec44759a4449f5d9247.tar.gz --strip-components=1 -C third-party/slang-elab && rm .openroad-submodule-third-party-slang-elab-82effc8d9541be69e1ed3ec44759a4449f5d9247.tar.gz",
+        "sed -i 's|\"@slang\"|\"@sv-lang//:libsvlang\"|' third-party/slang-elab/src/BUILD",
     ],
-    remote = "https://github.com/The-OpenROAD-Project/OpenROAD.git",
+    strip_prefix = "OpenROAD-299f30154c9a3621a701763263dc532f835ab4a5",
+    urls = ["https://github.com/The-OpenROAD-Project/OpenROAD/archive/299f30154c9a3621a701763263dc532f835ab4a5.tar.gz"],
 )
+
+# OpenROAD pins sv-lang 10.0.bcr.2, which is not yet published in BCR.
+# Force the latest published version (fork registry, via .bazelrc).
+single_version_override(
+    module_name = "sv-lang",
+    version = "10.0.1-20260316-f04e8156",
+)
+
+# The fork sv-lang pulls boost.unordered@1.87.0 (old compat_level 108700)
+# while OpenROAD pins all boost.* at 1.89.0.bcr.2 (compat_level 0) — MVS
+# can't reconcile differing compat levels, so force the OpenROAD version.
+# (Root-only override; OpenROAD/sv-lang can't apply it as non-root deps.)
+single_version_override(
+    module_name = "boost.unordered",
+    version = "1.89.0.bcr.2",
+)
+
+# scip 9.2.3 vendors a tinycthread that collides with glibc 2.41+'s
+# <threads.h>.  9.2.3.bcr.1 carries the upstream rename fix (fork registry).
+single_version_override(
+    module_name = "scip",
+    version = "9.2.3.bcr.1",
+)
+
+# sed-4.9 gnulib lib/memchr.c fails to compile on glibc 2.41+; force the
+# `# undef memchr` to run unconditionally.
+single_version_override(
+    module_name = "sed",
+    patch_cmds = [
+        "sed -i 's|^#ifdef _LIBC$|#if 1|' lib/memchr.c",
+    ],
+    version = "4.9.bcr.5",
+)
+
+# sv-lang pulls in rules_pycross, whose toolchain extension fails on Python
+# 3.8.  pycross.configure_environments is root-honored only.
+bazel_dep(name = "rules_pycross", version = "0.8.1")
+
+pycross = use_extension("@rules_pycross//pycross/extensions:pycross.bzl", "pycross")
+pycross.configure_environments(python_versions = ["3.13"])
 
 bazel_dep(name = "qt-bazel")
 git_override(
@@ -75,25 +125,14 @@ git_override(
     remote = "https://github.com/The-OpenROAD-Project/qt_bazel_prebuilts",
 )
 
-# --- Yosys (BCR) with visibility / headers / tcl9 patches ---
-bazel_dep(name = "yosys", version = "0.62")
-single_version_override(
-    module_name = "yosys",
-    patch_strip = 1,
-    patches = [
-        "//patches:yosys-visibility.patch",
-        "//patches:yosys-hdrs.patch",
-        "//patches:yosys-tcl9-mp-to-ubin.patch",
-    ],
-)
+# --- Yosys (BCR) — 0.64 needs no patches (visibility/hdrs/tcl9 upstreamed);
+# declared as a bazel_dep near the top with abc. ---
 
-bazel_dep(name = "abc", version = "0.64-yosyshq.bcr.1")
 bazel_dep(name = "glpk", version = "5.0.bcr.4")
 
 # Pulled transitively: or-tools@9.15 → soplex@7.1.4.bcr.1 pins
-# boost.multiprecision / boost.serialization at 1.87.0 (compat 108700),
-# but openroad → boost.* wants 1.89.0.bcr.2 (compat 0).  soplex@7.1.4.bcr.3
-# rebuilt against the newer boost; force that via single_version_override.
+# boost.multiprecision / boost.serialization at 1.87.0, but openroad → boost.*
+# wants 1.89.0.bcr.2.  soplex@7.1.4.bcr.3 rebuilt against the newer boost.
 single_version_override(
     module_name = "soplex",
     version = "7.1.4.bcr.3",
@@ -116,7 +155,7 @@ register_toolchains(
 )
 
 # --- Python 3.13 toolchain ---
-bazel_dep(name = "rules_python", version = "1.8.5")
+bazel_dep(name = "rules_python", version = "1.9.0")
 
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
 python.toolchain(

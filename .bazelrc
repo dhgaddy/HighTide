@@ -1,7 +1,13 @@
 # Inherit bazel-orfs's Bazel settings (C++20, strict action env, disk-cache GC,
-# lockfile mode, OpenROAD GUI build flag, etc.).  Kept as try-import so the
+# lockfile mode, scip fork registry, etc.).  Kept as try-import so the
 # submodule not being checked out doesn't break bazel invocations.
 try-import %workspace%/bazel-orfs/.bazelrc
+
+# Build OpenROAD from source with the GUI enabled (needed by the _gallery
+# image render, which runs `openroad -gui` under xvfb).  bazel-orfs carried
+# this in its own .bazelrc until 553c1c3 dropped it; declare it here so the
+# gallery targets keep working across submodule bumps.
+build --@openroad//:platform=gui
 
 # Remote cache (self-hosted bazel-remote on donut, fronted by Cloudflare Tunnel) —
 # publicly readable, auth required to write.  To enable writes, add to .bazelrc.user

@@ -22,7 +22,15 @@ FakeRAM macros live at `designs/<platform>/liteeth/sram/{lef,lib}/`.
 
 ## Active workarounds
 
-- **ODB-1200** in CTS-time `repair_timing` affects **asap7**.  Fixed via `SKIP_CTS_REPAIR_TIMING = 1` (skip the entire repair pass; route's own hold-repair still runs).  See [HighTide#75](https://github.com/VLSIDA/HighTide/issues/75).
+- **ODB-1200 / RSZ-0074** in `repair_timing` — the underlying OpenROAD resizer bug
+  (InsertBufferBeforeLoads / SplitLoadMove) is **fixed** as of the bazel-orfs 553c1c3 /
+  OpenROAD 299f3015 upgrade (2026-06-04).
+  - **nangate45 / sky130hd**: `SKIP_INCREMENTAL_REPAIR` **removed** — post-GRT repair now
+    runs without crashing and QoR is unchanged.
+  - **asap7**: `SKIP_CTS_REPAIR_TIMING` + `SKIP_INCREMENTAL_REPAIR` **kept** — not because
+    of the crash (it no longer crashes) but because re-enabling repair_timing on this design
+    makes the new resizer over-buffer (cells +37%, buf/inv ×3.3) for only a marginal close.
+    Skipping repair gives strictly better QoR. See [HighTide#75](https://github.com/VLSIDA/HighTide/issues/75).
 
 ## asap7
 
@@ -38,6 +46,7 @@ FakeRAM macros live at `designs/<platform>/liteeth/sram/{lef,lib}/`.
 ### Decisions
 - **2026-04-30 `c8d96617`**: hit ODB-1200 in CTS repair_timing once the OpenROAD pin moved from `5f1bd87f` to `578be38a` (HighTide #103). Same bug class that previously affected `liteeth_udp_stream_sgmii` (PR #76). Added `SKIP_CTS_REPAIR_TIMING=1`.
 - **2026-05-11 PPA area sweep**: UTIL 35→50 / DENSITY 0.30→0.55. Die area 41,896 → 29,439 µm² (**−30 %**). UTIL=55 fails MPL-0003 (macros + default halo cannot tile in the smaller core).
+- **2026-06-04 toolchain upgrade (bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64)**: the new synth/place produces a ~128 ps slower critical path on the 920 ps clock, so at the prior util 43 the design closed at WNS −29.9 ps (timing miss). Relaxed `CORE_UTILIZATION` 43→38 (a flow knob, no SDC/RTL change): recovers WNS to **+111.7 ps** (≥ the pre-upgrade +98 ps), Fmax 1.22→1.24 GHz, cells +0.4 %, instance area +2.1 %, power −3 %. Cost is die area +13 % (util-driven whitespace only). Kept `SKIP_CTS_REPAIR_TIMING` + `SKIP_INCREMENTAL_REPAIR` (see Active workarounds — repair over-buffers here).
 
 ## nangate45
 
@@ -53,6 +62,7 @@ FakeRAM macros live at `designs/<platform>/liteeth/sram/{lef,lib}/`.
 ### Decisions
 - nangate45 closes without the ODB-1200 workaround that asap7 needs — the bug is sensitive to the specific resizer-state interaction triggered by asap7's smaller cells.
 - **2026-05-11 PPA area sweep**: UTIL 45→60 / DENSITY 0.40→0.65. Die area 746,271 → 560,103 µm² (**−25 %**). This was the headline single-variant win on nangate45.
+- **2026-06-04 toolchain upgrade**: removed `SKIP_INCREMENTAL_REPAIR` (RSZ-0074 fixed in OpenROAD 299f3015). QoR essentially unchanged — WNS +5950 ps (relaxed 10 ns clock, unchanged), 17950 logic cells (−2 %), die −0.1 %.
 
 ## sky130hd
 
@@ -69,3 +79,4 @@ FakeRAM macros live at `designs/<platform>/liteeth/sram/{lef,lib}/`.
 - sky130hd halo is 30×30 — large enough to keep std cells out of the macro shadow given sky130hd's wide cells.
 - ODB-1200 doesn't trigger on sky130hd, same as nangate45.
 - **2026-05-11 PPA area sweep**: UTIL 50→52 / DENSITY 0.40→0.57. Die area 3,864,920 → 3,716,410 µm² (−4 %). The baseline at UTIL=50 already had 50 max-slew + 4 max-cap DRV violations; UTIL=52 improves both (46/0). UTIL=55 fails global-route congestion.
+- **2026-06-04 toolchain upgrade**: removed `SKIP_INCREMENTAL_REPAIR` (RSZ-0074 fixed in OpenROAD 299f3015). Closes with large margin (WNS +731 ps), instance area +1.4 %, die +0.02 % — within tolerance.

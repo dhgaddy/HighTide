@@ -38,12 +38,8 @@ hightide_design(
         "CORE_UTILIZATION": "60",
         "PLACE_DENSITY": "0.65",
         "ROUTING_LAYER_ADJUSTMENT": "0.2",
-        # RSZ-0074 on udp0_sink_last fires AFTER repair_timing (at the
-        # incremental global_route step in global_route.tcl:88), so
-        # dropping split_load via SETUP_MOVE_SEQUENCE doesn't fix it —
-        # tried it (commit c5800c95) and the error still fires. The
-        # whole post-GRT incremental-repair block has to be skipped.
-        # Same scope as the asap7 liteeth fix (commit 88b7ef46).
-        "SKIP_INCREMENTAL_REPAIR": "1",
+        # RSZ-0074 SKIP_INCREMENTAL_REPAIR workaround removed on the
+        # bazel-orfs 553c1c3 / OpenROAD 299f3015 upgrade — the OpenSTA
+        # resizer rewrite fixed it; post-GRT incremental repair now runs.
     },
 )

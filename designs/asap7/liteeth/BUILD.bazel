@@ -39,21 +39,14 @@ hightide_design(
         # UTIL 35->50 / DENSITY 0.30->0.55 sweep was tuned against the old
         # macros and now causes RSZ-0074 routing failures on udp0_sink_last
         # at grt. Step back to the pre-sweep settings until a fresh sweep.
-        "CORE_UTILIZATION": "43",
+        "CORE_UTILIZATION": "38",
         "PLACE_DENSITY": "0.30",
-        # Same OpenROAD ODB-1200 hold-repair crash as liteeth_udp_stream_sgmii;
-        # widened to this variant after the OpenROAD pin moved from 5f1bd87f
-        # to 578be38a (HighTide #103). Crash signature this time:
-        #   [ERROR ODB-1200] InsertBufferBeforeLoads: Load pin '_31891_/SN'
-        #   is not connected to net '_03221_'.  Error: cts.tcl, 82 ODB-1200
-        # Skip CTS repair_timing; downstream GRT/route still run hold-repair.
-        # Tracking re-enable: https://github.com/VLSIDA/HighTide/issues/75.
+        # ODB-1200 / RSZ-0074 (HighTide #75/#103) fixed in OpenROAD 299f3015,
+        # but full repair_timing over-buffers this design on the new tools
+        # (+37% cells). Keep skipping repair and instead relax util 43→38 to
+        # shorten the critical path — recovers WNS toward the 920 ps clock
+        # with cell area unchanged (only die padding grows). See DECISIONS.md.
         "SKIP_CTS_REPAIR_TIMING": "1",
-        # After the bsg_fakeram migration, the post-GRT repair_timing pass
-        # (global_route.tcl:125, resizer SplitLoadMove) also trips RSZ-0074
-        # on udp0_sink_last ("found route to N pins, expected N+1").
-        # Same family of resizer/routing book-keeping bugs as ODB-1200.
-        # Skip incremental repair; route's own hold-repair still runs.
         "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

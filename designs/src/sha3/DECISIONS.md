@@ -16,6 +16,7 @@ Mid-size combinational-heavy core (~20k stdcells, no macros).
 
 ### Decisions
 - None recorded — initial port closed at these values.
+- **2026-06-04**: validated on the bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64 upgrade. Closes clean: WNS +136 ps on the 1000 ps clock (Fmax 1.16 GHz), util 72.5%, 18245 logic cells. No change needed.
 
 ### Known issues / open questions
 - None.
@@ -32,6 +33,7 @@ Mid-size combinational-heavy core (~20k stdcells, no macros).
 
 ### Decisions
 - None recorded.
+- **2026-06-04**: validated on the bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64 upgrade. Closes clean: WNS +487 ps on the 2.5 ns clock, util 45.4%, 20181 logic cells. No change needed.
 
 ### Known issues / open questions
 - None.
@@ -63,6 +65,7 @@ Mid-size combinational-heavy core (~20k stdcells, no macros).
   packing, is the wall here. `PLACE_DENSITY = 0.42` tracks the target;
   `TNS_END_PERCENT = 100` gives repair_timing full budget for the thin
   positive slack.
+- **2026-06-04**: validated on the bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64 upgrade. Closes clean with markedly more slack than before — WNS +0.079 → +0.636 ns at the 10 ns clock (the new synth/place leaves the thin-slack design more headroom), util 45.1%, die 387 780 µm² (+4.4% vs the 2026-05-18 number, within tolerance). Left as-is; a future util sweep could reclaim the new slack as area.
 
 ### Known issues / open questions
 - None.

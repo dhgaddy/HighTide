@@ -60,6 +60,10 @@ The FF stubs are emitted by `designs/src/NVDLA/dev/gen_ff_rams.py` into `designs
 
 **Status**: partitions `a`, `m`, `o`, `p` cached on remote build cache; **partition `c` does not finish** — global-placement plateau.
 
+### 2026-06 toolchain upgrade (bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64)
+- **partition_a / _o / _p**: build unchanged, all close clean — `a` WNS +4209 ps (util 48.5 %, 35 825 cells), `o` WNS +975 ps (util 23.8 %, 185 458 cells), `p` WNS +575 ps (util 31.1 %, 64 868 cells). No GRT congestion (unlike asap7 partition_o).
+- **partition_m**: same OpenSTA `write_sdc` workaround as asap7 (removed the redundant `*/SETN|/RESETN` async false-paths) — closes at WNS +3324 ps, util 58.1 %, 11 022 cells.
+
 ### partition_c plateau
 
 Global placement plateaus at overflow ~0.31 (target 0.10). 84 macros at sky130hd's coarse pitches create local density hot spots near macro pin clusters that the placer can't smooth out. Loosening `CORE_UTILIZATION` / `PLACE_DENSITY_LB_ADDON` / `MACRO_PLACE_HALO` to match the other partitions doesn't fix it; ~18 h on `3_place` is the documented GP overflow plateau.

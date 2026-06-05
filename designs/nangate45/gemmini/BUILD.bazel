@@ -9,8 +9,7 @@ hightide_design(
     },
     arguments = {
         "CORE_UTILIZATION": "43",
-        # Drop split_load from repair_timing's move sequence to avoid
-        # OpenROAD CTS ODB-1200 (see CLAUDE.md "Known bug workarounds").
-        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
+        # SETUP_MOVE_SEQUENCE split_load-drop (ODB-1200) removed on the
+        # bazel-orfs 553c1c3 / OpenROAD 299f3015 upgrade — resizer bug fixed.
     },
 )

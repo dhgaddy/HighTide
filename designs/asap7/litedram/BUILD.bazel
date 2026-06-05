@@ -24,13 +24,9 @@ hightide_design(
         "CORE_UTILIZATION": "45",
         "PLACE_DENSITY": "0.55",
         "TNS_END_PERCENT": "100",
-        # Post-GRT hold-fix trips ODB-1200 in InsertBufferBeforeLoads on
-        # this design regardless of HOLD_SLACK_MARGIN / SETUP_MOVE_SEQUENCE
-        # tweaks (the buggy function is called from both setup's
-        # SplitLoadMove and hold's separate buffer-insertion pass).
-        # Skip the entire post-GRT repair_timing — CTS-time repair_timing
-        # still runs, and the relaxed clock leaves enough headroom for
-        # the design to close WNS positive without it.
-        "SKIP_INCREMENTAL_REPAIR": "1",
+        # SKIP_INCREMENTAL_REPAIR (ODB-1200 in post-GRT repair_timing)
+        # removed on the bazel-orfs 553c1c3 / OpenROAD 299f3015 upgrade —
+        # the InsertBufferBeforeLoads / SplitLoadMove resizer bug is fixed,
+        # so post-GRT repair_timing runs again.
     },
 )

@@ -20,7 +20,7 @@ This is the first memory-controller design in the suite. One variant only — `S
 ## Active workarounds (per-platform)
 
 - **`SYNTH_HIERARCHICAL = 1`** — required on every platform. With flat synth, abc inlines each `TRELLIS_IO` and the resulting INV cell (from the tristate optimization) collides with the `inout sdram_dq[*]` declaration. Hierarchical synth keeps each `TRELLIS_IO` as a module boundary so the multi-driver check sees only one driver per pin. Same approach as `liteeth_udp_raw_rgmii` for its `rgmii_mdio` MDIO pin.
-- **`SKIP_INCREMENTAL_REPAIR = 1`** — required on asap7. The post-GRT `repair_timing` pass plateaus on 170 setup-violating endpoints (all `user_port_axi_0_*id[*]` AXI ID outputs and `user_rst`) — WNS stuck at −935 ps after 700+ iters at a 6 ns clock target, with the resizer making no per-iter progress. This is the RTL-bounded-endpoint pattern; same workaround as `snitch_cluster` (see CLAUDE.md workarounds table). Detail-route still does its own hold-repair; the final WNS shows up in the report.
+- ~~**`SKIP_INCREMENTAL_REPAIR = 1`** — asap7.~~ **Removed 2026-06-04** on the bazel-orfs 553c1c3 / OpenROAD 299f3015 upgrade. It guarded against the post-GRT hold-fix tripping ODB-1200 (`InsertBufferBeforeLoads`), now fixed upstream. Post-GRT `repair_timing` runs again; the design closes with ~+14.9 ns setup slack at the relaxed clock and no ODB-1200.
 
 ## Upstream history
 
@@ -46,6 +46,8 @@ At 25 ns clock the worst routed delay (~22.8 ns achieved) fits comfortably. Hold
 
 Cell breakdown (excluding fill/tap/tie): 4393 sequential, 16486 multi_input_combinational, 1645 inverter, 766 timing_repair_buffer, 1 clock_buffer → 24397 stdcells total.
 
+- **2026-06-04 toolchain upgrade**: removed `SKIP_INCREMENTAL_REPAIR` (ODB-1200 fixed). Closes clean with post-GRT repair re-enabled: WNS +14858 ps setup, util 46.3 %, 24106 logic cells (≈ baseline 24397), die 7357 µm² (≈ baseline). No SDC/RTL change.
+
 ## nangate45
 
 **Status**: area-tuned, timing closed (PPA sweep 2026-05-12)
@@ -66,6 +68,8 @@ Cell breakdown (excluding fill/tap/tie): 4393 sequential, 16486 multi_input_comb
 
 util=90 still has +6.87 ns slack on the 12 ns clock — clock could be tightened separately for combined PPA, but per-task scope was area only. Cell breakdown post-sweep is essentially unchanged from baseline (denser packing, not different cell mix).
 
+- **2026-06-04 toolchain upgrade**: unchanged config builds clean — WNS +6.91 ns, util 91.7 %, die 45 222 µm² (≈ the locked 45 790). No regression; no change needed.
+
 ## sky130hd
 
 **Status**: area-tuned, timing closed (PPA sweep 2026-05-12)
@@ -84,6 +88,8 @@ util=90 still has +6.87 ns slack on the 12 ns clock — clock could be tightened
 | 75 | — | — | 95 % overflow | **GRT-0116 fail** |
 
 util=75 fails GRT congestion (M2 95 %, overflow 1994 tiles); util=68 is the practical ceiling without io.tcl / pdn.tcl tweaks. WNS still +19 ns of slack at util=68 — same combined-PPA opportunity as nangate45.
+
+- **2026-06-04 toolchain upgrade**: the OpenROAD 299f3015 global router is slightly tighter and tips util=68 (which sat at 57 % M2 congestion) into a GRT-0116 detail-route congestion failure. Relaxed `CORE_UTILIZATION` 68→60 (a flow knob — reverts to the already-characterized util=60 landmark above): routes clean with WNS +18.6 ns, die 303 304 µm² (+12.7 % vs the prior locked util=68). Pure routability trade; the design is IO-/whitespace-dominated with ~+18 ns of timing slack.
 
 Cell breakdown: 4393 sequential, 6287 multi_input_combinational, 275 inverter, 842 timing_repair_buffer → 11797 stdcells total. Sky130hd's wider ANDs/NORs absorb more logic per cell than nangate45's library.
 

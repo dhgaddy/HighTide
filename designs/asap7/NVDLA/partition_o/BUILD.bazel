@@ -16,7 +16,11 @@ hightide_design(
     arguments = {
         "SYNTH_HIERARCHICAL": "1",
         "VERILOG_INCLUDE_DIRS": "designs/src/NVDLA/vmod/include designs/src/NVDLA/vmod/vlibs",
-        "CORE_UTILIZATION": "45",
+        # Util relaxed 45→40 on the bazel-orfs 553c1c3 / OpenROAD 299f3015
+        # upgrade: the new global router tips util 45 into GRT-0116
+        # congestion (it suggested lowering layer adjustment 25→18%);
+        # 40 restores routability. Flow knob, +die area only.
+        "CORE_UTILIZATION": "40",
         "PLACE_DENSITY_LB_ADDON": "0.15",
         "MACRO_PLACE_HALO": "7 7",
         "TNS_END_PERCENT": "100",

@@ -22,9 +22,10 @@ None — ternip closes with RTLMP placement.
 ## asap7
 
 **Status**: finishing
-**Last updated**: 2026-05-28 (basejump_stl bump to `b48037e2`).
+**Last updated**: 2026-06-04 (bazel-orfs 553c1c3 upgrade validation).
 
 ### Decisions
+- **2026-06-04 toolchain upgrade (bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64)**: all three platforms close clean, no change needed — asap7 WNS +808 → +837 ps (util 71.2 %, 18 833 cells), nangate45 +3454 → +3410 ps, sky130hd +9916 → +9286 ps (all huge positive margins; Fmax within ~7 %). No workarounds.
 - **2026-05-28 `187957b5`**: bumped `dev/repo` to upstream `187957b5` — single commit, improves rowwise multioperand combinational operations in `rtl/fus/ternip_rowwise_operation.sv`. Closes #148.
 - **2026-05-28 `b48037e2`**: bumped `dev/basejump_stl` to `b48037e2` (3 commits: rp_groups `.v` extensions, `bsg_fifo_1r1w_narrowed.sv` update, `bsg_reduce balanced_p` param). None touch files in `_BSG_FILES` — regenerated `dev/bsg/` is bit-identical, build is pure cache hit. Closes #149.
 

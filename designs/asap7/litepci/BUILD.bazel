@@ -71,7 +71,5 @@ hightide_design(
         # CLAUDE.md) but the *hold* pass inside the post-GRT repair_timing_helper
         # also calls split_load and crashes too.  Skip the whole post-GRT repair
         # block (matches snitch_cluster / liteeth_udp_sgmii in the table).
-        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
-        "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

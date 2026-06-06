@@ -52,7 +52,5 @@ hightide_design(
         # ODB-1200 — drop split_load from SETUP_MOVE_SEQUENCE; skip the
         # post-GRT repair_timing block (hold-pass calls split_load too).
         # Same workaround as asap7 litepci.
-        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
-        "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

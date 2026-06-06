@@ -35,7 +35,6 @@ hightide_design(
         "TNS_END_PERCENT": "100",
         # Same ODB-1200 pattern as asap7 — drop split_load from the move
         # sequence to keep the rest of repair_timing active.
-        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
         # repair_timing non-convergence on the inter-cluster psum chains
         # (CLAUDE.md table; same pathology as asap7).
         "SKIP_INCREMENTAL_REPAIR": "1",

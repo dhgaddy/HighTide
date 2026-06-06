@@ -236,12 +236,24 @@ asap7 carries the real-FakeRAM build.
 util 75 is the measured best PPA point; the hold limit is structural and
 util-independent, so there is no benefit to trading area for a lower util.
 
+## 2026-06 toolchain upgrade (bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64)
+
+The **CTS-0122 fix is now in the OpenROAD pin** (the local patch was dropped), so the
+clock tree is built normally — the ~2.2/9.3 ns structural CTS skew that dominated litepci
+is gone. **asap7** now closes with a real clock tree: WNS −883 → **+944 ps** (cells +29.7 %,
+the cost of a proper clock + repair vs the prior skew-broken state); both ODB-1200
+workarounds (`SETUP_MOVE_SEQUENCE`, `SKIP_INCREMENTAL_REPAIR`) **removed** — the resizer bug
+is fixed. **nangate45**: both removed, reaches `_final` (its WNS is still dominated by the
+pre-existing forwarded-clock SDC quirk — Fmax≈0, unchanged from baseline; not a regression).
+**sky130hd**: `SKIP_INCREMENTAL_REPAIR` had never been set; removing `SETUP_MOVE_SEQUENCE`
+made post-GRT `repair_timing` spin non-convergent (~15 h CPU at GRT), so `SETUP_MOVE_SEQUENCE`
+(split_load-drop) is **kept** — for convergence now, not the (fixed) ODB-1200 crash.
+
 ## Bug workarounds in the real-FakeRAM build
 
 | Knob | Reason |
 |------|--------|
-| `SETUP_MOVE_SEQUENCE = "unbuffer,sizeup,swap,buffer,clone"` (no `split_load`) | Resizer's setup-pass SplitLoadMove triggers ODB-1200 (same as gemmini-asap7 row in CLAUDE.md) |
-| `SKIP_INCREMENTAL_REPAIR = 1` | ODB-1200 still fires from the *hold*-pass inside post-GRT `repair_timing_helper`, which doesn't go through SETUP_MOVE_SEQUENCE; skipping the whole block keeps the rest of the flow alive |
+| ~~`SETUP_MOVE_SEQUENCE` / `SKIP_INCREMENTAL_REPAIR`~~ | ODB-1200 fixed in OpenROAD 299f3015. Removed on asap7 + nangate45; sky130hd keeps `SETUP_MOVE_SEQUENCE` (split_load-drop) for repair convergence only — see the upgrade section above. |
 
 Note `SKIP_INCREMENTAL_REPAIR = 1` also disables post-GRT hold repair.
 That is *not* the cause of the asap7 hold story above — a ~2.2 ns

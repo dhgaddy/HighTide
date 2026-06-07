@@ -42,3 +42,24 @@ reaches `_final` today; nangate45 / sky130hd are not yet closing and are out of 
 ### Known issues / open questions
 - Setup WNS negative (−134.82 ps); SRAM-bound critical path. Recovering it needs an RTL
   pipeline change or a looser clock — out of scope for the toolchain upgrade.
+
+## nangate45
+
+**Status**: reaches `_final` on bazel-orfs 553c1c3.
+**Last updated**: 2026-06-04 (toolchain upgrade)
+
+- **2026-06-04**: closes timing — WNS +661 → +626 ps, util 35.7 %. But yosys 0.64's slang
+  frontend grows the netlist on this design's FF-fallback memories: **123 554 → 154 070
+  logic cells (+24.7 %)**. `ABC_AREA=1` was tried as a synth flow knob and made it *worse*
+  (211 910 cells), so it was reverted. The growth is inherent to the new front-/mid-end on
+  this design; not recoverable without RTL changes. Accepted as a flagged QoR regression.
+
+## sky130hd
+
+**Status**: reaches `_final` on bazel-orfs 553c1c3 (setup-negative).
+**Last updated**: 2026-06-04 (toolchain upgrade)
+
+- **2026-06-04**: WNS +130 → **−172.6 ps** (SRAM-bound path, same as asap7) and **94 627 →
+  121 621 logic cells (+28.5 %)** — same yosys-0.64 FF-fallback growth as nangate45;
+  `ABC_AREA=1` reverted (made it 159 164). Reaches `_final`; flagged QoR regression (cells +
+  setup), neither recoverable via flow knobs without RTL/SDC changes.

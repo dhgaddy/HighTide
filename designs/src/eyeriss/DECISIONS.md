@@ -27,7 +27,7 @@ Macro-heavy (GLB iact/Psum SRAM spads). Uses RTLMP for macro placement.
 
 ## asap7
 
-**Status**: MPL-0040 under the new RTLMP; util 40→30 fix applied, full build in progress.
+**Status**: finishing — util 40→30 clears the new-RTLMP MPL-0040; WNS +122.5 ps, util 30.8 %, 301 586 logic cells, Fmax 0.42 GHz. Die area grew (the util drop) but the design now floorplans and routes to `6_final`.
 
 ## nangate45
 

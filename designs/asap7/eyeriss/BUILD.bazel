@@ -38,7 +38,11 @@ hightide_design(
         # without finding a solution — bumping the global util just
         # tightens the per-cluster fence, it doesn't help here.  The
         # PPA win is the clock; util tightening would need hand-placement.
-        "CORE_UTILIZATION": "40",
+        # bazel-orfs 553c1c3 / OpenROAD 299f3015: the new RTLMP fails
+        # MPL-0040 annealing on ClusterGroup_0_1 at util 40 (where the old
+        # RTLMP succeeded). Lowered util 40→30 to enlarge each cluster's
+        # macro sub-region so annealing converges (flow knob; +die area).
+        "CORE_UTILIZATION": "30",
         "PLACE_DENSITY_LB_ADDON": "0.20",
         "MACRO_PLACE_HALO": "5 5",
         "TNS_END_PERCENT": "100",
@@ -47,7 +51,6 @@ hightide_design(
         # Drop split_load from the move sequence rather than the heavier
         # SKIP_CTS_REPAIR_TIMING — keeps the rest of repair_timing active so
         # the small (~40 ps) hold violations get patched too.
-        "SETUP_MOVE_SEQUENCE": "unbuffer,sizeup,swap,buffer,clone",
         # Post-GRT repair_timing on the Psum spad/SRAM write paths makes
         # ~5 ps of slack progress per iteration on the 193-macro design,
         # which never converges in reasonable time.  Skip the incremental

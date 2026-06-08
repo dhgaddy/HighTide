@@ -38,9 +38,11 @@ nangate45 stays on CACTI; its aspects come out 1.2–1.6 for cnn's four sizes.
 
 ## asap7
 
-**Status**: finishing.
+**Status**: **does not cleanly validate on bazel-orfs 553c1c3 — flagged regression.**
 
 `hightide_design()` with `CORE_UTILIZATION=60`, `PLACE_DENSITY=0.40`. Default RTLMP places the four `fakeram_w16_l32768` macros. **MPL-0040** workaround required — see CLAUDE.md bug table: `macros.tcl` pre-places the fakeram macros (FIRM) before RTLMP runs.
+
+- **2026-06-04 toolchain upgrade**: severe regression vs the +122 ps / 169 095-cell baseline. At util 60 the new global router stalls in congestion iterations (>1 h, no progress); dropping util 60→50 routes to `_final` but with a buffer explosion — WNS **−9088 ps**, 436 346 cells (+158 %), 301 855 buf/inv. The `SKIP_CTS_REPAIR_TIMING`/`SKIP_INCREMENTAL_REPAIR` skips (ODB-1200, fixed) leave timing unrepaired; re-enabling repair risks the litepci-sky-style non-convergence spin on this 65-macro design. Recovering this needs deeper macro-placement/clock retuning beyond the upgrade's flow-knob scope. Config reverted to the baseline (util 60). **Flagged, not validated.**
 
 ## nangate45
 
@@ -52,7 +54,7 @@ Fixed `DIE_AREA = 0 0 4502 4277` (auto-sizing didn't leave enough room for the 4
 
 ## sky130hd
 
-**Status**: finishing (2026-05-16, with R4 banks experiment 2026-05-20).
+**Status**: was finishing on old tools; on bazel-orfs 553c1c3 it reaches CTS/GRT but the new global router fails to route the 65-macro floorplan to `6_final` within the congestion-iteration budget. **Flagged, not validated on the new tools** — needs congestion/util retuning beyond scope.
 
 This was the hardest port — full RTL→GDS only landed after a stack of three independent fixes:
 

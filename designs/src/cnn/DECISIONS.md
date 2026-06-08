@@ -44,9 +44,11 @@ nangate45 stays on CACTI; its aspects come out 1.2–1.6 for cnn's four sizes.
 
 ## nangate45
 
-**Status**: finishing (2026-05-16).
+**Status**: reaches `_final` on bazel-orfs 553c1c3 (flagged setup regression).
 
 Fixed `DIE_AREA = 0 0 4502 4277` (auto-sizing didn't leave enough room for the 4 large macros). All 367 IO pins force-placed onto the bottom edge with `PLACE_PINS_ARGS` to avoid clustering and shorten routes to the stdcell band below the four `w16_l32768` macros at the top of the die. Default RTLMP for macro placement.
+
+- **2026-06-04 toolchain upgrade (bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64)**: reaches `_final`, but the new RTLMP places cnn's 65 macros worse, lengthening the SRAM critical paths — WNS **−362 → −3113 ps**, Fmax 0.35 → 0.18 GHz (−49 %), 198 407 cells (+7 %). No workarounds here (the old hand-placement `MACRO_PLACEMENT_TCL` was dropped in favour of RTLMP), so this is not removable; a re-introduced hand-placement would be the fix but is out of scope for the upgrade. **Flagged QoR regression.**
 
 ## sky130hd
 

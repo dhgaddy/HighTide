@@ -38,11 +38,11 @@ nangate45 stays on CACTI; its aspects come out 1.2–1.6 for cnn's four sizes.
 
 ## asap7
 
-**Status**: **does not cleanly validate on bazel-orfs 553c1c3 — flagged regression.**
+**Status**: reaches `_final` on bazel-orfs 553c1c3 via the k8s param sweep; **WNS still flagged-negative.**
 
 `hightide_design()` with `CORE_UTILIZATION=60`, `PLACE_DENSITY=0.40`. Default RTLMP places the four `fakeram_w16_l32768` macros. **MPL-0040** workaround required — see CLAUDE.md bug table: `macros.tcl` pre-places the fakeram macros (FIRM) before RTLMP runs.
 
-- **2026-06-04 toolchain upgrade**: severe regression vs the +122 ps / 169 095-cell baseline. At util 60 the new global router stalls in congestion iterations (>1 h, no progress); dropping util 60→50 routes to `_final` but with a buffer explosion — WNS **−9088 ps**, 436 346 cells (+158 %), 301 855 buf/inv. The `SKIP_CTS_REPAIR_TIMING`/`SKIP_INCREMENTAL_REPAIR` skips (ODB-1200, fixed) leave timing unrepaired; re-enabling repair risks the litepci-sky-style non-convergence spin on this 65-macro design. Recovering this needs deeper macro-placement/clock retuning beyond the upgrade's flow-knob scope. Config reverted to the baseline (util 60). **Flagged, not validated.**
+- **2026-06-09 toolchain upgrade — k8s parameter sweep**: the original config (util 60, repair skipped) GRT-*hangs* on the new tools; util 50 routes but with a buffer explosion (WNS −9088 ps, 436 k cells). A 5-variant k8s sweep (util × density × halo × routing-adjustment × repair-on) found the best config: **`CORE_UTILIZATION=45`, `PLACE_DENSITY=0.50`, `MACRO_PLACE_HALO=12 12`, repair ON** (the ODB-1200 `SKIP_*_REPAIR` removed — the new resizer converges). This **reaches `_final` at WNS −3502 ps** (vs −9088 / hang), util 45.5 %, ~240 k cells. Still negative vs the +122 ps baseline — the new RTLMP/router slow this 65-macro design's SRAM paths and no flow-knob combo recovered it fully — so it builds but is a **flagged QoR regression**. Sweep ranking: util45-repair −3502 > util55-repair −3790 > util60-repair −4585 > util50-skips −5208.
 
 ## nangate45
 
@@ -54,7 +54,7 @@ Fixed `DIE_AREA = 0 0 4502 4277` (auto-sizing didn't leave enough room for the 4
 
 ## sky130hd
 
-**Status**: was finishing on old tools; on bazel-orfs 553c1c3 it reaches CTS/GRT but the new global router fails to route the 65-macro floorplan to `6_final` within the congestion-iteration budget. **Flagged, not validated on the new tools** — needs congestion/util retuning beyond scope.
+**Status**: **fixed on bazel-orfs 553c1c3 via the k8s param sweep.** The 7×7 mm die hard-failed routing (GRT-0116 / GRT-0183) on the new global router. The sweep found that a **larger die fixes it**: `DIE_AREA = 0 0 8000 8000`, `PLACE_DENSITY = 0.35`, `MACRO_PLACE_HALO = 80 80` routes clean to `_final` at **WNS +770 ps**, util 44 %. (A 9×9 mm variant also passed; 8×8 is the smaller of the two. Halo 100 on the 7×7 die instead hit MPL-0004 — cluster too big; routing-adjustment alone on the 7×7 die failed GRT-0183.)
 
 This was the hardest port — full RTL→GDS only landed after a stack of three independent fixes:
 

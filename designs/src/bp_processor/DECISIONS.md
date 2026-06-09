@@ -79,9 +79,10 @@ python3 tools/gen_macro_grid.py \
 
 - **nangate45**: clean pass, no change — WNS +1963 → **+1943 ps**, util 15.9 %, 439 607 logic
   cells (≈ baseline 439 722), Fmax 0.19 → 0.20 GHz. Workarounds kept.
-- **asap7**: with `SKIP_INCREMENTAL_REPAIR` kept it regressed (WNS +78 → −459 ps, Fmax
-  0.31 → 0.26, −16 %) because repair was skipped. The new resizer converges (cnn-e4 ran full
-  repair on k8s without the old hang), so `SKIP_INCREMENTAL_REPAIR` was **removed** to let
-  repair recover the timing — see commit / retry result.
+- **asap7**: **flagged regression.** WNS +78 → −459 ps (Fmax 0.31 → 0.26, −16 %), 452 k cells
+  (−2 %). Re-enabling repair (removing `SKIP_INCREMENTAL_REPAIR`) was tried and converged
+  without the old hang, but gave the same −467 ps — the slowdown is netlist/placement-bound
+  on the new RTLMP/router, not repair-fixable (same class as cnn-asap7). Original config
+  (skip kept) restored; not recoverable via flow knobs without RTL/SDC changes.
 - **sky130hd**: 7.6 M cells / ~2.9 GB ODB — local-only (over the Cloudflare ceiling); not yet
   re-run on the upgraded tools.

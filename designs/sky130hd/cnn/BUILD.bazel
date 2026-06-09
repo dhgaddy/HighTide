@@ -56,3 +56,84 @@ hightide_design(
         # coarse pitch needed the hand grid + spread.
     },
 )
+
+
+# --- k8s cnn param-sweep experiments (temporary; remove after sweep) ---
+
+hightide_design(
+    name = "cnn_s1_bigdie",
+    platform = "sky130hd",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "DIE_AREA": "0 0 8000 8000",
+        "CORE_AREA": "5 5 7995 7995",
+        "PLACE_DENSITY": "0.35",
+        "MACRO_PLACE_HALO": "80 80",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+    },
+)
+
+hightide_design(
+    name = "cnn_s2_spread",
+    platform = "sky130hd",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "DIE_AREA": "0 0 7000 7000",
+        "CORE_AREA": "5 5 6995 6995",
+        "PLACE_DENSITY": "0.30",
+        "MACRO_PLACE_HALO": "100 100",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+        "ROUTING_LAYER_ADJUSTMENT": "0.3",
+    },
+)
+
+hightide_design(
+    name = "cnn_s3_routadj",
+    platform = "sky130hd",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "DIE_AREA": "0 0 7000 7000",
+        "CORE_AREA": "5 5 6995 6995",
+        "PLACE_DENSITY": "0.40",
+        "MACRO_PLACE_HALO": "50 50",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+        "ROUTING_LAYER_ADJUSTMENT": "0.5",
+    },
+)
+
+hightide_design(
+    name = "cnn_s4_bigdie_spread",
+    platform = "sky130hd",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "DIE_AREA": "0 0 9000 9000",
+        "CORE_AREA": "5 5 8995 8995",
+        "PLACE_DENSITY": "0.30",
+        "MACRO_PLACE_HALO": "100 100",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+    },
+)

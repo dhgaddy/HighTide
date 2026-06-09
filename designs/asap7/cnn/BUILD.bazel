@@ -38,3 +38,108 @@ hightide_design(
         "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )
+
+
+# --- k8s cnn param-sweep experiments (temporary; remove after sweep) ---
+
+hightide_design(
+    name = "cnn_e1_routadj",
+    platform = "asap7",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+        "CORE_UTILIZATION": "60",
+        "PLACE_DENSITY": "0.60",
+        "MACRO_PLACE_HALO": "6 6",
+        "SKIP_CTS_REPAIR_TIMING": "1",
+        "SKIP_INCREMENTAL_REPAIR": "1",
+        "ROUTING_LAYER_ADJUSTMENT": "0.3",
+    },
+)
+
+hightide_design(
+    name = "cnn_e2_loose",
+    platform = "asap7",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+        "CORE_UTILIZATION": "50",
+        "PLACE_DENSITY": "0.55",
+        "MACRO_PLACE_HALO": "12 12",
+        "SKIP_CTS_REPAIR_TIMING": "1",
+        "SKIP_INCREMENTAL_REPAIR": "1",
+    },
+)
+
+hightide_design(
+    name = "cnn_e3_repair",
+    platform = "asap7",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+        "CORE_UTILIZATION": "55",
+        "PLACE_DENSITY": "0.55",
+        "MACRO_PLACE_HALO": "10 10",
+        "ROUTING_LAYER_ADJUSTMENT": "0.3",
+    },
+)
+
+hightide_design(
+    name = "cnn_e4_repair_loose",
+    platform = "asap7",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+        "CORE_UTILIZATION": "45",
+        "PLACE_DENSITY": "0.50",
+        "MACRO_PLACE_HALO": "12 12",
+    },
+)
+
+hightide_design(
+    name = "cnn_e5_tight_repair",
+    platform = "asap7",
+    verilog_files = ["//designs/src/cnn:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HIERARCHICAL": "1",
+        "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
+        "MACRO_BLOCKAGE_HALO": "0.5",
+        "CORE_UTILIZATION": "60",
+        "PLACE_DENSITY": "0.60",
+        "MACRO_PLACE_HALO": "8 8",
+        "ROUTING_LAYER_ADJUSTMENT": "0.4",
+    },
+)

@@ -47,3 +47,25 @@ hightide_design(
     },
     stage_data = {"synth": ["//designs/src/vortex:rtl_data"]},
 )
+
+
+# --- k8s vortex synth experiment (temporary) ---
+hightide_design(
+    name = "vortex_hier",
+    top = "Vortex",
+    platform = "sky130hd",
+    verilog_files = ["//designs/src/vortex:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "ADDITIONAL_LEFS": [":sram_lefs"],
+        "ADDITIONAL_LIBS": [":sram_libs"],
+    },
+    arguments = {
+        "SYNTH_HDL_FRONTEND": "slang",
+        "SYNTH_HIERARCHICAL": "1",
+        "VERILOG_DEFINES": "-DSYNTHESIS -DSV_DPI -DMEM_BLOCK_SIZE=16 -DMAX_FANOUT=32 -DLATENCY_IMUL=5",
+        "VERILOG_INCLUDE_DIRS": _INCLUDE_DIRS,
+        "CORE_UTILIZATION": "30",
+    },
+    stage_data = {"synth": ["//designs/src/vortex:rtl_data"]},
+)

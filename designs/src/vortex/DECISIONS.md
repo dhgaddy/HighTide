@@ -57,6 +57,16 @@ reaches `_final` today; nangate45 / sky130hd are not yet closing and are out of 
   (same constraints produced the leaner old-tools baseline). **Accepted/backed off**: area-only,
   designs still close (n45 +626 ps) / route (sky −172 ps).
 
+  **Root cause (2026-06-10, confirmed):** the synth stat is dominated by **MUX2_X1 = 54 100
+  cells** — the read-multiplexer trees of the FF-fallback memories (the depth-16 reg-arrays
+  n45/sky cannot size as macros). yosys 0.64 lowers/shares those read muxes far less
+  efficiently than 0.62, a **front-end memory-lowering change set before ABC**. That is why
+  the count is **invariant to the clock period** (95 480 comb / 54 100 MUX2 at both 3.0 ns and
+  4.0 ns — relaxing the period only grows WNS, leaving cells and achievable Fmax unchanged),
+  to `set_max_fanout`, and to ABC area/speed mode. Not an SDC/clock issue. The only real
+  remedies are structural — a yosys memory-mux-sharing option, or sizing the depth-16
+  memories as macros — both beyond the flow-knob scope of this upgrade.
+
 ## sky130hd
 
 **Status**: reaches `_final` on bazel-orfs 553c1c3 (setup-negative).

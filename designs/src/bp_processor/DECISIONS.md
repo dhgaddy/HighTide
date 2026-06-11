@@ -84,5 +84,6 @@ python3 tools/gen_macro_grid.py \
   without the old hang, but gave the same −467 ps — the slowdown is netlist/placement-bound
   on the new RTLMP/router, not repair-fixable (same class as cnn-asap7). Original config
   (skip kept) restored; not recoverable via flow knobs without RTL/SDC changes.
-- **sky130hd**: 7.6 M cells / ~2.9 GB ODB — local-only (over the Cloudflare ceiling); not yet
-  re-run on the upgraded tools.
+- **sky130hd**: clean pass on the new tools — WNS **+4.14 ns** (≈ the +4.4 ns baseline), util
+  18.6 %, 367 437 logic cells, 140 macros. 7.6 M-cell-class / local-only (over the Cloudflare
+  ceiling); built + cached locally. Workarounds (MACRO_PLACEMENT_TCL hand-grid, repair skip) kept.

@@ -7,13 +7,16 @@ current_design litepcie_core
 
 set clk_name      sys_clk
 # 20 ns / 50 MHz — sky130hd baseline.  Real critical path is FakeRAM
-# clk-to-Q + DMA datapath; SDC target left above the FakeRAM-bounded
-# typical worst-case to allow clean closure (analogous to asap7's 3.6 ns).
-set clk_period    20000
+# clk-to-Q + DMA datapath.
+# NOTE: previously `set clk_period 20000` and refclk `-period 10000` — those
+# were ps-magnitude values in an ns-unit file (1000x unit error). Corrected to
+# 20 ns (sys_clk) / 10 ns (100 MHz PCIe refclk). This design still does not
+# route on the new GRT (issue #204), independent of the clock.
+set clk_period    20
 set clk_io_pct    0.2
 
 create_clock -name $clk_name -period $clk_period [get_pins pcie_us/user_clk]
-create_clock -name pcie_refclk -period 10000 [get_ports pcie_clk_p]
+create_clock -name pcie_refclk -period 10 [get_ports pcie_clk_p]
 set_clock_groups -asynchronous \
     -group [get_clocks $clk_name] \
     -group [get_clocks pcie_refclk]

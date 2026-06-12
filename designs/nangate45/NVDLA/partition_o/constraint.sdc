@@ -6,7 +6,7 @@ current_design NV_NVDLA_partition_o
 
 set clk_name nvdla_core_clk
 set clk_falcon_name nvdla_falcon_clk
-set clk_period 5.37
+set clk_period 5.92
 set clk_falcon_period 7.5
 set clk_io_pct 0.2
 

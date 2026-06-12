@@ -2,7 +2,7 @@ current_design bp_processor
 
 set clk_name  CLK
 set clk_port_name clk_i
-set clk_period 7.77
+set clk_period 8.53
 set clk_io_pct 0.2
 
 set clk_port [get_ports $clk_port_name]

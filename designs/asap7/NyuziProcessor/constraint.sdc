@@ -1,6 +1,6 @@
 current_design NyuziProcessor
 
-set clk_period 3000
+set clk_period 2841
 set clk_io_pct 0.2
 
 create_clock -name clk -period $clk_period [get_ports clk]

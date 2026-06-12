@@ -4,7 +4,7 @@ current_design litedram_core
 # delay of nangate45, so scale the starter target accordingly.
 set clk_name    clk
 set clk_port    [get_ports clk]
-set clk_period  12.43
+set clk_period  10.10
 set clk_io_pct  0.2
 
 create_clock -name $clk_name -period $clk_period $clk_port

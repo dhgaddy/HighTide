@@ -2,7 +2,7 @@ current_design floonoc_mesh_top
 
 set clk_name  clk
 set clk_port_name clk_i
-set clk_period 1040
+set clk_period 884
 
 set clk_port [get_ports $clk_port_name]
 

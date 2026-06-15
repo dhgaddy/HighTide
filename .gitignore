@@ -18,6 +18,7 @@ google-cloud-sdk/
 google-cloud-cli-*.tar.gz
 audit_upstream_items.ndjson
 tmp/
+.run_orfs/
 
 # bsg_fakeram intermediate outputs — re-generated locally by
 # tools/regenerate_sram.sh; the .lef/.lib that matter are copied into

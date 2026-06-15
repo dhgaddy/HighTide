@@ -13,16 +13,24 @@
 # OpenROAD-flow-scripts (`make DESIGN_CONFIG=<this-file> ...`).
 #
 # Usage:
-#   tools/bazel_to_config_mk.sh <design-dir-or-label> [output-file]
+#   tools/bazel_to_config_mk.sh [--abs] <design-dir-or-label> [output-file]
+#
+# Options:
+#   --abs   Emit absolute paths (rooted at the repo) for the path-bearing
+#           vars (VERILOG_FILES, SDC_FILE, ADDITIONAL_LEFS/LIBS/GDS,
+#           PDN_TCL, IO_CONSTRAINTS, FOOTPRINT_TCL, MACRO_PLACEMENT_TCL,
+#           VERILOG_INCLUDE_DIRS) so the config.mk runs from any CWD and
+#           against any ORFS clone. Default keeps workspace-relative paths.
 #
 # Examples:
 #   tools/bazel_to_config_mk.sh designs/asap7/lfsr
+#   tools/bazel_to_config_mk.sh --abs designs/asap7/lfsr   ./lfsr.config.mk
 #   tools/bazel_to_config_mk.sh //designs/asap7/lfsr:lfsr   ./lfsr.config.mk
 #   tools/bazel_to_config_mk.sh designs/asap7/liteeth/liteeth_mac_axi_mii
 #
 # Caveats:
-# - VERILOG_FILES / SDC_FILE paths are workspace-relative. Run upstream
-#   ORFS Make from the HighTide repo root (or symlink the paths in).
+# - Without --abs, VERILOG_FILES / SDC_FILE paths are workspace-relative;
+#   run upstream ORFS Make from the HighTide repo root (or use --abs).
 # - For designs that synthesize from dev-generated RTL (genrules), the
 #   resolved paths point into bazel-out/. Use --define update_rtl=true
 #   before extraction if you want fresh generated sources, or rely on
@@ -37,10 +45,24 @@ usage() {
     exit 1
 }
 
-[ $# -ge 1 ] && [ $# -le 2 ] || usage
+abs=0
+positional=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --abs)      abs=1; shift ;;
+        -h|--help)  usage ;;
+        --)         shift; while [ $# -gt 0 ]; do positional+=("$1"); shift; done ;;
+        -*)         echo "ERROR: unknown option: $1" >&2; usage ;;
+        *)          positional+=("$1"); shift ;;
+    esac
+done
 
-input=$1
-output=${2:-}
+[ "${#positional[@]}" -ge 1 ] && [ "${#positional[@]}" -le 2 ] || usage
+
+input=${positional[0]}
+output=${positional[1]:-}
+
+repo_root=$(git rev-parse --show-toplevel)
 
 # --- Normalize the input to package + target name -------------------
 case "$input" in
@@ -117,15 +139,41 @@ emit() {
 EOF
 
     # `export VAR?=VALUE` → keep the first occurrence of each VAR.
+    # With --abs, prefix each repo-relative token of the path-bearing
+    # vars with the repo root so the config.mk runs from any CWD.
     grep -h '^export ' "${shortmks[@]}" \
-        | awk -F'?=' -v skip="$SKIP_VARS" '
+        | awk -v skip="$SKIP_VARS" -v abs="$abs" -v root="$repo_root" '
+            # Vars whose value is one or more file/dir paths.
+            function is_pathvar(k) {
+                return (k ~ /^(VERILOG_FILES|SDC_FILE|ADDITIONAL_LEFS|ADDITIONAL_LIBS|ADDITIONAL_GDS|IO_CONSTRAINTS|FOOTPRINT_TCL|MACRO_PLACEMENT_TCL|VERILOG_INCLUDE_DIRS|PDN_TCL)$/) || (k ~ /_TCL$/)
+            }
             {
-                key = $1
+                pos = index($0, "?=")
+                if (pos == 0) next
+                lhs = substr($0, 1, pos + 1)   # includes "?="
+                val = substr($0, pos + 2)
+                key = lhs
                 sub(/^export /, "", key)
+                sub(/\?=$/, "", key)
                 sub(/[[:space:]]+$/, "", key)
                 if (key ~ skip)   next
                 if (seen[key]++)  next
-                print
+
+                if (abs == "1" && is_pathvar(key)) {
+                    n = split(val, toks, /[[:space:]]+/)
+                    out = ""
+                    for (i = 1; i <= n; i++) {
+                        t = toks[i]
+                        if (t == "") continue
+                        # Absolutize relative paths; leave abs paths and
+                        # make/flag tokens (-, $) untouched.
+                        if (t !~ /^\// && t !~ /^-/ && t !~ /^\$/)
+                            t = root "/" t
+                        out = (out == "" ? t : out " " t)
+                    }
+                    val = out
+                }
+                print lhs val
             }' \
         | sort
 }

@@ -13,7 +13,7 @@ set clk_port    [get_ports clk]
 # is comfortably absorbed; this is the slowest clock that still beats
 # the sky130hd target (36 ns at 130 nm) and the nangate45 target
 # (12 ns at 45 nm) on a relative-process-speed basis.
-set clk_period  2610
+set clk_period  1338
 set clk_io_pct  0.2
 
 create_clock -name $clk_name -period $clk_period $clk_port

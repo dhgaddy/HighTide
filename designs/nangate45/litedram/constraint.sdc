@@ -5,7 +5,7 @@ current_design litedram_core
 # liteeth variants — start at 12 ns (~83 MHz) and tighten later.
 set clk_name    clk
 set clk_port    [get_ports clk]
-set clk_period  2.96
+set clk_period  2.15
 set clk_io_pct  0.2
 
 create_clock -name $clk_name -period $clk_period $clk_port

@@ -5,7 +5,7 @@
 current_design NV_NVDLA_partition_c
 
 set clk_name nvdla_core_clk
-set clk_period 3.54
+set clk_period 3.90
 set clk_io_pct 0.2
 
 set clk_port [get_ports $clk_name]

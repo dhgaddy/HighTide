@@ -125,6 +125,12 @@ When reporting or comparing cell counts across designs or platforms, **exclude f
 
 Use the per-class fields in `6_report.json` (e.g. `class:sequential_cell`, `class:multi_input_combinational_cell`, `class:inverter`, `class:clock_buffer`, `class:timing_repair_buffer`) — not the top-level `instance__count` — when comparing designs.
 
+## Pushing clock frequency (and the io-feedthrough WNS trap)
+
+When tightening a design's clock period to raise Fmax, **do not use `finish__timing__setup__ws` (reported WNS) as the limiter.** For LiteX/protocol/NVDLA designs (litedram, liteeth, litepci, floonoc, NVDLA, bp_uno) the worst setup path is often a pure input→output *combinational feedthrough* constrained only by `set_input_delay + set_output_delay = clk_io_pct*period`, so its slack is `~0.6*period` and shows a permanent huge "margin" no matter how tight the clock — it tracks the constraint, not silicon, and masks the real register-to-register path (some designs were reg2reg-*violated* at baseline while reported WNS stayed positive). `6_finish.rpt`'s setup section only prints the worst path per group (= this io path), so it can't reveal reg2reg slack either.
+
+**Use `report_clock_min_period` instead** — the `period_min` field in `6_finish.rpt` is the achievable minimum period from the routed netlist and is reg2reg-dominated. ORFS synthesis optimizes *to the target clock*, so `period_min` keeps dropping as you tighten (litedram-asap7 floor fell 2373→1217→902 ps as the target tightened); iterate `clk_period = period_min * 1.10`, rebuild, re-read, until `set/period_min ≈ 1.10` (converged). Some designs hit a **routability** floor first (P&R fails before timing runs out — back off to the tightest that routes). Retrieve `period_min` for large designs via `k8s/run.sh --upload-artifacts` (PVC); their stage ODBs bust the Cloudflare cache cap.
+
 ## Known OpenROAD / yosys-slang bug workarounds
 
 Designs in this repo carry workarounds for upstream tool bugs. Update this table whenever a new workaround lands, and remove rows once the upstream bug is fixed and the workaround can be reverted.

@@ -63,6 +63,20 @@ EOF
     exit 1
 }
 
+# The Bazel build (and the patches/ symlinks it references) need the
+# bazel-orfs submodule checked out — otherwise bazel fails deep in repo
+# fetch with a cryptic "Cannot find patch file" error.
+require_bazel_orfs() {
+    [ -f "$(git rev-parse --show-toplevel)/bazel-orfs/MODULE.bazel" ] && return
+    cat >&2 <<'EOF'
+ERROR: the bazel-orfs submodule is not initialized.
+HighTide's Bazel build needs it (the patches/ files are symlinks into it).
+Run, from the repo root:
+  git submodule update --init bazel-orfs
+EOF
+    exit 1
+}
+
 abs=0
 positional=()
 while [ $# -gt 0 ]; do
@@ -131,6 +145,7 @@ for s in "${stages[@]}"; do targets+=("//${pkg}:${name}_${s}"); done
 config_groups=1_synth.mk,2_floorplan.mk,3_place.mk,4_cts.mk,5_1_grt.mk,5_2_route.mk,6_final.mk
 
 require_bazel
+require_bazel_orfs
 echo "Extracting config of //${pkg}:${name} (config only, no flow build) ..." >&2
 bazel build "${targets[@]}" --output_groups="$config_groups" >&2
 

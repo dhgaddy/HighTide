@@ -155,10 +155,15 @@ user_flow_home=0
 if [ -n "$flow_home" ]; then
     user_flow_home=1
 elif [ "$resynth" = 0 ]; then
-    # Default (reuse) path: the ORFS bazel-orfs already resolved (no
-    # tools/install needed — synth is skipped, openroad comes from bazel).
+    # Default (reuse) path: the ORFS that bazel-orfs resolved. Bazel fetches
+    # external repos lazily, so force-materialize the ORFS flow first, then
+    # derive its directory from cquery (robust to a fresh checkout and to the
+    # orfs+/orfs~ canonical-name difference across Bazel versions).
+    require_bazel; require_bazel_orfs
+    echo ">> Fetching the bazel-resolved ORFS flow ..." >&2
+    bazel build @orfs//flow:makefile >&2
     ob=$(bazel info output_base 2>/dev/null)
-    flow_home="$ob/external/orfs+"
+    flow_home="$ob/$(bazel cquery --output=files @orfs//flow:makefile 2>/dev/null | head -1 | xargs dirname)"
 else
     echo "ERROR: --resynth needs a built OpenROAD-flow-scripts install." >&2
     echo "       Pass --flow-home <ORFS> (its tools/install must have yosys+slang)," >&2

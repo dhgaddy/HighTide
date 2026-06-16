@@ -67,6 +67,23 @@ usage() {
     exit 1
 }
 
+require_bazel() {
+    command -v bazel >/dev/null 2>&1 && return
+    cat >&2 <<'EOF'
+ERROR: 'bazel' is not installed or not on PATH.
+HighTide resolves each design's configuration with Bazel (via Bazelisk).
+Install Bazelisk (recommended — it auto-fetches the pinned Bazel version):
+  Linux x86_64:
+    sudo curl -fsSL -o /usr/local/bin/bazel \
+      https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
+    sudo chmod +x /usr/local/bin/bazel
+  npm:  npm install -g @bazelbuild/bazelisk
+  go:   go install github.com/bazelbuild/bazelisk@latest
+More:   https://github.com/bazelbuild/bazelisk
+EOF
+    exit 1
+}
+
 flow_home=""
 openroad=""
 work_dir=""
@@ -166,6 +183,7 @@ config=$(realpath "$config")
 # config-only and does NOT build it). Build just the synth stage — not the
 # whole flow. --resynth re-synthesizes in plain ORFS, so it needs nothing.
 if [ "$resynth" = 0 ] && [ "$no_build" = 0 ]; then
+    require_bazel
     echo ">> Building synth netlist //$pkg:${name}_synth ..." >&2
     bazel build "//$pkg:${name}_synth" >&2
 fi
@@ -177,6 +195,7 @@ fi
 openroad_exe="$openroad"
 opensta_exe=""
 if [ -z "$openroad_exe" ] && [ "$user_flow_home" = 0 ]; then
+    require_bazel
     echo ">> Resolving bazel-built openroad ..." >&2
     bazel build @openroad//:openroad >&2
     openroad_exe=$(realpath "$(bazel cquery --output=files @openroad//:openroad 2>/dev/null | head -1)")

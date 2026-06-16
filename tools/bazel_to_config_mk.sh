@@ -46,6 +46,23 @@ usage() {
     exit 1
 }
 
+require_bazel() {
+    command -v bazel >/dev/null 2>&1 && return
+    cat >&2 <<'EOF'
+ERROR: 'bazel' is not installed or not on PATH.
+HighTide resolves each design's configuration with Bazel (via Bazelisk).
+Install Bazelisk (recommended — it auto-fetches the pinned Bazel version):
+  Linux x86_64:
+    sudo curl -fsSL -o /usr/local/bin/bazel \
+      https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
+    sudo chmod +x /usr/local/bin/bazel
+  npm:  npm install -g @bazelbuild/bazelisk
+  go:   go install github.com/bazelbuild/bazelisk@latest
+More:   https://github.com/bazelbuild/bazelisk
+EOF
+    exit 1
+}
+
 abs=0
 positional=()
 while [ $# -gt 0 ]; do
@@ -113,6 +130,7 @@ targets=()
 for s in "${stages[@]}"; do targets+=("//${pkg}:${name}_${s}"); done
 config_groups=1_synth.mk,2_floorplan.mk,3_place.mk,4_cts.mk,5_1_grt.mk,5_2_route.mk,6_final.mk
 
+require_bazel
 echo "Extracting config of //${pkg}:${name} (config only, no flow build) ..." >&2
 bazel build "${targets[@]}" --output_groups="$config_groups" >&2
 

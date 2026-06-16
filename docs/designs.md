@@ -10,70 +10,35 @@ HighTide ports open-source hardware designs across three technology platforms us
 | **nangate45** | 45nm | FreePDK with NanGate cell library |
 | **sky130hd** | 130nm | Open-source SkyWater 130nm high-density |
 
-## Design Matrix
+## Designs
 
-| Design | Description | Language | asap7 | nangate45 | sky130hd |
-|--------|-------------|----------|:-----:|:---------:|:--------:|
-| **lfsr** | LFSR/PRBS generator | Verilog | x | x | x |
-| **minimax** | RISC-V RV32I core | SystemVerilog (sv2v) | x | x | x |
-| **liteeth** | Ethernet MAC (6 variants) | LiteX/Python | x | x | x |
-| **NyuziProcessor** | Multi-threaded GPGPU | SystemVerilog (yosys-slang) | x | x | |
-| **bp_processor** | Black-Parrot RISC-V (bp_uno, bp_quad) | SystemVerilog (yosys-slang) | x | x | |
-| **gemmini** | ML systolic array accelerator | Chisel/Scala | x | x | |
-| **cnn** | CNN accelerator | Veriloggen/NNgen/Python | x | x | |
-| **sha3** | SHA3 hash engine | Verilog | x | x | |
+The authoritative list of designs and the (platform, design) build matrix lives on the web page:
 
-### Liteeth Variants
+- [results.html](https://hightide-benchmarks.dev/results.html) — every cached `_final` build with its current QoR (areas, cells, slack, skew, fmax, power)
+- [gallery.html](https://hightide-benchmarks.dev/gallery.html) — routed-view layouts per design, with upstream-repo links and a short description of each design
+- [Design Portfolio on the landing page](https://hightide-benchmarks.dev/#designs) — design ↔ language ↔ platforms summary
 
-The liteeth design has 6 configuration variants, each a different combination of protocol layer and PHY interface:
+This catalog intentionally does not duplicate that list — the web page is regenerated from cached build state, so referring to it avoids the two-source-of-truth drift this file used to have.
 
-| Variant | Protocol | PHY |
-|---------|----------|-----|
-| `liteeth` | UDP | USP GTH SGMII |
-| `liteeth_udp_raw_rgmii` | UDP raw | RGMII |
-| `liteeth_udp_stream_rgmii` | UDP stream | RGMII |
-| `liteeth_udp_stream_sgmii` | UDP stream | SGMII |
-| `liteeth_mac_wb_mii` | MAC (Wishbone) | MII |
-| `liteeth_mac_axi_mii` | MAC (AXI) | MII |
+Memory-bearing designs (e.g. CNN, NyuziProcessor, BlackParrot, NVDLA, LiteDRAM, LiteEth, LitePCI) use [bsg_fakeram](https://github.com/bespoke-silicon-group/bsg_fakeram)-generated SRAM macros — pin-accurate LEF / LIB black-boxes with no internal logic.
 
-### Black-Parrot Variants
+## Build targets
 
-| Variant | Description |
-|---------|-------------|
-| `bp_uno` | Single-core BlackParrot |
-| `bp_quad` | Quad-core BlackParrot |
-
-## Design Complexity
-
-Designs range from small (lfsr, ~200 cells) to large (gemmini, bp_quad with thousands of cells and memory macros). Designs with embedded memories use FakeRAM — placeholder LEF/LIB black-box macros that provide pin-accurate physical models without internal logic.
-
-| Design | Approximate Size | Has FakeRAM | Hierarchical Synth |
-|--------|-----------------|:-----------:|:-------------------:|
-| lfsr | Small (~200 cells) | | |
-| minimax | Small (~1K cells) | | |
-| sha3 | Medium (~5K cells) | | |
-| liteeth | Medium (~2-8K cells) | x | |
-| NyuziProcessor | Large (~20K cells) | x | |
-| cnn | Large (~15K cells) | x | |
-| gemmini | Very large (~50K cells) | | |
-| bp_uno | Large (~30K cells) | x | x |
-| bp_quad | Very large (~100K+ cells) | x | x |
-
-## Build Targets
-
-Each design exposes Bazel targets for individual flow stages:
+Each design exposes Bazel targets for the individual flow stages:
 
 ```
 //designs/<platform>/<design>:<design>_synth       # Yosys synthesis
 //designs/<platform>/<design>:<design>_floorplan   # Floorplan + IO + PDN
-//designs/<platform>/<design>:<design>_place       # Global/detailed placement
-//designs/<platform>/<design>:<design>_cts         # Clock tree synthesis
-//designs/<platform>/<design>:<design>_route       # Global/detailed routing
+//designs/<platform>/<design>:<design>_place       # Global + detailed placement
+//designs/<platform>/<design>:<design>_cts         # Clock-tree synthesis
+//designs/<platform>/<design>:<design>_route       # Global + detailed routing
 //designs/<platform>/<design>:<design>_final       # Metal fill + GDSII
+//designs/<platform>/<design>:<design>_gallery     # Routed-view PNG render
 ```
 
-For multi-level designs (liteeth, bp_processor), the target path includes the variant:
+For designs grouped under a family path, the leaf is the last segment:
+
 ```
-//designs/asap7/liteeth/liteeth_mac_wb_mii:liteeth_mac_wb_mii_final
 //designs/asap7/bp_processor/bp_quad:bp_quad_final
+//designs/asap7/NVDLA/partition_c:partition_c_final
 ```

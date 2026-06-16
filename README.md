@@ -27,42 +27,45 @@ is the easier interface. Two tools bridge the gap.
 ### One command: `tools/run_orfs.sh`
 
 ```bash
-# Golden flow + bazel-built openroad, full place-and-route:
+# Fast, zero-setup: reuse the golden synthesized netlist + bazel openroad,
+# full place-and-route:
 tools/run_orfs.sh designs/asap7/lfsr
 
 # Your own OpenROAD build, only through placement:
 tools/run_orfs.sh --openroad ~/OpenROAD/build/src/openroad \
                   designs/asap7/lfsr floorplan place
 
-# Your modified flow scripts:
-tools/run_orfs.sh --flow-home ~/OpenROAD-flow-scripts designs/sky130hd/eyeriss
+# Re-synthesize from RTL in your own ORFS install (its yosys + slang):
+tools/run_orfs.sh --resynth --flow-home ~/OpenROAD-flow-scripts designs/asap7/lfsr
 ```
 
-It extracts the design's resolved `config.mk`, **reuses the golden
-synthesized netlist** bazel-orfs already produced
-(`results/.../1_synth.{odb,sdc}`), and runs the standard ORFS `Makefile`
-from floorplan onward against the OpenROAD binary (`--openroad`, sets
-`OPENROAD_EXE`) and flow (`--flow-home`) you choose. Reusing the netlist
-means **no yosys / yosys-slang toolchain is needed** and the P&R starting
-point is identical to HighTide's published QoR. (Synthesis is therefore
-not re-run here; use the bazel flow to re-synthesize.)
+It extracts the design's resolved `config.mk` and runs the standard ORFS
+`Makefile`. There are two synthesis modes:
 
-To **edit flow scripts**, clone ORFS and point `--flow-home` at it:
+- **Default (reuse synth):** reuses the synthesized netlist bazel-orfs
+  already produced (`results/.../1_synth.{odb,sdc}`) and runs only
+  floorplan onward. Fast and zero-setup — **no yosys/slang needed** — and
+  runs against the ORFS bazel-orfs already resolved. Best for iterating on
+  placement, routing, or the OpenROAD binary (`--openroad` sets
+  `OPENROAD_EXE`). The netlist already reflects your constraints/RTL *if*
+  you rebuild through bazel; to re-synthesize entirely in plain ORFS, use
+  `--resynth`.
+- **`--resynth` (from RTL):** runs the *whole* flow including synthesis in
+  your ORFS install, using its own yosys + yosys-slang. Honors changes to
+  constraints, RTL, or the synthesis flow itself — but slower, and requires
+  `--flow-home` pointing at a **built** OpenROAD-flow-scripts install (one
+  whose `tools/install` has yosys; ORFS's slang support is built in).
 
-```bash
-git clone https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts
-# Check out the commit run_orfs.sh prints ("golden ORFS commit ...") for a
-# comparable baseline — or stay on HEAD if matching HighTide's numbers
-# doesn't matter. Then edit flow/scripts/*.tcl and:
-tools/run_orfs.sh --flow-home ./OpenROAD-flow-scripts designs/asap7/lfsr
-```
+To **edit flow scripts or steps**, point `--flow-home` at your own ORFS
+checkout and edit `flow/scripts/*.tcl` there.
 
-**QoR caveat:** HighTide's published numbers come from the bazel-orfs
-build, which pins specific tool commits (bazel-orfs, OpenROAD, and the
-ORFS commit it resolves). Pointing `--flow-home` at a *newer* ORFS shifts
-the baseline, and some extracted `config.mk` workaround variables (e.g.
-`SKIP_CTS_REPAIR_TIMING`, `SETUP_MOVE_SEQUENCE`, `write_sdc` async-reset
-edits) may be unnecessary or stale — review them against your ORFS.
+**QoR comparability:** HighTide's published numbers come from the bazel-orfs
+build, which pins specific tool commits (bazel-orfs, OpenROAD, and the ORFS
+commit `run_orfs.sh` prints). A `--resynth` run against a *different* ORFS /
+yosys shifts the baseline, and some extracted `config.mk` workaround
+variables (e.g. `SKIP_CTS_REPAIR_TIMING`, `SETUP_MOVE_SEQUENCE`, `write_sdc`
+async-reset edits) may be unnecessary or stale — review them against your
+ORFS.
 
 ### Just the config.mk: `tools/bazel_to_config_mk.sh`
 

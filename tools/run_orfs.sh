@@ -2,49 +2,63 @@
 #
 # Run a HighTide design in upstream OpenROAD-flow-scripts (plain ORFS),
 # so OpenROAD researchers can experiment with a custom OpenROAD binary,
-# modified flow Tcl scripts, or added/changed flow steps — without
-# leaving HighTide's golden bazel-orfs configuration behind.
+# modified flow Tcl scripts, added/changed flow steps, or different
+# constraints — without leaving HighTide's golden bazel-orfs config.
 #
-# It (1) extracts the design's resolved ORFS config.mk via
-# tools/bazel_to_config_mk.sh --abs, (2) reuses the golden synthesized
-# netlist bazel-orfs already produced (results/.../1_synth.{odb,sdc}) so
-# no yosys / yosys-slang plugin is needed and the P&R starting point is
-# identical to HighTide's published QoR, and (3) runs the standard ORFS
-# Makefile from floorplan onward against the OpenROAD binary and flow
-# you choose.
+# It extracts the design's resolved ORFS config.mk (via
+# tools/bazel_to_config_mk.sh --abs) and runs the standard ORFS Makefile.
+#
+# Two synthesis modes:
+#
+#   default (reuse synth):  reuses the synthesized netlist bazel-orfs already
+#       produced (results/.../1_synth.{odb,sdc}) and runs only floorplan
+#       onward. Fast and zero-setup — no yosys/slang needed — and works
+#       against the ORFS bazel-orfs already resolved. Best for iterating on
+#       placement / routing / the OpenROAD binary. (The netlist is rebuilt by
+#       bazel whenever constraints/RTL change, but only if you go through the
+#       bazel build; to re-synthesize entirely in plain ORFS, use --resynth.)
+#
+#   --resynth (from RTL):  runs the *whole* flow including synthesis in your
+#       ORFS install, using its own yosys + yosys-slang. Honors changes to
+#       constraints, RTL, or the synthesis flow itself — but slower, and
+#       requires --flow-home pointing at a built OpenROAD-flow-scripts install
+#       (one whose tools/install has yosys; ORFS's slang support is built in).
 #
 # Usage:
 #   tools/run_orfs.sh [options] <design-dir-or-label> [make-target...]
 #
 # Options:
-#   --flow-home DIR  ORFS checkout to run (its `flow/` dir or the dir
-#                    itself). Default: the exact ORFS bazel-orfs resolved
-#                    (read-only) — i.e. HighTide's golden flow. To edit
-#                    flow scripts, clone ORFS at the commit printed below,
-#                    edit flow/scripts/*.tcl, and pass --flow-home <clone>.
-#   --openroad BIN   openroad executable (sets OPENROAD_EXE). Default: the
-#                    bazel-built @openroad//:openroad. Point this at your
-#                    own build to test a custom OpenROAD.
+#   --resynth        Run synthesis from RTL in your ORFS install (default:
+#                    reuse the bazel-synthesized netlist). Needs --flow-home.
+#   --flow-home DIR  ORFS checkout to run (its `flow/` dir or the root).
+#                    Default (reuse mode): the ORFS bazel-orfs resolved.
+#                    Required with --resynth: a built install with yosys+slang.
+#   --openroad BIN   openroad executable (sets OPENROAD_EXE). Point this at
+#                    your own build to test a custom OpenROAD. Default: the
+#                    bazel-built @openroad//:openroad (reuse mode) or your
+#                    ORFS install's own openroad (with --resynth).
 #   --work-dir DIR   Run/output directory (becomes ORFS WORK_HOME).
 #                    Default: <repo>/.run_orfs/<platform>/<design>.
 #   --config FILE    Use this config.mk instead of extracting one.
 #   --no-build       Don't (re)build in bazel; assume stages + config exist.
 #   -h, --help       Print this help and exit.
 #
-# make-target defaults to: floorplan place cts route finish
+# make-target default: "floorplan place cts route finish"
+#                      (--resynth: "synth floorplan place cts route finish")
 #
 # Examples:
-#   # Out-of-box: golden flow + bazel openroad, full P&R.
+#   # Fast, zero-setup: reuse golden synth + bazel openroad, full P&R:
 #   tools/run_orfs.sh designs/asap7/lfsr
-#   # My OpenROAD build, only through placement.
+#   # Your custom OpenROAD build, only through placement:
 #   tools/run_orfs.sh --openroad ~/OpenROAD/build/src/openroad \
 #                     designs/asap7/lfsr floorplan place
-#   # My modified ORFS flow scripts.
-#   tools/run_orfs.sh --flow-home ~/OpenROAD-flow-scripts designs/sky130hd/eyeriss
+#   # Re-synthesize from RTL in your ORFS install (its yosys+slang):
+#   tools/run_orfs.sh --resynth --flow-home ~/OpenROAD-flow-scripts designs/asap7/lfsr
 #
-# Note: synthesis is reused from the golden bazel build, not re-run here
-# (that keeps every design buildable without the yosys-slang toolchain and
-# holds the netlist fixed). To re-synthesize, use the bazel flow.
+# QoR comparability: HighTide's published numbers come from the bazel-orfs
+# build. A --resynth run reproduces them only if your ORFS install's yosys /
+# openroad match the commits bazel-orfs pins (printed below); otherwise the
+# baseline shifts and some config.mk workaround vars may be stale.
 
 set -euo pipefail
 
@@ -58,10 +72,12 @@ openroad=""
 work_dir=""
 config=""
 no_build=0
+resynth=0
 positional=()
 
 while [ $# -gt 0 ]; do
     case "$1" in
+        --resynth)   resynth=1;    shift ;;
         --flow-home) flow_home=$2; shift 2 ;;
         --openroad)  openroad=$2;  shift 2 ;;
         --work-dir)  work_dir=$2;  shift 2 ;;
@@ -77,7 +93,13 @@ done
 [ "${#positional[@]}" -ge 1 ] || usage
 input=${positional[0]}
 targets=("${positional[@]:1}")
-[ "${#targets[@]}" -gt 0 ] || targets=(floorplan place cts route finish)
+if [ "${#targets[@]}" -eq 0 ]; then
+    if [ "$resynth" = 1 ]; then
+        targets=(synth floorplan place cts route finish)
+    else
+        targets=(floorplan place cts route finish)
+    fi
+fi
 
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
@@ -97,9 +119,37 @@ name=$(awk -F'"' '
     in_call && /name[[:space:]]*=/  { print $2; exit }' "$pkg/BUILD.bazel")
 [ -n "$name" ] || { echo "ERROR: could not find name in $pkg/BUILD.bazel" >&2; exit 1; }
 
+# --- Resolve the ORFS flow dir (FLOW_HOME) --------------------------------
+user_flow_home=0
+if [ -n "$flow_home" ]; then
+    user_flow_home=1
+elif [ "$resynth" = 0 ]; then
+    # Default (reuse) path: the ORFS bazel-orfs already resolved (no
+    # tools/install needed — synth is skipped, openroad comes from bazel).
+    ob=$(bazel info output_base 2>/dev/null)
+    flow_home="$ob/external/orfs+"
+else
+    echo "ERROR: --resynth needs a built OpenROAD-flow-scripts install." >&2
+    echo "       Pass --flow-home <ORFS> (its tools/install must have yosys+slang)," >&2
+    echo "       or drop --resynth to reuse the bazel-synthesized netlist." >&2
+    exit 1
+fi
+if   [ -f "$flow_home/flow/Makefile" ]; then flow_dir="$flow_home/flow"
+elif [ -f "$flow_home/Makefile" ];      then flow_dir="$flow_home"
+else echo "ERROR: no ORFS Makefile under --flow-home $flow_home" >&2; exit 1
+fi
+orfs_commit=$(grep -oP 'OpenROAD-flow-scripts-\K[0-9a-f]{40}' MODULE.bazel | head -1)
+
+# Soft check: --resynth needs a yosys somewhere (install dir or PATH).
+if [ "$resynth" = 1 ] \
+   && [ ! -x "$flow_dir/../tools/install/yosys/bin/yosys" ] \
+   && ! command -v yosys >/dev/null 2>&1; then
+    echo "WARNING: no yosys found at $flow_dir/../tools/install or on PATH;" >&2
+    echo "         synthesis will fail unless your ORFS install provides one." >&2
+fi
+
 # --- Build stages + extract config.mk (cached after first run) ------------
 if [ -z "$work_dir" ]; then
-    # platform = first path component under designs/; leaf = last.
     rel=${pkg#designs/}
     work_dir="$repo_root/.run_orfs/${rel%%/*}/${rel##*/}"
 fi
@@ -109,7 +159,7 @@ if [ -z "$config" ]; then
     config="$work_dir/config.mk"
     echo ">> Extracting config.mk -> $config" >&2
     tools/bazel_to_config_mk.sh --abs "$pkg" "$config"
-elif [ "$no_build" = 0 ]; then
+elif [ "$no_build" = 0 ] && [ "$resynth" = 0 ]; then
     echo ">> Building all stages of //$pkg (for the synth netlist) ..." >&2
     stage_targets=()
     for s in synth floorplan place cts grt route final; do
@@ -119,77 +169,68 @@ elif [ "$no_build" = 0 ]; then
 fi
 config=$(realpath "$config")
 
-# --- Locate the golden synthesized netlist from the bazel build -----------
-results_root="bazel-bin/$pkg/results"
-synth_odb=$(find "$results_root" -name '1_synth.odb' -type f 2>/dev/null | head -1)
-[ -n "$synth_odb" ] || {
-    echo "ERROR: no 1_synth.odb under $results_root — did the bazel build run?" >&2
-    exit 1
-}
-synth_dir=$(dirname "$synth_odb")
-# results/<platform>/<design>/<variant>/1_synth.odb
-relres=${synth_odb#*/results/}
-IFS=/ read -r platform design variant _ <<<"$relres"
-
-# --- Resolve the ORFS flow dir (FLOW_HOME) --------------------------------
-if [ -z "$flow_home" ]; then
-    ob=$(bazel info output_base 2>/dev/null)
-    flow_home="$ob/external/orfs+"
-fi
-if   [ -f "$flow_home/flow/Makefile" ]; then flow_dir="$flow_home/flow"
-elif [ -f "$flow_home/Makefile" ];      then flow_dir="$flow_home"
-else echo "ERROR: no ORFS Makefile under --flow-home $flow_home" >&2; exit 1
-fi
-orfs_commit=$(grep -oP 'OpenROAD-flow-scripts-\K[0-9a-f]{40}' MODULE.bazel | head -1)
-
-# --- Resolve the OpenROAD (+ matching sta) binary -------------------------
-opensta=""
-if [ -z "$openroad" ]; then
+# --- Resolve OpenROAD (+ matching sta) ------------------------------------
+# Override OPENROAD_EXE/OPENSTA_EXE only when the tools wouldn't otherwise
+# resolve: a user-supplied --openroad, or the bazel-resolved ORFS default
+# (which has no tools/install). A user-supplied ORFS install uses its own.
+openroad_exe="$openroad"
+opensta_exe=""
+if [ -z "$openroad_exe" ] && [ "$user_flow_home" = 0 ]; then
     echo ">> Resolving bazel-built openroad ..." >&2
     bazel build @openroad//:openroad >&2
-    openroad=$(realpath "$(bazel cquery --output=files @openroad//:openroad 2>/dev/null | head -1)")
+    openroad_exe=$(realpath "$(bazel cquery --output=files @openroad//:openroad 2>/dev/null | head -1)")
     if bazel cquery @openroad//src/sta:opensta >/dev/null 2>&1; then
         bazel build @openroad//src/sta:opensta >&2 || true
-        opensta=$(realpath "$(bazel cquery --output=files @openroad//src/sta:opensta 2>/dev/null | head -1)" 2>/dev/null || true)
+        opensta_exe=$(realpath "$(bazel cquery --output=files @openroad//src/sta:opensta 2>/dev/null | head -1)" 2>/dev/null || true)
     fi
 fi
-[ -x "$openroad" ] || { echo "ERROR: openroad not executable: $openroad" >&2; exit 1; }
+[ -z "$openroad_exe" ] || [ -x "$openroad_exe" ] || {
+    echo "ERROR: openroad not executable: $openroad_exe" >&2; exit 1; }
 
-# --- Seed WORK_HOME with the golden synth artifacts so synth is skipped ---
-# Copy every 1_* / mem* artifact bazel produced (the whole yosys chain:
-# *.rtlil, 1_2_yosys.{v,sdc}, 1_synth.{odb,sdc}, mem*.json) so upstream
-# Make sees the synth prerequisites present, then touch them in dependency
-# order — newer than the (old, committed) RTL/LEF/LIB sources — so Make
-# treats synthesis as up-to-date and never invokes yosys.
-work_results="$work_dir/results/$platform/$design/$variant"
-mkdir -p "$work_results"
-chmod -R u+w "$work_results" 2>/dev/null || true
-cp -f --no-preserve=mode "$synth_dir"/1_* "$work_results"/ 2>/dev/null || true
-cp -f --no-preserve=mode "$synth_dir"/mem*.json "$work_results"/ 2>/dev/null || true
+# --- Reuse-synth (default): seed WORK_HOME with the golden netlist --------
+if [ "$resynth" = 0 ]; then
+    results_root="bazel-bin/$pkg/results"
+    synth_odb=$(find "$results_root" -name '1_synth.odb' -type f 2>/dev/null | head -1)
+    [ -n "$synth_odb" ] || {
+        echo "ERROR: no 1_synth.odb under $results_root — did the bazel build run?" >&2
+        exit 1
+    }
+    synth_dir=$(dirname "$synth_odb")
+    relres=${synth_odb#*/results/}      # <platform>/<design>/<variant>/1_synth.odb
+    IFS=/ read -r platform design variant _ <<<"$relres"
 
-# clock_period.txt is a yosys prerequisite Make would otherwise regenerate
-# (then rebuild the netlist). Its content is irrelevant once synth is
-# skipped — create it only if bazel didn't emit one.
-[ -f "$work_results/clock_period.txt" ] || echo 0 > "$work_results/clock_period.txt"
+    # Copy every 1_* / mem* artifact (the whole yosys chain) so upstream Make
+    # sees the synth prerequisites present, then touch them in dependency
+    # order — newer than the (old, committed) sources — so Make treats
+    # synthesis as up-to-date and never invokes yosys.
+    work_results="$work_dir/results/$platform/$design/$variant"
+    mkdir -p "$work_results"
+    chmod -R u+w "$work_results" 2>/dev/null || true
+    cp -f --no-preserve=mode "$synth_dir"/1_* "$work_results"/ 2>/dev/null || true
+    cp -f --no-preserve=mode "$synth_dir"/mem*.json "$work_results"/ 2>/dev/null || true
+    [ -f "$work_results/clock_period.txt" ] || echo 0 > "$work_results/clock_period.txt"
 
-# Anchor slightly in the past so the ordered touches stay <= now (avoids
-# Make's "modification time in the future" warning) yet newer than the
-# day-old committed sources.
-base=$(( $(date +%s) - 60 ))
-i=0
-for f in clock_period.txt 1_1_yosys_canonicalize.rtlil 1_2_yosys.sdc \
-         1_2_yosys.v 1_synth.odb 1_synth.sdc; do
-    [ -e "$work_results/$f" ] && touch -d "@$((base + i * 2))" "$work_results/$f"
-    i=$((i + 1))
-done
+    base=$(( $(date +%s) - 60 ))
+    i=0
+    for f in clock_period.txt 1_1_yosys_canonicalize.rtlil 1_2_yosys.sdc \
+             1_2_yosys.v 1_synth.odb 1_synth.sdc; do
+        [ -e "$work_results/$f" ] && touch -d "@$((base + i * 2))" "$work_results/$f"
+        i=$((i + 1))
+    done
+else
+    platform=${pkg#designs/}; platform=${platform%%/*}
+    design=$(awk -F'?=' '/^export DESIGN_NAME\?=/{print $2; exit}' "$config")
+fi
 
 # --- Run upstream ORFS ----------------------------------------------------
+mode=$([ "$resynth" = 1 ] && echo "from RTL (incl. synthesis)" || echo "reuse synth (floorplan onward)")
 cat >&2 <<EOF
 >> Running upstream ORFS
-   design     : $platform / $design
+   design     : $platform / ${design:-$name}
+   mode       : $mode
    flow_home  : $flow_dir
-   (golden ORFS commit bazel resolves: $orfs_commit — clone this to edit flow scripts)
-   openroad   : $openroad
+   (golden ORFS commit bazel resolves: $orfs_commit)
+   openroad   : ${openroad_exe:-<ORFS install default>}
    work_home  : $work_dir
    targets    : ${targets[*]}
 EOF
@@ -198,6 +239,6 @@ exec make -C "$flow_dir" \
     DESIGN_CONFIG="$config" \
     WORK_HOME="$work_dir" \
     FLOW_HOME="$flow_dir" \
-    OPENROAD_EXE="$openroad" \
-    ${opensta:+OPENSTA_EXE="$opensta"} \
+    ${openroad_exe:+OPENROAD_EXE="$openroad_exe"} \
+    ${opensta_exe:+OPENSTA_EXE="$opensta_exe"} \
     "${targets[@]}"

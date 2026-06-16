@@ -810,7 +810,7 @@
         </div>
         <div class="feature-card">
           <h3>Built on OpenROAD</h3>
-          <p>Leverages <a href="https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts" style="color: var(--sea-blue);">OpenROAD-flow-scripts</a> and the <a href="https://theopenroadproject.org/" style="color: var(--sea-blue);">OpenROAD</a> toolchain for an open, reproducible RTL-to-GDSII flow. Designs run within a Docker image by default, eliminating manual tool installation.</p>
+          <p>Leverages <a href="https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts" style="color: var(--sea-blue);">OpenROAD-flow-scripts</a> and the <a href="https://theopenroadproject.org/" style="color: var(--sea-blue);">OpenROAD</a> toolchain for an open, reproducible RTL-to-GDSII flow. Bazel fetches and builds the entire toolchain (OpenROAD, Yosys, OpenSTA) from source &mdash; no manual tool installation and no Docker required.</p>
         </div>
         <div class="feature-card">
           <h3>Bazel Build System</h3>
@@ -1210,7 +1210,7 @@
         <div class="step-num">1</div>
         <div class="step-content">
           <h3>Install Dependencies</h3>
-          <p>You need Bazelisk and Docker on an Ubuntu machine.</p>
+          <p>All you need is Bazelisk on an Ubuntu machine &mdash; Bazel fetches and builds everything else (OpenROAD, Yosys, OpenSTA) from source. No Docker required.</p>
           <div class="code-block"><code><span class="comment"># Install Bazelisk</span>
 <span class="cmd">sudo apt install perl
 sudo wget -O /usr/local/bin/bazel \
@@ -1253,6 +1253,22 @@ git submodule update --init bazel-orfs</span></code></div>
           <p>Check build summaries and QoR reports.</p>
           <div class="code-block"><code><span class="cmd">./tools/summary.sh</span></code></div>
           <p>See the <a href="results.html" style="color: var(--sea-blue);">latest build results</a> for detailed QoR metrics across all designs and platforms.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <h3>Run in Upstream ORFS (Custom OpenROAD or Flow)</h3>
+          <p>OpenROAD researchers can run any design in plain <a href="https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts" style="color: var(--sea-blue);">OpenROAD-flow-scripts</a> to try a custom OpenROAD build, modified flow scripts, or new flow steps &mdash; while the Bazel configuration stays the golden source of truth. <code>run_orfs.sh</code> extracts the resolved <code>config.mk</code> (seconds, no full build) and drives the standard ORFS <code>Makefile</code>.</p>
+          <div class="code-block"><code><span class="comment"># Fast, zero-setup: reuse the golden netlist, full place-and-route</span>
+<span class="cmd">./tools/run_orfs.sh designs/asap7/lfsr</span>
+
+<span class="comment"># Test your own OpenROAD build</span>
+<span class="cmd">./tools/run_orfs.sh --openroad ~/OpenROAD/build/src/openroad designs/asap7/lfsr</span>
+
+<span class="comment"># Re-synthesize from RTL in your own ORFS install (its Yosys + slang)</span>
+<span class="cmd">./tools/run_orfs.sh --resynth --flow-home ~/OpenROAD-flow-scripts designs/asap7/lfsr</span></code></div>
         </div>
       </div>
     </div>

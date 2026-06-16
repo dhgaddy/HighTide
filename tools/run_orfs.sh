@@ -84,6 +84,20 @@ EOF
     exit 1
 }
 
+# The Bazel build (and the patches/ symlinks it references) need the
+# bazel-orfs submodule checked out — otherwise bazel fails deep in repo
+# fetch with a cryptic "Cannot find patch file" error.
+require_bazel_orfs() {
+    [ -f "$repo_root/bazel-orfs/MODULE.bazel" ] && return
+    cat >&2 <<'EOF'
+ERROR: the bazel-orfs submodule is not initialized.
+HighTide's Bazel build needs it (the patches/ files are symlinks into it).
+Run, from the repo root:
+  git submodule update --init bazel-orfs
+EOF
+    exit 1
+}
+
 flow_home=""
 openroad=""
 work_dir=""
@@ -183,7 +197,7 @@ config=$(realpath "$config")
 # config-only and does NOT build it). Build just the synth stage — not the
 # whole flow. --resynth re-synthesizes in plain ORFS, so it needs nothing.
 if [ "$resynth" = 0 ] && [ "$no_build" = 0 ]; then
-    require_bazel
+    require_bazel; require_bazel_orfs
     echo ">> Building synth netlist //$pkg:${name}_synth ..." >&2
     bazel build "//$pkg:${name}_synth" >&2
 fi
@@ -195,7 +209,7 @@ fi
 openroad_exe="$openroad"
 opensta_exe=""
 if [ -z "$openroad_exe" ] && [ "$user_flow_home" = 0 ]; then
-    require_bazel
+    require_bazel; require_bazel_orfs
     echo ">> Resolving bazel-built openroad ..." >&2
     bazel build @openroad//:openroad >&2
     openroad_exe=$(realpath "$(bazel cquery --output=files @openroad//:openroad 2>/dev/null | head -1)")

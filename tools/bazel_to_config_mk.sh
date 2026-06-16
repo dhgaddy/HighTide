@@ -3,14 +3,15 @@
 # Extract an ORFS-compatible config.mk for a HighTide design from the
 # bazel-orfs flow's generated artifacts.
 #
-# The bazel-orfs rule writes one `<stage>.short.mk` per flow stage,
-# each containing `export VAR?=VALUE` lines for every resolved ORFS
-# env var the stage consumes. Different stages contribute different
-# vars (synth → VERILOG_FILES / SDC_FILE; floorplan → CORE_UTILIZATION;
-# final → GDS_ALLOW_EMPTY; etc.) — so this script forces a build of
-# every stage, unions the export lines across all shortmks, drops the
-# Bazel-internal ones, and emits a config.mk you can feed to upstream
-# OpenROAD-flow-scripts (`make DESIGN_CONFIG=<this-file> ...`).
+# Each flow stage exposes its resolved config as a `<stage>.mk` bazel
+# output group, written by a cheap analysis-phase action. This script
+# builds ONLY those config output groups — so it costs no synthesis or
+# place-and-route, just bazel analysis (seconds) — then unions the
+# `export VAR?=VALUE` lines across stages (different stages contribute
+# different vars: floorplan → CORE_UTILIZATION, final → GDS_ALLOW_EMPTY,
+# etc.), drops the Bazel-internal ones, adds the cquery-resolved
+# VERILOG_FILES (the one var the .mk files omit), and emits a config.mk
+# you can feed to upstream OpenROAD-flow-scripts (`make DESIGN_CONFIG=...`).
 #
 # Usage:
 #   tools/bazel_to_config_mk.sh [--abs] <design-dir-or-label> [output-file]
@@ -42,6 +43,23 @@ set -euo pipefail
 
 usage() {
     sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//' >&2
+    exit 1
+}
+
+require_bazel() {
+    command -v bazel >/dev/null 2>&1 && return
+    cat >&2 <<'EOF'
+ERROR: 'bazel' is not installed or not on PATH.
+HighTide resolves each design's configuration with Bazel (via Bazelisk).
+Install Bazelisk (recommended — it auto-fetches the pinned Bazel version):
+  Linux x86_64:
+    sudo curl -fsSL -o /usr/local/bin/bazel \
+      https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
+    sudo chmod +x /usr/local/bin/bazel
+  npm:  npm install -g @bazelbuild/bazelisk
+  go:   go install github.com/bazelbuild/bazelisk@latest
+More:   https://github.com/bazelbuild/bazelisk
+EOF
     exit 1
 }
 
@@ -100,24 +118,38 @@ if [ -z "$name" ]; then
     }
 fi
 
-# --- Build every stage so all shortmks exist on disk ----------------
+# --- Extract config from the per-stage config files (NO flow build) -------
+# Each stage exposes its resolved config as the <stage>.mk output group,
+# written by a cheap analysis-phase action — so building just these groups
+# costs no synthesis or place-and-route (they complete as "internal"
+# actions in seconds). VERILOG_FILES is the one resolved variable the
+# <stage>.mk files omit; pull it from the synth target's verilog_files
+# attr via cquery (analysis only, no build).
 stages=(synth floorplan place cts grt route final)
 targets=()
 for s in "${stages[@]}"; do targets+=("//${pkg}:${name}_${s}"); done
+config_groups=1_synth.mk,2_floorplan.mk,3_place.mk,4_cts.mk,5_1_grt.mk,5_2_route.mk,6_final.mk
 
-echo "Building all stages of //${pkg}:${name} ..." >&2
-bazel build "${targets[@]}" >&2
+require_bazel
+echo "Extracting config of //${pkg}:${name} (config only, no flow build) ..." >&2
+bazel build "${targets[@]}" --output_groups="$config_groups" >&2
 
-# --- Locate the result dir + collect every short.mk -----------------
+verilog_files=$(bazel cquery --output=files \
+    "labels(verilog_files, //${pkg}:${name}_synth)" 2>/dev/null | tr '\n' ' ')
+
+# --- Locate the result dir + collect the per-stage config .mk files -------
 results_root="bazel-bin/${pkg}/results"
 [ -d "$results_root" ] || {
     echo "ERROR: $results_root missing after build" >&2
     exit 1
 }
 
-mapfile -t shortmks < <(find "$results_root" -name '*.short.mk' -type f 2>/dev/null | sort)
-[ "${#shortmks[@]}" -gt 0 ] || {
-    echo "ERROR: no *.short.mk under $results_root" >&2
+# Stage configs are <N>_<stage>.mk; skip the *.args.mk / *.short.mk / args.mk
+# helper configs.
+mapfile -t mks < <(find "$results_root" -type f -name '*.mk' \
+    ! -name '*.args.mk' ! -name '*.short.mk' ! -name 'args.mk' 2>/dev/null | sort)
+[ "${#mks[@]}" -gt 0 ] || {
+    echo "ERROR: no per-stage *.mk under $results_root" >&2
     exit 1
 }
 
@@ -139,9 +171,13 @@ emit() {
 EOF
 
     # `export VAR?=VALUE` → keep the first occurrence of each VAR.
-    # With --abs, prefix each repo-relative token of the path-bearing
-    # vars with the repo root so the config.mk runs from any CWD.
-    grep -h '^export ' "${shortmks[@]}" \
+    # The per-stage .mk files omit VERILOG_FILES; inject the cquery-resolved
+    # list so the union is complete. With --abs, prefix each repo-relative
+    # token of the path-bearing vars with the repo root (runs from any CWD).
+    {
+        grep -h '^export ' "${mks[@]}"
+        [ -n "$verilog_files" ] && printf 'export VERILOG_FILES?=%s\n' "${verilog_files% }"
+    } \
         | awk -v skip="$SKIP_VARS" -v abs="$abs" -v root="$repo_root" '
             # Vars whose value is one or more file/dir paths.
             function is_pathvar(k) {

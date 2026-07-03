@@ -21,7 +21,7 @@
 # pin shape is fully contained — earlier attempts with -force_to_die_boundary
 # triggered GRT-0209 "pin completely outside die" on bigger-pin platforms.
 
-# ── asap7 layer config (from platforms/asap7/config.mk + make_tracks.tcl) ──
+# ── sky130hd layer config (from platforms/sky130hd/config.mk + make_tracks.tcl) ──
 set hor_layer  met3    ;# IO_PLACER_H — pins on left/right edges
 set ver_layer  met2    ;# IO_PLACER_V — pins on top/bottom edges
 set hor_offset 0.34  ;# met3 y_offset
@@ -29,7 +29,11 @@ set hor_pitch  0.68  ;# met3 y_pitch
 set ver_offset 0.23  ;# met2 x_offset
 set ver_pitch  0.46  ;# met2 x_pitch
 
-set edge_margin 5.0      ;# distance from die edge (well > pin width / 2)
+set edge_margin 4.37     ;# distance from die edge; must keep met2 obstruction top
+                         ;# below row-0 VSS via area (y=5200 nm). At 5.0 um the
+                         ;# met2 spacing-expanded obstruction reaches y=5381 nm,
+                         ;# blocking every met1-met4 via at row 0. At 4.37 um it
+                         ;# reaches y=4751 nm, clearing the via area.
 set end_margin  5.0      ;# distance from corner along the edge
 
 proc bus_pins {name high {low 0}} {

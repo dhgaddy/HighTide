@@ -9,13 +9,25 @@ hightide_design(
         "SDC_FILE": [":constraint.sdc"],
         "ADDITIONAL_LEFS": ["//designs/sky130hd/NVDLA:sram_lefs_c"],
         "ADDITIONAL_LIBS": ["//designs/sky130hd/NVDLA:sram_libs_c"],
-        # Fixed grid (all 64 fakeram_64x256 + 1 small forced R0, channel
-        # below every row) — defeats the RTLMP pin-edge-blind clustering
-        # that plateaued GP at overflow ~0.31 for 18 h. Same fix as
-        # cnn-sky130hd. Regenerate: python3 tools/gen_macro_grid.py \
-        #   designs/src/NVDLA/dev/generated/partition_c_sky130hd_macros.txt \
-        #   designs/sky130hd/NVDLA/partition_c/macro_placement.tcl \
-        #   --gap-x 250 --chan 450
+        # 8 cols centred, alternating R0/MX rows, cold=300 µm channels
+        # (R0→MX, both boundaries pin-free), hot=550 µm channels
+        # (MX→R0, pins on both sides), gap-x=900 µm between columns.
+        # Small fakeram_11x128 placed in left side corridor (vertically centred).
+        # gap-x progression: 700 (31 DRC shorts) → 850 (4 DRC shorts at bank18
+        # left edge) → 900 (current). Root cause: nv_ram_rws_16x64 is 16-deep,
+        # below CACTI's min-depth floor for sky130hd so no fakeram LEF; yosys
+        # synthesizes 16 instances as FF arrays; RTLMP packs the dense FF cluster
+        # into the inter-column hot channel next to the macro corners.
+        # GRT-0183 (heap underflow in repair_antennas back-to-back jumpers) is
+        # fixed by a local patch to OpenROAD (patches/openroad-grt-0183-fix.patch,
+        # upstream PR #10743). Remove patch once OR pin advances past 2026-06-24.
+        # Regenerate:
+        #   python3 tools/gen_macro_grid.py \
+        #     designs/src/NVDLA/dev/generated/partition_c_sky130hd_macros.txt \
+        #     designs/sky130hd/NVDLA/partition_c/macro_placement.tcl \
+        #     --gap-x 900 --chan 786 --cold-chan 300 --hot-chan 550 \
+        #     --per-row 8 --center --numeric-sort --alternate \
+        #     --aside fakeram_11x128_1r1w
         "MACRO_PLACEMENT_TCL": [":macro_placement.tcl"],
     },
     stage_data = {"synth": ["//designs/src/NVDLA:include"]},
@@ -23,14 +35,9 @@ hightide_design(
         "SYNTH_HIERARCHICAL": "1",
         "VERILOG_INCLUDE_DIRS": "designs/src/NVDLA/vmod/include designs/src/NVDLA/vmod/vlibs",
         "CORE_UTILIZATION": "25",
-        # 25%-utilized core: drop the LB_ADDON (it forced the placer
-        # target up and packed std cells onto macro pin clusters) and set
-        # an explicit low PLACE_DENSITY so cells spread across the die +
-        # grid channels. Wider macro keep-out keeps std cells/routing off
-        # the met2 pin edges. Same playbook as cnn-sky130hd (proportioned
-        # to the smaller 11.3 mm core).
         "PLACE_DENSITY": "0.20",
         "MACRO_PLACE_HALO": "150 150",
         "TNS_END_PERCENT": "100",
+        "GLOBAL_ROUTE_ARGS": "-congestion_iterations 60",
     },
 )

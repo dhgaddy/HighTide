@@ -63,14 +63,14 @@ The FF stubs are emitted by `designs/src/NVDLA/dev/gen_ff_rams.py` into `designs
 
 ## sky130hd
 
-**Status**: partitions `a`, `m`, `o`, `p` cached on remote build cache; **partition `c` does not finish** — global-placement plateau.
+**Status**: partitions `a`, `m`, `o`, `p` cached on remote build cache; **partition `c` finishing** (clean `_final`, 0 DRC, 2026-07-02, see below).
 
 ### 2026-06 toolchain upgrade (bazel-orfs 553c1c3 / OpenROAD 299f3015 / yosys 0.64)
 - **partition_a / _o / _p**: build unchanged, all close clean — `a` WNS +4209 ps (util 48.5 %, 35 825 cells), `o` WNS +975 ps (util 23.8 %, 185 458 cells), `p` WNS +575 ps (util 31.1 %, 64 868 cells). No GRT congestion (unlike asap7 partition_o).
 - **partition_m**: same OpenSTA `write_sdc` workaround as asap7 (removed the redundant `*/SETN|/RESETN` async false-paths) — closes at WNS +3324 ps, util 58.1 %, 11 022 cells.
 
-### partition_c plateau
-
-Global placement plateaus at overflow ~0.31 (target 0.10). 84 macros at sky130hd's coarse pitches create local density hot spots near macro pin clusters that the placer can't smooth out. Loosening `CORE_UTILIZATION` / `PLACE_DENSITY_LB_ADDON` / `MACRO_PLACE_HALO` to match the other partitions doesn't fix it; ~18 h on `3_place` is the documented GP overflow plateau.
-
-Likely fix: a manual `macros.tcl` to spread the 84 SRAMs into a regular grid — same treatment that cnn-sky130hd ([[../cnn/DECISIONS.md]]) and bp_uno-sky130hd ([[../bp_processor/DECISIONS.md]]) needed.
+### partition_c: GP plateau fixed + GRT-0183 fixed + DRC clean (2026-07-02)
+- **GP plateau** (overflow ~0.31, target 0.10): fixed by hand-placed macro grid via `MACRO_PLACEMENT_TCL` — 8 columns, alternating R0/MX rows, gap-x 900 µm, cold channel 300 µm (R0→MX), hot channel 550 µm (MX→R0), fakeram_11x128 aside in left corridor (`tools/gen_macro_grid.py`). Alternating R0/MX is load-bearing — an all-R0 uniform-spacing control build exhausted the 64-iteration DRT budget with residual violations while alternating converged cleanly. gap-x 900 µm is required at macro corners: `nv_ram_rws_16x64` (16-deep, below CACTI floor) has no fakeram LEF — yosys synthesizes all 16 instances as FF arrays, RTLMP packs them into inter-column gaps adjacent to their functionally related macro corners, and the router runs out of tracks where horizontal and vertical routing pressure converge.
+- **GRT-0183** (`repair_antennas` heap underflow, triggered by sky130hd's high antenna count): fixed by `patches/openroad-grt-0183-fix.patch` (upstream PR #10743, merged 2026-06-24 — remove once OR pin advances past that date).
+- **SDC fix**: replaced `set_false_path -to [get_pin */RESETN|/SETN]` (asap7 pin names, silent no-ops on sky130hd) with port-level `-from` false-paths; added `set_ideal_network [get_nets {nvdla_core_rstn}]`.
+- WNS +0.03 ns, Fmax **66.80 MHz** (`period_min` 14.97 ns vs 15 ns), 0 DRC violations, `CORE_UTILIZATION` 25, `PLACE_DENSITY` 0.20, ~265 k logic cells, core 128.9 mm².

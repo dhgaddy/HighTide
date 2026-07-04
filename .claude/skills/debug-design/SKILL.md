@@ -131,6 +131,7 @@ tail -200 logs/<platform>/<design>/base/2_*.log
 
 2. **PDN failures**: Power grid cannot be constructed.
    - Check if `pdn.tcl` exists and metal layer names match the platform (M1-M7 for asap7, met1-met5 for sky130hd)
+   - If `2_4_floorplan_pdn.log` is clean but PSM-0069 fires at Stage 6, see **G (PSM errors)** — via obstruction leaves no trace in the PDN log
 
 3. **IO placement failures**: Too many pins for the die perimeter — increase die area or create a manual `io.tcl`.
 
@@ -228,6 +229,9 @@ head -50 reports/<platform>/<design>/base/6_finish_drc.rpt 2>/dev/null
 ./tools/summary.sh            # Bazel flow
 # Or manually parse 6_report.json
 ```
+
+**PSM errors** (power connectivity, `6_*.log`):
+- **PSM-0069** — check if all PSM-0039 warnings cluster in a single boundary row. If so, vias to that row were likely silently dropped by pin obstruction (no PDN-0110 fires for obstruction removal). See CLAUDE.md bugs table for root cause and fix.
 
 ---
 

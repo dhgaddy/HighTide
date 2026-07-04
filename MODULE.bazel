@@ -68,6 +68,18 @@ archive_override(
     # GitHub /archive/<sha>.tar.gz tarballs don't carry submodules,
     # so vendor src/sta (OpenSTA) and third-party/abc from their own
     # GitHub auto-archives at the SHAs OpenROAD's .gitmodules pins to.
+    patch_strip = 1,
+    patches = [
+        # GRT-0183 heap underflow in repair_antennas: back-to-back jumpers on
+        # the same net caused updateRouteGridsLayer to merge adjacent promoted
+        # endpoints into a same-layer chain; releaseNetResources then
+        # decremented a uint16_t usage counter that was never incremented.
+        # Fix: build new_grids instead of modifying in place; insert old-layer
+        # via-transition points at promoted-region boundaries.
+        # Upstream: OpenROAD PR #10743 (merged 2026-06-24).
+        # Remove once pin is bumped past 299f3015 to a commit after 2026-06-24.
+        "//patches:openroad-grt-0183-fix.patch",
+    ],
     patch_cmds = [
         "curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o .openroad-submodule-src-sta-8575070292cd0eb0150d191795ba59ca7e610ec2.tar.gz https://github.com/The-OpenROAD-Project/OpenSTA/archive/8575070292cd0eb0150d191795ba59ca7e610ec2.tar.gz && echo '17c490baf588ae564067d639a4938f1b749e55734a82445b0e742397a0f34ba9  .openroad-submodule-src-sta-8575070292cd0eb0150d191795ba59ca7e610ec2.tar.gz' | sha256sum -c - && tar xzf .openroad-submodule-src-sta-8575070292cd0eb0150d191795ba59ca7e610ec2.tar.gz --strip-components=1 -C src/sta && rm .openroad-submodule-src-sta-8575070292cd0eb0150d191795ba59ca7e610ec2.tar.gz",
         "curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o .openroad-submodule-third-party-abc-17cadca080b33edc5a13c8e6e8e8092f8c350b25.tar.gz https://github.com/The-OpenROAD-Project/abc/archive/17cadca080b33edc5a13c8e6e8e8092f8c350b25.tar.gz && echo 'bebf58d918646b0f6ebf62dd8cafaec5e04957388d19e99d3083456c971c211a  .openroad-submodule-third-party-abc-17cadca080b33edc5a13c8e6e8e8092f8c350b25.tar.gz' | sha256sum -c - && tar xzf .openroad-submodule-third-party-abc-17cadca080b33edc5a13c8e6e8e8092f8c350b25.tar.gz --strip-components=1 -C third-party/abc && rm .openroad-submodule-third-party-abc-17cadca080b33edc5a13c8e6e8e8092f8c350b25.tar.gz",

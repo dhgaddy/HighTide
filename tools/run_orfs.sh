@@ -25,7 +25,16 @@
 #       (one whose tools/install has yosys; ORFS's slang support is built in).
 #
 # Usage:
-#   tools/run_orfs.sh [options] <design-dir-or-label> [make-target...]
+#   tools/run_orfs.sh [options] <target> [make-target...]
+#
+# <target> is one design, or a bazel-style pattern for many:
+#   designs/asap7/lfsr          one design
+#   designs/asap7/NVDLA         a container -> all its sub-designs
+#   //designs/asap7/...         all asap7 designs (recursive wildcard)
+#   //designs/...  |  all       every design, every platform
+#   asap7 | nangate45 | sky130hd  all designs on that platform
+# With a multi-design target the flow runs once per design (continues past
+# failures, prints a summary); combine with --prepare-only to stage a batch.
 #
 # Options:
 #   --resynth        Run synthesis from RTL in your ORFS install (default:
@@ -59,11 +68,11 @@
 #                     designs/asap7/lfsr floorplan place
 #   # Re-synthesize from RTL in your ORFS install (its yosys+slang):
 #   tools/run_orfs.sh --resynth --flow-home ~/OpenROAD-flow-scripts designs/asap7/lfsr
-#   # Stage several designs without running, then run each elsewhere:
-#   for d in designs/asap7/lfsr designs/asap7/NVDLA/partition_a; do
-#     tools/run_orfs.sh --prepare-only "$d"
-#   done
+#   # Stage every asap7 design without running, then run one elsewhere:
+#   tools/run_orfs.sh --prepare-only //designs/asap7/...
 #   OPENROAD_EXE=~/OpenROAD/build/src/openroad .run_orfs/asap7/lfsr/run.sh
+#   # Prepare all NVDLA partitions:
+#   tools/run_orfs.sh --prepare-only //designs/asap7/NVDLA/...
 #
 # QoR comparability: HighTide's published numbers come from the bazel-orfs
 # build. A --resynth run reproduces them only if your ORFS install's yosys /
@@ -116,16 +125,17 @@ no_build=0
 resynth=0
 prepare_only=0
 positional=()
+flags=()   # design-independent flags, replayed to per-design child invocations
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --resynth)   resynth=1;    shift ;;
-        --flow-home) flow_home=$2; shift 2 ;;
-        --openroad)  openroad=$2;  shift 2 ;;
-        --work-dir)  work_dir=$2;  shift 2 ;;
-        --config)    config=$2;    shift 2 ;;
-        --no-build)  no_build=1;   shift ;;
-        --prepare-only|--no-run) prepare_only=1; shift ;;
+        --resynth)   resynth=1;    flags+=("$1");      shift ;;
+        --flow-home) flow_home=$2; flags+=("$1" "$2"); shift 2 ;;
+        --openroad)  openroad=$2;  flags+=("$1" "$2"); shift 2 ;;
+        --work-dir)  work_dir=$2;  shift 2 ;;   # per-design; not replayed
+        --config)    config=$2;    shift 2 ;;   # per-design; not replayed
+        --no-build)  no_build=1;   flags+=("$1");      shift ;;
+        --prepare-only|--no-run) prepare_only=1; flags+=("$1"); shift ;;
         -h|--help)   usage ;;
         --)          shift; while [ $# -gt 0 ]; do positional+=("$1"); shift; done ;;
         -*)          echo "ERROR: unknown option: $1" >&2; usage ;;
@@ -147,23 +157,77 @@ fi
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 
-# --- Normalize the design input to a bazel package (designs/<plat>/<d>) ---
-case "$input" in
-    //*:*) pkg=${input#//}; pkg=${pkg%:*} ;;
-    //*)   pkg=${input#//} ;;
-    *)     pkg=${input%/} ;;
-esac
-[ -f "$pkg/BUILD.bazel" ] || { echo "ERROR: no $pkg/BUILD.bazel" >&2; exit 1; }
-
-# Some designs are grouped: a container package (NVDLA, bp_processor) holds
-# only shared filegroups, and the real hightide_design() calls live in
-# subpackages (partition_a…partition_p; bp_uno, bp_quad). List those so the
-# user can pick one instead of getting a cryptic "no name" error.
-list_subdesigns() {
-    find "$1" -mindepth 2 -name BUILD.bazel 2>/dev/null | sort | while read -r bf; do
+# Every runnable design is a leaf package whose BUILD.bazel calls
+# hightide_design()/orfs_flow(). Container packages (NVDLA, bp_processor) and
+# platform dirs (designs/asap7) don't — they just hold subpackages.
+enumerate_designs() {   # <dir> -> prints each design package under it
+    find "$1" -name BUILD.bazel 2>/dev/null | sort | while read -r bf; do
         grep -q 'hightide_design\|orfs_flow' "$bf" && dirname "$bf"
     done
 }
+
+# --- Expand the input into a design list ----------------------------------
+# Bazel-style recursive wildcard is the primary syntax:
+#   //designs/...            all designs, every platform
+#   designs/asap7/...        all asap7 designs
+#   //designs/asap7/NVDLA/...  every NVDLA partition
+# Also accepted: the "all" alias and a bare platform (asap7|nangate45|
+# sky130hd); a bare container/platform dir (designs/asap7/NVDLA) expands to
+# its sub-designs; anything else is a single design package/label.
+design_list=()
+sel=${input#//}                 # tolerate the leading // of a bazel label
+case "$sel" in
+    all|ALL|designs|designs/) root="designs" ;;
+    asap7|nangate45|sky130hd) root="designs/$sel" ;;
+    *...) root=${sel%...}; root=${root%/}; [ -n "$root" ] || root="designs" ;;
+    *)    root="" ;;
+esac
+
+if [ -n "$root" ]; then
+    [ -d "$root" ] || { echo "ERROR: no such directory: $root" >&2; exit 1; }
+    mapfile -t design_list < <(enumerate_designs "$root")
+else
+    p=${sel%:*}; p=${p%/}       # drop any :target and trailing slash
+    if [ -f "$p/BUILD.bazel" ] && grep -q 'hightide_design\|orfs_flow' "$p/BUILD.bazel"; then
+        design_list=("$p")                              # a single design
+    elif [ -d "$p" ]; then
+        mapfile -t design_list < <(enumerate_designs "$p")  # container/platform dir
+    fi
+fi
+
+if [ "${#design_list[@]}" -eq 0 ]; then
+    echo "ERROR: no HighTide designs match '$input'." >&2
+    echo "       Give a design dir (designs/asap7/lfsr), a container" >&2
+    echo "       (designs/asap7/NVDLA), a platform (asap7|nangate45|sky130hd)," >&2
+    echo "       or 'all'." >&2
+    exit 1
+fi
+
+# --- Batch: >1 design → run each in its own child invocation --------------
+# Replays the design-independent flags + targets to a fresh run_orfs.sh per
+# design (keeps all the single-design logic in one place). Continues past a
+# failure and reports a summary. Per-design --work-dir/--config make no sense
+# across a batch.
+if [ "${#design_list[@]}" -gt 1 ]; then
+    [ -z "$config" ]   || { echo "ERROR: --config can't be used with multiple designs." >&2; exit 1; }
+    [ -z "$work_dir" ] || { echo "ERROR: --work-dir can't be used with multiple designs." >&2; exit 1; }
+    echo ">> ${#design_list[@]} designs matched:" >&2
+    printf '   %s\n' "${design_list[@]}" >&2
+    failed=()
+    for d in "${design_list[@]}"; do
+        printf '\n======== %s ========\n' "$d" >&2
+        "$0" "${flags[@]}" "$d" "${targets[@]}" || failed+=("$d")
+    done
+    if [ "${#failed[@]}" -gt 0 ]; then
+        printf '\nFAILED (%d/%d):\n' "${#failed[@]}" "${#design_list[@]}" >&2
+        printf '   %s\n' "${failed[@]}" >&2
+        exit 1
+    fi
+    printf '\n>> all %d designs OK\n' "${#design_list[@]}" >&2
+    exit 0
+fi
+
+pkg=${design_list[0]}
 
 # Design target base name (first quoted value after `name =` in the
 # hightide_design()/orfs_flow() call).
@@ -171,16 +235,7 @@ name=$(awk -F'"' '
     /hightide_design\(|orfs_flow\(/ { in_call = 1 }
     in_call && /name[[:space:]]*=/  { print $2; exit }' "$pkg/BUILD.bazel")
 if [ -z "$name" ]; then
-    subs=$(list_subdesigns "$pkg")
-    if [ -n "$subs" ]; then
-        {
-            echo "ERROR: $pkg groups sub-designs; it has no design of its own."
-            echo "Pick one:"
-            echo "$subs" | sed 's|^|  tools/run_orfs.sh |'
-        } >&2
-    else
-        echo "ERROR: could not find name in $pkg/BUILD.bazel" >&2
-    fi
+    echo "ERROR: could not find name in $pkg/BUILD.bazel" >&2
     exit 1
 fi
 

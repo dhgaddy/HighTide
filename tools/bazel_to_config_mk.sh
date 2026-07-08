@@ -119,6 +119,15 @@ build_file="${pkg}/BUILD.bazel"
     exit 1
 }
 
+# Container packages (NVDLA, bp_processor) hold only shared filegroups; the
+# real hightide_design() calls live in subpackages. List them so the user
+# picks a concrete sub-design instead of getting a cryptic "no name" error.
+list_subdesigns() {
+    find "$1" -mindepth 2 -name BUILD.bazel 2>/dev/null | sort | while read -r bf; do
+        grep -q 'hightide_design\|orfs_flow' "$bf" && dirname "$bf"
+    done
+}
+
 # If no target was supplied, read the name from the hightide_design()
 # (or orfs_flow()) call in BUILD.bazel — first quoted value after `name =`.
 if [ -z "$name" ]; then
@@ -126,10 +135,19 @@ if [ -z "$name" ]; then
         /hightide_design\(|orfs_flow\(/   { in_call = 1 }
         in_call && /name[[:space:]]*=/    { print $2; exit }
     ' "$build_file")
-    [ -n "$name" ] || {
-        echo "ERROR: could not find name = \"...\" in $build_file" >&2
+    if [ -z "$name" ]; then
+        subs=$(list_subdesigns "$pkg")
+        if [ -n "$subs" ]; then
+            {
+                echo "ERROR: $pkg groups sub-designs; it has no design of its own."
+                echo "Pick one:"
+                echo "$subs" | sed 's|^|  tools/bazel_to_config_mk.sh |'
+            } >&2
+        else
+            echo "ERROR: could not find name = \"...\" in $build_file" >&2
+        fi
         exit 1
-    }
+    fi
 fi
 
 # --- Extract config from the per-stage config files (NO flow build) -------

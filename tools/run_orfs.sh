@@ -41,6 +41,11 @@
 #                    Default: <repo>/.run_orfs/<platform>/<design>.
 #   --config FILE    Use this config.mk instead of extracting one.
 #   --no-build       Don't (re)build in bazel; assume stages + config exist.
+#   --prepare-only   Stage the work dir (config.mk + seeded netlist) and write
+#     (--no-run)     a self-contained run.sh, but do NOT run the flow. Loop it
+#                    over many designs to stage a batch, then run each
+#                    <work-dir>/run.sh later or on another machine (no bazel;
+#                    OPENROAD_EXE / FLOW_HOME / targets overridable at run time).
 #   -h, --help       Print this help and exit.
 #
 # make-target default: "floorplan place cts route finish"
@@ -54,6 +59,11 @@
 #                     designs/asap7/lfsr floorplan place
 #   # Re-synthesize from RTL in your ORFS install (its yosys+slang):
 #   tools/run_orfs.sh --resynth --flow-home ~/OpenROAD-flow-scripts designs/asap7/lfsr
+#   # Stage several designs without running, then run each elsewhere:
+#   for d in designs/asap7/lfsr designs/asap7/NVDLA/partition_a; do
+#     tools/run_orfs.sh --prepare-only "$d"
+#   done
+#   OPENROAD_EXE=~/OpenROAD/build/src/openroad .run_orfs/asap7/lfsr/run.sh
 #
 # QoR comparability: HighTide's published numbers come from the bazel-orfs
 # build. A --resynth run reproduces them only if your ORFS install's yosys /
@@ -104,6 +114,7 @@ work_dir=""
 config=""
 no_build=0
 resynth=0
+prepare_only=0
 positional=()
 
 while [ $# -gt 0 ]; do
@@ -114,6 +125,7 @@ while [ $# -gt 0 ]; do
         --work-dir)  work_dir=$2;  shift 2 ;;
         --config)    config=$2;    shift 2 ;;
         --no-build)  no_build=1;   shift ;;
+        --prepare-only|--no-run) prepare_only=1; shift ;;
         -h|--help)   usage ;;
         --)          shift; while [ $# -gt 0 ]; do positional+=("$1"); shift; done ;;
         -*)          echo "ERROR: unknown option: $1" >&2; usage ;;
@@ -143,12 +155,34 @@ case "$input" in
 esac
 [ -f "$pkg/BUILD.bazel" ] || { echo "ERROR: no $pkg/BUILD.bazel" >&2; exit 1; }
 
+# Some designs are grouped: a container package (NVDLA, bp_processor) holds
+# only shared filegroups, and the real hightide_design() calls live in
+# subpackages (partition_a…partition_p; bp_uno, bp_quad). List those so the
+# user can pick one instead of getting a cryptic "no name" error.
+list_subdesigns() {
+    find "$1" -mindepth 2 -name BUILD.bazel 2>/dev/null | sort | while read -r bf; do
+        grep -q 'hightide_design\|orfs_flow' "$bf" && dirname "$bf"
+    done
+}
+
 # Design target base name (first quoted value after `name =` in the
 # hightide_design()/orfs_flow() call).
 name=$(awk -F'"' '
     /hightide_design\(|orfs_flow\(/ { in_call = 1 }
     in_call && /name[[:space:]]*=/  { print $2; exit }' "$pkg/BUILD.bazel")
-[ -n "$name" ] || { echo "ERROR: could not find name in $pkg/BUILD.bazel" >&2; exit 1; }
+if [ -z "$name" ]; then
+    subs=$(list_subdesigns "$pkg")
+    if [ -n "$subs" ]; then
+        {
+            echo "ERROR: $pkg groups sub-designs; it has no design of its own."
+            echo "Pick one:"
+            echo "$subs" | sed 's|^|  tools/run_orfs.sh |'
+        } >&2
+    else
+        echo "ERROR: could not find name in $pkg/BUILD.bazel" >&2
+    fi
+    exit 1
+fi
 
 # --- Resolve the ORFS flow dir (FLOW_HOME) --------------------------------
 user_flow_home=0
@@ -213,7 +247,11 @@ fi
 # (which has no tools/install). A user-supplied ORFS install uses its own.
 openroad_exe="$openroad"
 opensta_exe=""
-if [ -z "$openroad_exe" ] && [ "$user_flow_home" = 0 ]; then
+# In --prepare-only mode, don't resolve (and thus build/download) the bazel
+# openroad: the whole point is to stage configs to run elsewhere, where the
+# researcher supplies their own binary via OPENROAD_EXE. Skip unless the
+# user explicitly named one with --openroad.
+if [ -z "$openroad_exe" ] && [ "$user_flow_home" = 0 ] && [ "$prepare_only" = 0 ]; then
     require_bazel; require_bazel_orfs
     echo ">> Resolving bazel-built openroad ..." >&2
     bazel build @openroad//:openroad >&2
@@ -259,6 +297,54 @@ if [ "$resynth" = 0 ]; then
 else
     platform=${pkg#designs/}; platform=${platform%%/*}
     design=$(awk -F'?=' '/^export DESIGN_NAME\?=/{print $2; exit}' "$config")
+fi
+
+# --- Prepare-only: write a self-contained run.sh and stop ----------------
+# Everything above (config.mk, seeded netlist, resolved paths) has staged
+# the work dir. Emit a run.sh that re-invokes the standard ORFS Makefile so
+# the design can be run later, or on another machine, with no bazel — while
+# still letting the researcher swap in their own OpenROAD (OPENROAD_EXE),
+# ORFS clone (FLOW_HOME), or targets at run time.
+if [ "$prepare_only" = 1 ]; then
+    run_script="$work_dir/run.sh"
+    def_or=""; [ -n "$openroad_exe" ] && def_or=$(printf '%q' "$openroad_exe")
+    def_sta=""; [ -n "$opensta_exe" ] && def_sta=$(printf '%q' "$opensta_exe")
+    tq=""; for t in "${targets[@]}"; do tq+=" $(printf '%q' "$t")"; done
+    {
+        echo '#!/usr/bin/env bash'
+        echo '# Auto-generated by tools/run_orfs.sh --prepare-only.'
+        echo '# Runs this prepared HighTide design in upstream ORFS — no bazel.'
+        echo '# Override at run time:'
+        echo '#   OPENROAD_EXE=/path/to/openroad ./run.sh   # your own build'
+        echo '#   FLOW_HOME=/path/to/OpenROAD-flow-scripts ./run.sh'
+        echo '#   ./run.sh floorplan place                  # pick targets'
+        echo 'set -euo pipefail'
+        echo 'cd "$(dirname "$0")"'
+        printf 'flow_home=${FLOW_HOME:-%q}\n' "$flow_dir"
+        printf 'openroad_exe=${OPENROAD_EXE:-%s}\n' "${def_or:-\"\"}"
+        printf 'opensta_exe=${OPENSTA_EXE:-%s}\n' "${def_sta:-\"\"}"
+        printf 'default_targets=(%s )\n' "$tq"
+        echo 'if [ "$#" -gt 0 ]; then targets=("$@"); else targets=("${default_targets[@]}"); fi'
+        echo 'exec make -C "$flow_home" \'
+        printf '    DESIGN_CONFIG=%q \\\n' "$config"
+        printf '    WORK_HOME=%q \\\n' "$work_dir"
+        echo '    FLOW_HOME="$flow_home" \'
+        echo '    ${openroad_exe:+OPENROAD_EXE="$openroad_exe"} \'
+        echo '    ${opensta_exe:+OPENSTA_EXE="$opensta_exe"} \'
+        echo '    "${targets[@]}"'
+    } > "$run_script"
+    chmod +x "$run_script"
+
+    mode=$([ "$resynth" = 1 ] && echo "from RTL (incl. synthesis)" || echo "reuse synth (floorplan onward)")
+    cat >&2 <<EOF
+>> Prepared (not run) — $platform / ${design:-$name}
+   mode       : $mode
+   work_home  : $work_dir
+   config.mk  : $config
+   run it     : $run_script ${targets[*]}
+   custom OR  : OPENROAD_EXE=/path/to/openroad $run_script
+EOF
+    exit 0
 fi
 
 # --- Run upstream ORFS ----------------------------------------------------

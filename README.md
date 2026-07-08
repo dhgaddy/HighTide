@@ -37,7 +37,27 @@ tools/run_orfs.sh --openroad ~/OpenROAD/build/src/openroad \
 
 # Re-synthesize from RTL in your own ORFS install (its yosys + slang):
 tools/run_orfs.sh --resynth --flow-home ~/OpenROAD-flow-scripts designs/asap7/lfsr
+
+# Stage many designs without running (writes each work dir + a run.sh),
+# then run them later or on another machine — no bazel needed at run time:
+for d in designs/asap7/lfsr designs/asap7/NVDLA/partition_a; do
+    tools/run_orfs.sh --prepare-only "$d"
+done
+OPENROAD_EXE=~/OpenROAD/build/src/openroad .run_orfs/asap7/lfsr/run.sh
 ```
+
+**Grouped designs (NVDLA, bp_processor):** these are *containers* — the top
+directory holds only shared SRAM filegroups, and each runnable design is a
+sub-package. Pass the sub-design path, not the container:
+`designs/asap7/NVDLA/partition_a`, `designs/asap7/bp_processor/bp_uno`, etc.
+(Pass the container and the script lists the available sub-designs.)
+
+**Prepare vs. run (`--prepare-only`):** by default `run_orfs.sh` prepares
+*and* runs. With `--prepare-only` it stops after staging the work dir
+(`config.mk` + the seeded golden netlist) and writes a self-contained
+`run.sh` there — so you can prep a batch of designs in one loop, then run
+each `run.sh` whenever/wherever you like. `run.sh` needs no bazel and lets
+you override `OPENROAD_EXE`, `FLOW_HOME`, or the make targets at run time.
 
 It extracts the design's resolved `config.mk` and runs the standard ORFS
 `Makefile`. There are two synthesis modes:

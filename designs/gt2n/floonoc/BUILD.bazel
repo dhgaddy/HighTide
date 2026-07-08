@@ -1,0 +1,25 @@
+load("//:defs.bzl", "hightide_design")
+
+hightide_design(
+    name = "floonoc",
+    top = "floonoc_mesh_top",
+    platform = "gt2n",
+    verilog_files = ["//designs/src/floonoc:rtl"],
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "FOOTPRINT_TCL": [":io.tcl"],
+    },
+    arguments = {
+        "SYNTH_HDL_FRONTEND": "slang",
+        "VERILOG_INCLUDE_DIRS": "designs/src/floonoc/dev/generated/deps/include designs/src/floonoc/dev/generated",
+        "VERILOG_DEFINES": "-D VERILATOR",
+        # Die sized for pin fit + logic density (v2: upsized from 80×80 after v1 landed at 84% util):
+        # - v1 actual cell area ≈ 4191 µm² at 81% util (core 72×72 = 5184 µm²)
+        # - Target 60% util → core needed ≈ 4191/0.60 ≈ 6985 µm² → ~84×84 µm core
+        # - Pin fit: 1598 × M3_pitch 0.028 = 44.7 µm < 82 µm effective edge (92-2×5) ✓
+        "DIE_AREA": "0 0 129 129",
+        "CORE_AREA": "6 6 123 123",
+        "MAX_ROUTING_LAYER": "M11",
+        "TNS_END_PERCENT": "100",
+    },
+)

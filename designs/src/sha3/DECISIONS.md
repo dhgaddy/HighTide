@@ -69,3 +69,26 @@ Mid-size combinational-heavy core (~20k stdcells, no macros).
 
 ### Known issues / open questions
 - None.
+
+## gt2n
+
+**Status**: finishing
+**Last updated**: 2026-07-07
+
+### Configuration
+- `CORE_UTILIZATION = 50` — reduced from asap7's 70%; gt2n's M2/M3 pitches (24/28 nm) are ~2.3× tighter than asap7's, so the same cell density drives proportionally higher routing demand; 50% provides equivalent routing headroom
+- `PLACE_DENSITY = 0.60` — explicit placer density cap; prevents the placer from over-packing individual bins even within the 50% core-level target
+- `MAX_ROUTING_LAYER = M7` — two layers above asap7's M5; the extra capacity (M6 horizontal, M7 vertical) is needed for the router to escape congestion at gt2n's fine pitches
+- `TNS_END_PERCENT = 100`
+- Clock: `500 ps` (period_min 463.07 ps, WNS +36.92 ps, ratio 1.08 — converged within [1.05, 1.15] ✓)
+
+### Decisions
+- **2026-07-07**: Initial gt2n port. Started from the asap7 configuration (70% utilization, M5 routing cap). First build at those settings produced severe global routing overflow — M2/M3 utilization far exceeded 100% in dense cells. Fixed in a single re-parameter pass with three changes:
+  1. **`CORE_UTILIZATION` 70 → 50**: the same RTL that packs well at asap7's 56 nm pitch is effectively 2.3× denser relative to the routing grid at gt2n's 24/28 nm M2/M3 pitches. Dropping to 50% provides comparable routing margin to what asap7 has at 70%.
+  2. **`MAX_ROUTING_LAYER` M5 → M7**: the two additional layers (M6 horizontal, M7 vertical) give the router sufficient planes to spread the horizontal routing load that overflowed M2/M4 at the higher utilization.
+  3. **`PLACE_DENSITY = 0.60`**: explicit density cap prevents the placer from creating locally over-dense bins that the router cannot recover from regardless of the global utilization setting.
+- With these three changes sha3 converged in one build: 0 GRT overflow, 0 DRC violations, WNS +36.92 ps, period_min 463.07 ps, ratio 1.08.
+- See `designs/src/lfsr/DECISIONS.md` gt2n section for platform-level infrastructure notes (ORFS pin bump, two patches, OpenROAD pin bump) that apply to all gt2n designs.
+
+### Known issues / open questions
+- None.

@@ -57,3 +57,24 @@ A small RISC-V core (~10–20k stdcells, no macros).  Used as a real-RTL smoke t
 
 ### Known issues / open questions
 - None.
+
+## gt2n
+
+**Status**: finishing
+**Last updated**: 2026-07-07
+
+### Configuration
+- `CORE_UTILIZATION = 60` — slightly below asap7's 65%; gt2n's M2/M3 pitches (24/28 nm) require more routing headroom
+- `PLACE_DENSITY = 0.7`
+- `CORE_ASPECT_RATIO = 1.0`, `CORE_MARGIN = 4`
+- `MAX_ROUTING_LAYER = M9` — mid-size design (~10–20k cells); two layers above sha3's M7, below floonoc's M11
+- `TNS_END_PERCENT = 100`
+- Clock: `780 ps` (Fmax 1.28 GHz; period_min 778 ps, WNS +2.1 ps, ratio 1.003 — just below the [1.05, 1.15] HighTide convergence window)
+
+### Decisions
+- **2026-07-07**: Initial gt2n port. Adapted from asap7 configuration: reduced `CORE_UTILIZATION` 65 → 60 to give the router margin at gt2n's tighter pitches; increased `MAX_ROUTING_LAYER` from its asap7 value to M9 to provide sufficient global-routing capacity for the ~15k-cell design. Closes cleanly at 780 ps (WNS +2.1 ps, 0 DRC violations).
+- `MAX_ROUTING_LAYER = M9` chosen empirically between sha3 (M7, ~20k combinational cells) and floonoc (M11, 6k+ IO pins and many wide buses); minimax's sequential RISC-V core at ~15k cells fits at M9.
+- See `designs/src/lfsr/DECISIONS.md` gt2n section for platform-level infrastructure notes (ORFS pin bump, two patches, OpenROAD pin bump) that apply to all gt2n designs.
+
+### Known issues / open questions
+- Clock at 780 ps is at the timing-closure limit (period_min 778 ps, ratio 1.003 — below the HighTide [1.05, 1.15] convergence target). A proper convergence pass would loosen the target to ~856 ps (= 778 × 1.10), verify it still closes, and re-read period_min. Left at 780 ps as part of the initial port.

@@ -1,0 +1,14 @@
+load("//:defs.bzl", "hightide_design")
+
+hightide_design(
+    name = "sha3",
+    platform = "gt2n",
+    verilog_files = ["//designs/src/sha3:rtl"],
+    sources = {"SDC_FILE": [":constraint.sdc"]},
+    arguments = {
+        "CORE_UTILIZATION": "50",
+        "PLACE_DENSITY": "0.60",
+        "MAX_ROUTING_LAYER": "M7",
+        "TNS_END_PERCENT": "100",
+    },
+)

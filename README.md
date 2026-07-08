@@ -38,13 +38,25 @@ tools/run_orfs.sh --openroad ~/OpenROAD/build/src/openroad \
 # Re-synthesize from RTL in your own ORFS install (its yosys + slang):
 tools/run_orfs.sh --resynth --flow-home ~/OpenROAD-flow-scripts designs/asap7/lfsr
 
-# Stage many designs without running (writes each work dir + a run.sh),
-# then run them later or on another machine — no bazel needed at run time:
-for d in designs/asap7/lfsr designs/asap7/NVDLA/partition_a; do
-    tools/run_orfs.sh --prepare-only "$d"
-done
+# Batch: run (or prepare) many designs with a bazel-style pattern. Stage
+# every asap7 design without running, then run one later / on another
+# machine — no bazel needed at run time:
+tools/run_orfs.sh --prepare-only //designs/asap7/...
 OPENROAD_EXE=~/OpenROAD/build/src/openroad .run_orfs/asap7/lfsr/run.sh
 ```
+
+**Design patterns.** The target can be one design or a bazel-style pattern
+that expands to many (the flow runs once per design, continuing past
+failures and printing a summary):
+
+| Pattern | Matches |
+|---|---|
+| `designs/asap7/lfsr` | one design |
+| `//designs/asap7/...` | all asap7 designs |
+| `//designs/asap7/NVDLA/...` | every NVDLA partition |
+| `//designs/...` or `all` | every design, every platform |
+| `asap7` \| `nangate45` \| `sky130hd` | all designs on that platform |
+| `designs/asap7/NVDLA` | a container → its sub-designs |
 
 **Grouped designs (NVDLA, bp_processor):** these are *containers* — the top
 directory holds only shared SRAM filegroups, and each runnable design is a

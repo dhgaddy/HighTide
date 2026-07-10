@@ -254,6 +254,40 @@ with **GRT-0116** after the iteration budget. `SETUP_MOVE_SEQUENCE` (split_load-
 this needs dedicated congestion work (macro re-floorplan, routing-layer adjustment, or a
 larger die) beyond the upgrade's flow-knob scope. asap7 + nangate45 litepci both pass.
 
+## 2026-07 re-validation (bazel-orfs 6c1bbca / OpenROAD b65c274c) — `SKIP_INCREMENTAL_REPAIR` re-added; nangate45 synth fixed
+
+Two new-tools issues surfaced (both k8s-verified fixes):
+
+1. **New-resizer `repair_timing` non-convergence → `SKIP_INCREMENTAL_REPAIR = 1` re-added on
+   asap7 *and* nangate45.** The 553c1c3 upgrade above removed the skip (ODB-1200 was fixed in
+   299f3015). But the b65c274c resizer's post-GRT `repair_timing` **does not converge** on
+   litepci's forwarded-clock reg2reg feedthrough: the worst reg2reg path is the LiteX `user_clk`
+   off-chip forward (WNS ≈ −898 ps), which is structural (io-feedthrough, not silicon) and
+   unrepairable. The pass keeps buffering (~1450 iters/hr, TNS decaying asymptotically) and never
+   terminates (killed at ~2 h / iter ~2200 with TNS still hugely negative). With the skip, both
+   platforms reach `_final`. NOTE: the asap7 arg had long been *described* in a BUILD.bazel
+   comment ("Skip the whole post-GRT repair block") but the argument was never actually set, so
+   the flow had been running the (now non-converging) repair the whole time — now set for real.
+   Result **asap7 PASS**: 71 328 logic cells (−26.6 % — the omitted repair no longer sprays
+   buffers), WNS **+927 ps** (reg2reg met, setup TNS = 0; the +slack is the io-feedthrough),
+   Fmax 0.374 GHz.
+
+2. **nangate45 synth was build-broken by an SDC clock-period sed poisoning → `constraint.sdc`
+   comment reworded.** ORFS derives the ABC target clock period by grepping the SDC with a naive
+   sed (`variables.mk`) that takes the first `-period <n>` / `set clk_period <n>` token in the
+   file. The n45 SDC comment quoted a backtick example (`` `-period 10000` ``); the sed captured
+   `10000` *with the trailing backtick*, and `echo 10000\` > clock_period.txt` triggered
+   unterminated shell command-substitution → make **Error 2**, killing synth before floorplan.
+   Reworded the comment (no hyphen-period token, no backtick) so the sed cleanly extracts
+   `set clk_period 10`. Result **nangate45 PASS**: 68 910 logic cells (−2.3 %), WNS **+4266 ps**
+   (reg2reg met), Fmax 0.174 GHz. (The old baseline's +3 197 480 ps was the 1000× ns/ps
+   unit-error artifact.) **Follow-up**: the 10 ns clock is a never-tightened probe value — the
+   huge +slack is not meaningful; tighten to `period_min × 1.10` from a routed measurement to get
+   a real Fmax.
+
+**sky130hd**: still **flagged — does not route** (GRT congestion, unchanged from the 553c1c3
+section above; its stage ODBs also bust the Cloudflare cache cap). asap7 + nangate45 pass.
+
 ## Bug workarounds in the real-FakeRAM build
 
 | Knob | Reason |

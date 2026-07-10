@@ -49,11 +49,15 @@ nangate45 stays on CACTI; its aspects come out 1.2–1.6 for cnn's four sizes.
   GRT stage = the same ≈−49 % Fmax macro regression) but keeps iterating; per-iteration
   incremental STA time explodes past an hour, so the stage never terminates (observed 7 h+ with
   TNS crawling and no closure — had to be killed). Fix: **`SKIP_INCREMENTAL_REPAIR = 1`** — GRT
-  then finishes in ~37 min and the design reaches `_final` (k8s-verified). The design still
-  carries its documented **flagged Fmax−49 % macro-placement regression** (repair was never going
-  to fix it), but it now *finishes* instead of spinning. NOTE: cnn-asap7's stage ODBs exceed the
-  Cloudflare 100 MB cache-upload cap (413 on `5_1_grt.odb`), so it stays a local/large build; and
-  its detail route is congestion-slow (several hours) independent of the repair issue.
+  then finishes in ~37 min and the design reaches `_final` (k8s-verified). **Final post-route QoR**:
+  219 829 logic cells (−11.0 %, the omitted repair no longer sprays buffers), WNS **−2869 ps**
+  (still violated — the macro-placement-bound reg2reg path — but +634 ps *better* than the −3503 ps
+  baseline), Fmax **0.258 GHz** (+17.5 % vs baseline), power 490 mW. So vs the (already-regressed)
+  baseline it is actually a marginal improvement *and* it now finishes; the design still carries the
+  documented **macro-placement Fmax regression** vs the original pre-regression state (repair was
+  never going to fix that). NOTE: cnn-asap7's stage ODBs exceed the Cloudflare 100 MB cache-upload
+  cap (413 on `5_1_grt.odb`), so it stays a local/large build; and its detail route is
+  congestion-slow (~4–5 h) independent of the repair issue (whole flow ~6.5 h on k8s).
 - **2026-06-11 — explicit-die sweep (a1/a2/a3), inconclusive → e4 retained**: unlike nangate45/sky130 (where a bigger `DIE_AREA` cured an RTLMP-packing / GRT-congestion regression), asap7's regression is buffer/SRAM-path bound, not congestion. Three explicit-die variants (`DIE_AREA` 2400/2800/3200 µm², density 0.45/0.40/0.35, halo 20/30/40, repair-ON) were run on k8s. All three **routed** (each reached `5_2_route` / `6_final.odb`), confirming routability isn't the limiter — but none produced a clean, attributable final WNS: the k8s variants share `top="cnn"` so they collide on the same artifact-PVC path, and every variant's job died at the post-route **gallery GUI render** (`Db save failed` under xvfb), which then triggered a full 24 h flow retry. The sweep yielded no evidence the bigger die beats e4's −3502 ps, so the variant targets were removed and the committed **e4 config is the final answer** (finishes, flagged-negative; deeper recovery needs an RTL pipeline or looser clock, both out of scope). Final run done locally to populate the disk cache.
 
 ## nangate45

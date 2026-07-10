@@ -49,8 +49,10 @@ hightide_design(
         "PLACE_DENSITY": "0.70",
         "MACRO_PLACE_HALO": "15 15",
         "GDS_ALLOW_EMPTY": "fakeram.*|pcie_us",
-        # ODB-1200 — drop split_load from SETUP_MOVE_SEQUENCE; skip the
-        # post-GRT repair_timing block (hold-pass calls split_load too).
-        # Same workaround as asap7 litepci.
+        # Skip the post-GRT repair_timing block (same as asap7 litepci):
+        # ODB-1200 hold-pass split_load crash + new-resizer non-convergence on
+        # the forwarded-clock reg2reg feedthrough.  Arg was previously only
+        # described in a comment and never set; now set.
+        "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

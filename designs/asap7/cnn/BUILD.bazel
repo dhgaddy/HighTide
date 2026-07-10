@@ -26,5 +26,12 @@ hightide_design(
         "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
         "MACRO_PLACE_HALO": "12 12",
         "MACRO_BLOCKAGE_HALO": "0.5",
+        # New-resizer (2026-06 tools) post-GRT repair_timing does not converge on
+        # this design's macro-placement-bound critical path (RTLMP places the
+        # SRAMs such that Fmax regresses ~49%; see DECISIONS.md).  repair_timing
+        # spends unbounded time (per-iteration incremental STA explodes past an
+        # hour) without ever closing the structurally-unfixable path.  Skip the
+        # post-GRT repair so the design finishes; detail-route still hold-repairs.
+        "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

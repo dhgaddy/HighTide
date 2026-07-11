@@ -13,6 +13,11 @@ _ARGS.update({
     "CORE_AREA": "10 10 7990 7990",
     "PLACE_DENSITY_LB_ADDON": "0.10",
     "MACRO_PLACE_HALO": "25 25",
+    # See asap7 bp_quad: new-resizer repair_timing does not converge on the
+    # structural -4900 ps memory path; skip the CTS-time and post-GRT repair
+    # passes so the flow finishes (route still hold-repairs).
+    "SKIP_CTS_REPAIR_TIMING": "1",
+    "SKIP_INCREMENTAL_REPAIR": "1",
 })
 
 hightide_design(

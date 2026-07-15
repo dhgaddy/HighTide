@@ -29,7 +29,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-TEMPLATE="$SCRIPT_DIR/job-template.yaml"
+TEMPLATE="${HIGHTIDE_JOB_TEMPLATE:-$SCRIPT_DIR/job-template.yaml}"
 RESOURCES_CONF="$SCRIPT_DIR/design_resources.conf"
 NAMESPACE="vlsida"
 

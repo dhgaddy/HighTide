@@ -19,8 +19,8 @@ hightide_design(
         # synthesizes 16 instances as FF arrays; RTLMP packs the dense FF cluster
         # into the inter-column hot channel next to the macro corners.
         # GRT-0183 (heap underflow in repair_antennas back-to-back jumpers) is
-        # fixed by a local patch to OpenROAD (patches/openroad-grt-0183-fix.patch,
-        # upstream PR #10743). Remove patch once OR pin advances past 2026-06-24.
+        # fixed upstream (OpenROAD PR #10743, in the pin since the b65c274c bump);
+        # the former local patches/openroad-grt-0183-fix.patch was dropped.
         # Regenerate:
         #   python3 tools/gen_macro_grid.py \
         #     designs/src/NVDLA/dev/generated/partition_c_sky130hd_macros.txt \

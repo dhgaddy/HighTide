@@ -15,6 +15,15 @@ _ARGS.update({
     "MACRO_PLACE_HALO": "6 6",
     "MACRO_BLOCKAGE_HALO": "0.5",
     "PLACE_DENSITY_LB_ADDON": "0.10",
+    # New-resizer (2026-07 tools, OpenROAD b65c274c) repair_timing does not
+    # converge on bp_quad's worst reg2reg path — a structural memory path with
+    # WNS ~-4900 ps that no buffering can fix.  Both the CTS-time and post-GRT
+    # repair_timing passes spin (TNS crawls ~48 ps/iter, iteration count climbs
+    # unbounded) so the flow never finishes.  bp_uno converges (its WNS is
+    # manageable); bp_quad (4 cores) does not.  Skip both repair passes so the
+    # design reaches _final; detail route still does its own hold repair.
+    "SKIP_CTS_REPAIR_TIMING": "1",
+    "SKIP_INCREMENTAL_REPAIR": "1",
 })
 
 hightide_design(

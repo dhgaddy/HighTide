@@ -18,13 +18,24 @@ wrapper instantiates. Carries `SKIP_CTS_REPAIR_TIMING` + `SKIP_INCREMENTAL_REPAI
   placement is very slow (several hours under shared-machine contention) but converges
   (overflow 0.63 → <0.10). Workarounds kept. No SDC/RTL/flow change.
 
+- **2026-07 re-validation (bazel-orfs 6c1bbca / OpenROAD b65c274c)**: **PASS** — 1 538 886
+  logic cells (+0.1 %), WNS **+253 ps** (met; base +387), Fmax 0.174 GHz (−3.3 %, within
+  tolerance), power 1033 mW. Very slow on the new resizer: detail route needed 5 ripup-reroute
+  optimization passes (337 k → 53 k → 30 k → 973 → 41 → 0 violations) and the report/STA
+  stage took ~3 h; the whole flow ~16 h and briefly overran a 16 h wall-clock cap mid-report
+  (re-run from the cached route to finish). Workarounds kept, no SDC/RTL/flow change.
+
 ## nangate45
 
-**Status**: **flagged — global-placement hang on bazel-orfs 553c1c3.**
+**Status**: **PASS on bazel-orfs 6c1bbca / OpenROAD b65c274c** (the 553c1c3 GP hang is resolved).
 
-- **2026-06 toolchain upgrade**: synth + floorplan complete, but the new OpenROAD global
-  placer **hangs** on the 1.5M-cell nangate45 design — it ran ~8 h, dropped to 0 % CPU at
-  ~iter 472 / overflow 0.63 (deadlocked, no further progress), and was killed. asap7 (same
-  RTL) converges, so this is nangate45-specific GP behaviour under the new GPL. Needs GP
-  parameter work (e.g. `GPL_*` density/routability settings) or an upstream fix; out of
-  scope for the flow-knob upgrade. Stops at `2_floorplan`.
+- **2026-06 toolchain upgrade (bazel-orfs 553c1c3)**: synth + floorplan complete, but the
+  OpenROAD global placer **hung** on the 1.5M-cell nangate45 design — ran ~8 h, dropped to
+  0 % CPU at ~iter 472 / overflow 0.63 (deadlocked), killed. Stopped at `2_floorplan`.
+- **2026-07 re-validation (bazel-orfs 6c1bbca / OpenROAD b65c274c)**: **PASS** — the newer
+  OpenROAD no longer hangs; global placement converges (overflow → <0.10) though it is slow:
+  the new timing-driven `place_gp` runs **two** timing-driven iterations, each a full
+  `repair_design` over ~1.3M nets (~295 k nets/hr), so placement alone took ~8 h and the whole
+  flow ~14 h. Detail route converged cleanly (0 violations in 4 passes). Result: 1 333 473
+  logic cells (+2.1 %), WNS **+5801 ps** (met; base +6035), Fmax 0.082 GHz (+2.5 %),
+  power 368 mW. No SDC/RTL/flow change.

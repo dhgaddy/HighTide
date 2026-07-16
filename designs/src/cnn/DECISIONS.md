@@ -83,3 +83,75 @@ The hand-placed coordinates from #2 above were valid for the old enormous macros
 - **2026-05-20** (R4): banks experiment shrunk macros 94% — die from 400 mm² to 49 mm².
 
 cnn-asap7 and cnn-nangate45 pass with RTLMP; only sky130's coarse pitch needed the hand grid + spread.
+
+## gt2n
+
+**Status**: Reaches `_final` with setup and hold timing not closed. The WNS floor is SRAM-read-path bound and cannot be recovered via flow knobs.
+
+**Platform context**: gt2n is a 2nm GAAFET PDK (6-track standard cells, backside power delivery via BPR/BM layers). The metal stack has a distinctive resistance profile with a sharp drop at M6 from the local tiers:
+
+| Layers | RC (Ω/µm) | Tier |
+|--------|-----------|------|
+| M0–M5  | 166–622   | Local/thin |
+| M6–M9  | 26.55     | Intermediate |
+| M10–M11 | 7.48     | Thick global |
+| M12–M13 | 0.64     | Ultra-thick |
+
+The PDK default clock wire RC (`set_wire_rc -clock -layer M5`, 166 Ω/µm) is at the top of the local tier. The platform does not define `CTS_BUF_CELL` — TritonCTS auto-selects from all loaded Liberty (characterizes to one buffer type, `gt2_6t_buf_x12_w31_elvt`; this is normal behavior, not a config gap).
+
+**DPL-0036 note**: CTS-inserted buffers can land inside 175 µm-deep `w16_l32768` SRAM bodies (observed max displacement 349.5 µm in a later build). v7 completed without a workaround. If a future build hits DPL-0036, add a `PRE_CTS_TCL` that wraps `detailed_placement` with `-max_displacement {400 100}` — this was confirmed to resolve it.
+
+**Current config** (v7 — best completing build):
+
+```python
+arguments = {
+    "SYNTH_HIERARCHICAL": "1",
+    "CORE_UTILIZATION": "40",
+    "MAX_ROUTING_LAYER": "M13",
+    "PLACE_PINS_ARGS": "-min_distance 30 -min_distance_in_tracks",
+    "MACRO_PLACE_HALO": "5 5",
+    "MACRO_BLOCKAGE_HALO": "0.5",
+    "TNS_END_PERCENT": "100",
+}
+```
+
+**v7 QoR** (final):
+
+| Metric | Value |
+|--------|-------|
+| Setup WNS | −5,829 ps |
+| Setup TNS | −7,092,440 ps |
+| Setup violations | 18,722 |
+| Hold WNS | −1,609 ps |
+| Hold TNS | −123,064 ps |
+| Hold violations | 555 |
+| Clock skew | 2,394 ps |
+| Utilization | 98.6% |
+
+**Non-closure root cause**: Setup violations are dominated by SRAM-output → register paths (same pathology as asap7/cnn; see issue #194). The WNS floor (~−5,800 ps) is set by the SRAM read latency and does not move with any routing or placement knob. Recovery requires either an RTL pipeline register on the SRAM read path or a looser clock period — both are out of scope for a benchmark port.
+
+### Experiment log
+
+**v17 — `MIN_CLK_ROUTING_LAYER=M10`, `CORE_UTILIZATION=35`, `MACRO_PLACE_HALO=4 4`** (completed, regressed):
+
+- **Motivation**: The PDK default M5 clock routing (166 Ω/µm) produces high clock skew. M10 (7.48 Ω/µm) was tried to reduce skew and hold violations.
+- **Post-CTS skew**: 784 ps (vs 2,394 ps in v7) — large improvement at CTS stage.
+- **Final results**: worse across all metrics.
+
+| Metric | v7 | v17 |
+|--------|----|-----|
+| Setup WNS | −5,829 ps | −7,273 ps |
+| Setup TNS | −7,092,440 ps | −23,065,600 ps |
+| Hold WNS | −1,609 ps | −2,365 ps |
+| Hold TNS | −123,064 ps | −2,305,040 ps |
+| Clock skew | 2,394 ps | 2,125 ps |
+| Hold violations | 555 | 2,358 |
+
+- **Regression cause**: Dropping `CORE_UTILIZATION` from 40 → 35 enlarged the die, lengthening interconnects and worsening timing. The macro congestion that originally motivated the lower utilization (GRT-0116 overflow in earlier builds) was actually caused by tight `MACRO_PLACE_HALO` — the fix is the halo, not lower utilization. The M10 clock layer showed promising post-CTS skew (784 ps) but detail routing re-introduced wire length that eroded most of the gain (final skew 2,125 ps).
+- **GRT runtime**: 62 hours at TNS_END_PERCENT=100 with zero overflow throughout; timing-driven rerouting reduced TNS ~31% from GRT start but could not overcome the larger-die penalty.
+
+### Anticipated next steps
+
+1. **Try `MIN_CLK_ROUTING_LAYER=M6` at `CORE_UTILIZATION=40`**: M6 is the start of the intermediate tier (26.55 Ω/µm — 6× lower than M5's 166 Ω/µm, without jumping all the way to M10). Keep `CORE_UTILIZATION=40` to preserve the v7 die size. Update `pre_cts.tcl` to `set_wire_rc -clock -layer M6` to align CTS estimation with the routing constraint.
+
+2. **Setup closure**: Requires RTL change (pipeline register on SRAM read path) or relaxed clock period. Not addressable via flow knobs on any platform.

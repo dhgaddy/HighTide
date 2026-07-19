@@ -56,6 +56,8 @@ archive_override(
     patch_strip = 1,
     patches = [
         "//patches:0036-fix-bazel-orfs-bazel_dep-non-dev-for-load-visibility.patch",
+        "//patches:orfs-gt2n-flow-build.patch",
+        "//patches:orfs-no-rcx-spef-stub.patch",
     ],
     strip_prefix = "OpenROAD-flow-scripts-fb65d5b487d2afd443fc1892330f622c776a57ac",
     urls = ["https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts/archive/fb65d5b487d2afd443fc1892330f622c776a57ac.tar.gz"],
@@ -68,6 +70,10 @@ archive_override(
     # GitHub /archive/<sha>.tar.gz tarballs don't carry submodules,
     # so vendor src/sta (OpenSTA) and third-party/abc from their own
     # GitHub auto-archives at the SHAs OpenROAD's .gitmodules pins to.
+    patches = [
+        "//patches:openroad-gcell-tile-size-fix.patch",
+    ],
+    patch_strip = 1,
     patch_cmds = [
         "curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o .openroad-submodule-src-sta-8572175ac45c42ce8d3d772f73bbb059786b9c66.tar.gz https://github.com/The-OpenROAD-Project/OpenSTA/archive/8572175ac45c42ce8d3d772f73bbb059786b9c66.tar.gz && echo '805fbf8fef8ff35bc03e1d7fc3eb15760f886a4735e9c96adec303904b5d7d3e  .openroad-submodule-src-sta-8572175ac45c42ce8d3d772f73bbb059786b9c66.tar.gz' | sha256sum -c - && tar xzf .openroad-submodule-src-sta-8572175ac45c42ce8d3d772f73bbb059786b9c66.tar.gz --strip-components=1 -C src/sta && rm .openroad-submodule-src-sta-8572175ac45c42ce8d3d772f73bbb059786b9c66.tar.gz",
         "curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o .openroad-submodule-third-party-abc-d527cfab4ad731b767ea0a2be2021d920d3afece.tar.gz https://github.com/The-OpenROAD-Project/abc/archive/d527cfab4ad731b767ea0a2be2021d920d3afece.tar.gz && echo '0cbf538e60d0303d0e00360d8973aaad7dae198954bed6e34cc31c9a13b3f802  .openroad-submodule-third-party-abc-d527cfab4ad731b767ea0a2be2021d920d3afece.tar.gz' | sha256sum -c - && tar xzf .openroad-submodule-third-party-abc-d527cfab4ad731b767ea0a2be2021d920d3afece.tar.gz --strip-components=1 -C third-party/abc && rm .openroad-submodule-third-party-abc-d527cfab4ad731b767ea0a2be2021d920d3afece.tar.gz",

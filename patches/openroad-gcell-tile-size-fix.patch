@@ -1,0 +1,71 @@
+--- a/src/odb/src/db/dbBlock.cpp	2026-07-17 01:29:14.968422322 -0700
++++ b/src/odb/src/db/dbBlock.cpp	2026-07-17 01:29:14.970422330 -0700
+@@ -2551,17 +2551,61 @@
+   const int upper_layer_for_gcell_size = 4;
+   const int pitches_in_tile = 15;
+ 
++  int tile_size;
+   if (block->max_routing_layer_ < upper_layer_for_gcell_size) {
+-    return getAverageTrackSpacing(block->max_routing_layer_) * pitches_in_tile;
++    tile_size = getAverageTrackSpacing(block->max_routing_layer_) * pitches_in_tile;
++  } else {
++    // Use the middle track spacing between M2, M3 and M4
++    std::vector<int> track_spacings = {getAverageTrackSpacing(2),
++                                       getAverageTrackSpacing(3),
++                                       getAverageTrackSpacing(4)};
++    std::ranges::sort(track_spacings);
++    tile_size = track_spacings[1] * pitches_in_tile;
+   }
+ 
+-  // Use the middle track spacing between M2, M3 and M4
+-  std::vector<int> track_spacings = {getAverageTrackSpacing(2),
+-                                     getAverageTrackSpacing(3),
+-                                     getAverageTrackSpacing(4)};
+-  std::ranges::sort(track_spacings);
++  // A tile sized only from the bottom few routing layers can be smaller
++  // than the actual top enabled routing layer's own track pitch when a
++  // technology has a very wide bottom-to-top pitch ratio (e.g. a fine
++  // frontside stack topped by a few sparse ultra-thick layers). When that
++  // happens, some GCells end up with zero tracks on the top layer, which
++  // fails track assignment outright (DRT-0406 "No tracks found") the
++  // moment global routing assigns any wire to one of those tiles. Ensure
++  // the tile always spans at least a couple of pitches of the actual top
++  // routing layer in use, so every GCell has track coverage on every
++  // enabled layer.
++  //
++  // getGCellTileSize() is also called from global placement's internal
++  // routability-driven congestion check (gpl::RouteBase ->
++  // grt::GlobalRouter::initRoutingLayers), which can run before every
++  // layer's track grid has been created on this block, so silently skip
++  // the floor when the top layer's track grid isn't available yet -- the
++  // fix still applies once routing stages run against a fully tracked
++  // block, which is where the missing-track failure actually occurs.
++  //
++  // block->max_routing_layer_ is a raw routing level (dbTechLayer::
++  // getRoutingLevel()), which numbers every ROUTING-type layer including
++  // backside BSPDN layers (BPR/BM*/BRDL) ahead of the frontside stack --
++  // the same convention set_routing_layers uses when resolving a layer
++  // name via findRoutingLayer(). Look the top layer up the same way,
++  // rather than re-deriving a frontside-relative ordinal, so the two
++  // stay consistent.
++  if (block->max_routing_layer_ >= upper_layer_for_gcell_size) {
++    odb::dbTechLayer* top_layer
++        = getTech()->findRoutingLayer(block->max_routing_layer_);
++    odb::dbTrackGrid* top_track_grid
++        = top_layer != nullptr ? findTrackGrid(top_layer) : nullptr;
++    if (top_track_grid != nullptr) {
++      int track_spacing, track_init, num_tracks;
++      top_track_grid->getAverageTrackSpacing(
++          track_spacing, track_init, num_tracks);
++      track_spacing
++          = (track_spacing % 2 == 0) ? track_spacing : track_spacing - 1;
++      const int min_top_layer_pitches = 2;
++      tile_size = std::max(tile_size, track_spacing * min_top_layer_pitches);
++    }
++  }
+ 
+-  return track_spacings[1] * pitches_in_tile;
++  return tile_size;
+ }
+ 
+ void dbBlock::getExtCornerNames(std::list<std::string>& ecl)

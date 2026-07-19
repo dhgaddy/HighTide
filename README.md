@@ -37,7 +37,39 @@ tools/run_orfs.sh --openroad ~/OpenROAD/build/src/openroad \
 
 # Re-synthesize from RTL in your own ORFS install (its yosys + slang):
 tools/run_orfs.sh --resynth --flow-home ~/OpenROAD-flow-scripts designs/asap7/lfsr
+
+# Batch: run (or prepare) many designs with a bazel-style pattern. Stage
+# every asap7 design without running, then run one later / on another
+# machine — no bazel needed at run time:
+tools/run_orfs.sh --prepare-only //designs/asap7/...
+OPENROAD_EXE=~/OpenROAD/build/src/openroad .run_orfs/asap7/lfsr/run.sh
 ```
+
+**Design patterns.** The target can be one design or a bazel-style pattern
+that expands to many (the flow runs once per design, continuing past
+failures and printing a summary):
+
+| Pattern | Matches |
+|---|---|
+| `designs/asap7/lfsr` | one design |
+| `//designs/asap7/...` | all asap7 designs |
+| `//designs/asap7/NVDLA/...` | every NVDLA partition |
+| `//designs/...` or `all` | every design, every platform |
+| `asap7` \| `nangate45` \| `sky130hd` | all designs on that platform |
+| `designs/asap7/NVDLA` | a container → its sub-designs |
+
+**Grouped designs (NVDLA, bp_processor):** these are *containers* — the top
+directory holds only shared SRAM filegroups, and each runnable design is a
+sub-package. Pass the sub-design path, not the container:
+`designs/asap7/NVDLA/partition_a`, `designs/asap7/bp_processor/bp_uno`, etc.
+(Pass the container and the script lists the available sub-designs.)
+
+**Prepare vs. run (`--prepare-only`):** by default `run_orfs.sh` prepares
+*and* runs. With `--prepare-only` it stops after staging the work dir
+(`config.mk` + the seeded golden netlist) and writes a self-contained
+`run.sh` there — so you can prep a batch of designs in one loop, then run
+each `run.sh` whenever/wherever you like. `run.sh` needs no bazel and lets
+you override `OPENROAD_EXE`, `FLOW_HOME`, or the make targets at run time.
 
 It extracts the design's resolved `config.mk` and runs the standard ORFS
 `Makefile`. There are two synthesis modes:

@@ -65,11 +65,15 @@ hightide_design(
         "MACRO_PLACE_HALO": "5 5",
         # Allow no GDS for fakeram macros and the pcie_us blackbox.
         "GDS_ALLOW_EMPTY": "fakeram.*|pcie_us",
-        # ODB-1200 bug — InsertBufferBeforeLoads iterates a stale load list and
-        # aborts when SplitLoadMove fires in repair_timing.  SETUP_MOVE_SEQUENCE
-        # without split_load fixes the setup pass (same as gemmini-asap7 in
-        # CLAUDE.md) but the *hold* pass inside the post-GRT repair_timing_helper
-        # also calls split_load and crashes too.  Skip the whole post-GRT repair
-        # block (matches snitch_cluster / liteeth_udp_sgmii in the table).
+        # Skip the post-GRT repair_timing block.  Two reasons:
+        #  (1) ODB-1200 — InsertBufferBeforeLoads iterates a stale load list and
+        #      aborts when SplitLoadMove fires; the hold pass calls split_load too.
+        #  (2) new resizer (2026-06 tools) — repair_timing does not converge on the
+        #      forwarded-clock reg2reg path (WNS ~-898 ps is a structural LiteX
+        #      user_clk feedthrough, not silicon; TNS decays asymptotically and the
+        #      pass never terminates, ~1450 iters/hr with no closure).
+        # NOTE: this arg was previously described in a comment but never actually
+        # set, so the flow ran the (non-converging) repair anyway.  Now set.
+        "SKIP_INCREMENTAL_REPAIR": "1",
     },
 )

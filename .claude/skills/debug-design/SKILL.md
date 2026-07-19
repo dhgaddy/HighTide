@@ -157,6 +157,7 @@ tail -200 logs/<platform>/<design>/base/3_*.log
    - Generate a placement density and RUDY heatmap (see Step 4)
    - Follow the congestion fix priority in `.claude/skills/shared/congestion-analysis.md`
    - For macro-heavy designs where local-density hot spots near macro pins are the culprit (GP overflow plateaus around 0.2–0.4), consider repartitioning the FakeRAM banks for **this platform only** — see `.claude/skills/shared/sram-repartition.md`.
+   - For sky130hd and other low-layer-count platforms, consider **alternating macro row orientation** (R0/MX) in `macro_placement.tcl` rather than a uniform grid — it creates distinct channel types that can reduce per-layer routing pressure. Inter-column spacing and hot/cold channel ratio require per-design tuning; start near the high end of the available spacing range.
 
 ---
 

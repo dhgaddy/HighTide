@@ -1,4 +1,6 @@
 # NVDLA partition_c — sky130hd timing constraints (scaled ~10x from asap7 1500 ps)
+# GRT stage: period_min 14.888 ns < 15 ns constraint; reg2reg closes.
+# WNS −0.671 ns is io feedthrough (clk_io_pct=0.2 artifact), not reg2reg.
 current_design NV_NVDLA_partition_c
 
 set clk_name nvdla_core_clk
@@ -28,8 +30,19 @@ set_ideal_network [get_ports {nvdla_clk_ovr_on}]
 set_ideal_network [get_ports {tmc2slcg_disable_clock_gating}]
 set_ideal_network [get_ports {pwrbus_ram_pd*}]
 
-set_false_path -to [get_pin */RESETN]
-set_false_path -to [get_pin */SETN]
+# Extend ideal_network from reset input ports to the internal reset net so CTS
+# does not insert NDR buffers into the reset fanout tree.
+set_ideal_network [get_nets {nvdla_core_rstn}]
+
+# False-path from reset input ports so repair_timing ignores async-reset paths.
+# Using -from (port-level) rather than -to */RESET_B (pin-level) to avoid the
+# OpenSTA write_sdc wildcard-expansion UTF-8 corruption bug.
+set_false_path -from [get_ports {direct_reset_}]
+set_false_path -from [get_ports {dla_reset_rstn}]
+
+# Removed: set_false_path -to [get_pin */RESETN] and */SETN — those are asap7
+# pin names; on sky130hd the equivalent pins are RESET_B/SET_B so they matched
+# nothing and were silent no-ops.
 
 set_max_fanout 128 [current_design]
 set_wire_load_mode enclosed

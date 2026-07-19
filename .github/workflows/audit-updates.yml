@@ -12,6 +12,9 @@ permissions:
 
 jobs:
   audit-updates:
+    # Only run on the canonical repo — forks don't have the ANTHROPIC_API_KEY
+    # secret, so this Claude job would just fail on them.
+    if: ${{ github.repository == 'VLSIDA/HighTide' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

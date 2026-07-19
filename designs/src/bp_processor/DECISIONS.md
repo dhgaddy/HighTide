@@ -87,3 +87,19 @@ python3 tools/gen_macro_grid.py \
 - **sky130hd**: clean pass on the new tools — WNS **+4.14 ns** (≈ the +4.4 ns baseline), util
   18.6 %, 367 437 logic cells, 140 macros. 7.6 M-cell-class / local-only (over the Cloudflare
   ceiling); built + cached locally. Workarounds (MACRO_PLACEMENT_TCL hand-grid, repair skip) kept.
+
+## 2026-07 re-validation (bazel-orfs 6c1bbca / OpenROAD b65c274c) — bp_uno
+
+All three platforms **PASS** on the newer pin (built locally; the batch initially failed with a
+wrong Bazel target — the macro names targets `bp_processor_gallery`, from `top="bp_processor"`,
+not `bp_uno_gallery`). Unlike cnn/litepci, bp_uno's reg2reg is met, so the new resizer's
+post-GRT repair converges normally — no `SKIP_INCREMENTAL_REPAIR` needed here beyond the
+existing config.
+
+- **asap7**: 451 474 logic cells (−0.1 %), WNS **−510 ps** (baseline was already −459; the small
+  negative is the same netlist/placement-bound path noted for the 553c1c3 pin), Fmax 0.260 GHz
+  (+0.1 %), power 271 mW.
+- **nangate45**: 442 511 logic cells (+0.7 %), WNS **+576 ps** (met; base +1943), Fmax 0.212 GHz
+  (+6.1 %), power 523 mW.
+- **sky130hd**: 368 735 logic cells (+0.4 %), WNS **+3489 ps** (met; base +4144), Fmax 0.035 GHz
+  (+15.1 %), power 488 mW. Detail route converged cleanly (1307 → 154 → 27 → 0 violations).

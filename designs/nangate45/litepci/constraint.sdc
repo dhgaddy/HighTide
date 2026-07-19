@@ -12,9 +12,17 @@ set clk_name      sys_clk
 # datapath; nangate45 (45 nm) is far slower than asap7 (7 nm), so the closing
 # period is well above asap7's 3.6 ns.  Probe at 10 ns, then tighten to the
 # measured critical path + 10% guardband.
-# NOTE: previously `set clk_period 4000` and refclk `-period 10000` — those were
-# ps-magnitude values in an ns-unit file (1000x unit error), making STA report
-# a meaningless +3197 ns WNS / 0.00 GHz Fmax.
+#
+# Keep every period in this file expressed in ns.  Earlier drafts used
+# ps-magnitude values here (a 1000x unit error) and STA reported a meaningless
+# +3197 ns WNS / 0 GHz Fmax.
+#
+# CAUTION: keep the real clk_period assignment above any create_clock line, and
+# never write a backtick or a hyphenated clock flag in the comments above it.
+# ORFS derives the ABC target clock via a naive sed (variables.mk) that grabs
+# the first clock token it finds; a stray quoted example in a comment is captured
+# verbatim, and a trailing backtick then breaks the clock_period.txt shell step
+# and fails synth entirely.
 set clk_period    10
 set clk_io_pct    0.2
 

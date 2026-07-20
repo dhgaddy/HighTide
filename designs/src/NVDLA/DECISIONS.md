@@ -80,7 +80,7 @@ The FF stubs are emitted by `designs/src/NVDLA/dev/gen_ff_rams.py` into `designs
 
 ## gt2n
 
-**Status**: partitions `m`, `o`, and `p` reach `_final` cleanly; `a`/`c` not yet ported.
+**Status**: partitions `a`, `m`, `o`, and `p` reach `_final` cleanly; `c` not yet ported.
 
 ### 2026-07-15 initial port
 
@@ -93,3 +93,7 @@ The FF stubs are emitted by `designs/src/NVDLA/dev/gen_ff_rams.py` into `designs
 ### 2026-07-19 partition_o (multi-clock, largest gt2n NVDLA partition)
 
 - **partition_o**: 8 macros (`18x128`, `8x256`, `4x256`, `7x256`, `66x64`, `15x80`, `22x60`, `32x128`). The only multi-clock partition (`nvdla_core_clk` + `nvdla_falcon_clk`, ratio held at the NVIDIA reference 1.25). `CORE_UTILIZATION=35` — 37 hit GRT-0232 routing congestion. Found and fixed a potential OpenROAD bug (DRT-0406): `dbBlock::getGCellTileSize()` sizes the global-routing GCell tile from just the median M2/M3/M4 pitch, independent of which layers are actually enabled — gt2n's top routing layer is ~30x coarser than M2, so the resulting tile is smaller than the top layer's own pitch and track assignment hard-fails. Fixed via `patches/openroad-gcell-tile-size-fix.patch`. Also tested `MIN_CLK_ROUTING_LAYER` M6/M10/M4/M2 to close timing — non-monotonic, M4 best. Closes clean: WNS +3.14 ps, util 37 %, 348 194 logic cells.
+
+### 2026-07-20 partition_a
+
+- **partition_a**: no macros (like partition_m) — both SRAMs (256x16, 272x16) are FF arrays. Clock 1097 ps. Closes clean: setup WNS +3.23 ps, hold WNS +1.16 ps, util 45 %, 98 138 logic cells, period_min 1093.77 ps.

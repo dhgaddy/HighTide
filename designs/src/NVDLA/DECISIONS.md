@@ -80,12 +80,16 @@ The FF stubs are emitted by `designs/src/NVDLA/dev/gen_ff_rams.py` into `designs
 
 ## gt2n
 
-**Status**: partitions `m` and `p` reach `_final` cleanly; `a`/`c`/`o` not yet ported.
+**Status**: partitions `m`, `o`, and `p` reach `_final` cleanly; `a`/`c` not yet ported.
 
 ### 2026-07-15 initial port
 
-- **partition_m**: no macros — config adapted from `minimax` (closest existing gt2n design by cell count and sequential logic). `CORE_UTILIZATION=50`, `PLACE_DENSITY=0.7`, `MAX_ROUTING_LAYER=M9` (from minimax); clock 1300 ps (asap7's 1500 ps scaled by minimax's own asap7→gt2n ratio). `MIN_CLK_ROUTING_LAYER=M6` + matching `pre_cts.tcl` `set_wire_rc -clock -layer M6` (platform defaults M3/M5) — not yet isolated whether necessary. Closes clean: 0 setup/hold violations, WNS +320.35 ps, `period_min` 979.65 ps (ratio 1.327, tightening deferred), 0 DRC, 0 antenna violations, ~30.7k logic cells (excl. fill/tap). See `designs/src/lfsr/DECISIONS.md` gt2n section for platform bring-up notes.
+- **partition_m**: no macros, clock 1300 ps. Closes clean: WNS +320.35 ps, util 53 %, 30 669 logic cells.
 
 ### 2026-07-16 partition_p (first gt2n macro-bearing NVDLA partition)
 
 - **partition_p**: 6 macros (`16x160`, `65x160`, `14x80`, `66x80`) — no gt2n FakeRAM macros existed for NVDLA prior to this; generated fresh via a new `fakeram_gt2n.cfg`. Fixed a real bug found in `cnn`'s existing gt2n cfg while writing this one: `bsg_fakeram`'s `class_process.py` only reads `snapWidth_nm`/`snapHeight_nm` (camelCase) — `cnn`'s cfg used `snap_width_nm`/`snap_height_nm` (snake_case), silently falling back to a 1 nm grid. Fixed here and backported to `cnn`'s cfg. Also found the same key-mismatch bug on **every asap7 fakeram cfg in the repo** (see `CLAUDE.md` bug table) — not yet fixed/regenerated there. Closes clean: setup WNS +27.46 ps, hold WNS +0.80 ps, util 42 %, 115 375 logic cells.
+
+### 2026-07-19 partition_o (multi-clock, largest gt2n NVDLA partition)
+
+- **partition_o**: 8 macros (`18x128`, `8x256`, `4x256`, `7x256`, `66x64`, `15x80`, `22x60`, `32x128`). The only multi-clock partition (`nvdla_core_clk` + `nvdla_falcon_clk`, ratio held at the NVIDIA reference 1.25). `CORE_UTILIZATION=35` — 37 hit GRT-0232 routing congestion. Found and fixed a potential OpenROAD bug (DRT-0406): `dbBlock::getGCellTileSize()` sizes the global-routing GCell tile from just the median M2/M3/M4 pitch, independent of which layers are actually enabled — gt2n's top routing layer is ~30x coarser than M2, so the resulting tile is smaller than the top layer's own pitch and track assignment hard-fails. Fixed via `patches/openroad-gcell-tile-size-fix.patch`. Also tested `MIN_CLK_ROUTING_LAYER` M6/M10/M4/M2 to close timing — non-monotonic, M4 best. Closes clean: WNS +3.14 ps, util 37 %, 348 194 logic cells.

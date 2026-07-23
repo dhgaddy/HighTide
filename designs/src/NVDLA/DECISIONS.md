@@ -97,3 +97,7 @@ The FF stubs are emitted by `designs/src/NVDLA/dev/gen_ff_rams.py` into `designs
 ### 2026-07-20 partition_a
 
 - **partition_a**: no macros (like partition_m) — both SRAMs (256x16, 272x16) are FF arrays. Clock 1097 ps. Closes clean: setup WNS +3.23 ps, hold WNS +1.16 ps, util 45 %, 98 138 logic cells, period_min 1093.77 ps.
+
+### 2026-07-22 partition_p: hold closure after SRAM bitcell correction
+
+- **partition_p**: a gt2n fakeram SRAM bitcell correction enlarged this design's 6 macros ~2.5x, raising clock skew to ~157 ps; `HOLD_SLACK_MARGIN` alone (up to 100) could not converge. Root cause: the 2 residual violators, `u_reg.req_pd[1]` and `u_wdma.u_dmaif_wr.mc_dma_wr_rsp_complete`, are zero-logic passthroughs of primary inputs (`csb2sdp_req_pd` from `csb_master`, `mcif2sdp_wr_rsp_complete` from the MCIF) — sibling-partition signals with no on-chip source register in this standalone build, so the blanket `set_input_delay` under-budgets their minimum arrival. Fixed with two scoped `-min` overrides (`-max`/setup untouched), each sized as blanket 286.6 ps + measured deficit × 1.3: `-min 341` on `csb2sdp_req_pd*`, `-min 311` on `mcif2sdp_wr_rsp_complete*`. Closes clean: setup WNS +2.51 ps, hold WNS +5.38 ps, util 43 %, 136 834 logic cells, `HOLD_SLACK_MARGIN=50`.

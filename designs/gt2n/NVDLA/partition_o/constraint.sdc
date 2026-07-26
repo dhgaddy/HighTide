@@ -33,6 +33,12 @@ set non_clock_inputs [lsearch -inline -all -not -exact [all_inputs] "^($clk_port
 set_input_delay  [expr $clk_period * $clk_io_pct] -clock $clk_name $non_clock_inputs
 set_output_delay [expr $clk_period * $clk_io_pct] -clock $clk_name [all_outputs]
 
+# Scoped hold fixes: sdp2csb_resp_valid and cmac_b2csb_resp_valid are zero-logic passthrough
+# primary inputs from sibling gt2n partitions, with no on-chip source register to model skew
+# against, so the blanket -min under-budgets their minimum arrival.
+set_input_delay -min 494 -clock $clk_name [get_ports {sdp2csb_resp_*}]
+set_input_delay -min 469 -clock $clk_name [get_ports {cmac_b2csb_resp_*}]
+
 set_ideal_network [get_ports test_mode]
 set_ideal_network [get_ports direct_reset_]
 set_ideal_network [get_ports dla_reset_rstn]

@@ -2,7 +2,7 @@ library(fakeram_4x256_1r1w) {
     technology (cmos);
     delay_model : table_lookup;
     revision : 1.0;
-    date : "2026-07-21 19:06:33Z";
+    date : "2026-08-01 08:31:13Z";
     comment : "SRAM";
     time_unit : "1ns";
     voltage_unit : "1V";
@@ -144,16 +144,16 @@ cell(fakeram_4x256_1r1w) {
                 index_1 ("0.005, 0.125");
                 index_2 ("0.005, 0.500");
                 values ( \
-                  "0.100, 0.100", \
-                  "0.100, 0.100" \
+                  "0.200, 0.200", \
+                  "0.200, 0.200" \
                 )
             }
             cell_fall(fakeram_4x256_1r1w_mem_out_delay_template) {
                 index_1 ("0.005, 0.125");
                 index_2 ("0.005, 0.500");
                 values ( \
-                  "0.100, 0.100", \
-                  "0.100, 0.100" \
+                  "0.200, 0.200", \
+                  "0.200, 0.200" \
                 )
             }
             rise_transition(fakeram_4x256_1r1w_mem_out_slew_template) {

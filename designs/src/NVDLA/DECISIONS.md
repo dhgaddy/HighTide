@@ -98,7 +98,7 @@ The FF stubs are emitted by `designs/src/NVDLA/dev/gen_ff_rams.py` into `designs
 
 ## gt2n
 
-**Status**: partitions `a`, `m`, `o`, and `p` reach `_final` cleanly; `c` not yet ported.
+**Status**: partitions `a`, `m`, `o`, and `p` reach `_final` cleanly; `c` reaches `_final` with remaining setup/hold violations (see below).
 
 ### 2026-07-15 initial port
 
@@ -123,3 +123,10 @@ The FF stubs are emitted by `designs/src/NVDLA/dev/gen_ff_rams.py` into `designs
 ### 2026-07-25 partition_o: routing + hold closure after SRAM bitcell correction
 
 - **partition_o**: the same gt2n bitcell correction (see partition_p above) enlarged this design's 8 macros ~2.5x, breaking both routing and hold timing. A `MACRO_PLACE_HALO` sweep (5/10/12/14, up from the platform default of 1.0) found **8** is necessary for clean GRT routing at this macro size — other values either left congestion unresolved or made it worse; closed alongside `MAX_ROUTING_LAYER=M11` (down from M13). Two of the hold violators are zero-logic passthroughs of primary inputs from sibling gt2n partitions (`sdp2csb_resp_*`, `cmac_b2csb_resp_*`), same class as partition_p's fix — no on-chip source register in this standalone build, so the blanket `set_input_delay` under-budgets their minimum arrival. Fixed with scoped `-min` overrides: `-min 494` on `sdp2csb_resp_*`, `-min 469` on `cmac_b2csb_resp_*`. `HOLD_SLACK_MARGIN` raised to 20. Closes clean: setup WNS +129.73 ps, hold WNS +12.18 ps, util 35 %, 308 720 logic cells.
+
+### 2026-08-13 partition_c: finishes with manual macro placement and partition-aware I/O timing delays (Fmax 635.80 MHz)
+
+- Finishes via a hand-placed 8x8 SRAM bank grid (`macro_placement.tcl`). Macros are **54% of core die area** — reference density for future macro-heavy gt2n floorplans. Best result: WNS -364.80 ps, Fmax **635.80 MHz**, core 0.61 mm² — vs. asap7's reported 590 MHz / 1.65 mm² for the same design (108% of asap7's Fmax on 37% of its area).
+- gt2n's sheet resistance is 2.5-14x asap7's at matched pitch — floorplan compactness matters far more here than on asap7; small gap changes swing Fmax 15-20% and can break routing outright.
+- Model inter-partition boundary signals (e.g. `cdma2csb_resp_pd`) with an I/O delay credit approximating the launch/capture-side clock network latency they'd actually see if the partitions were connected as one die. The HighTide default assumption is a blanket 20%-of-period delay on input and output, acceptable for most designs but highly unrealistic here, where the reg2reg clock network latency can be more than twice the period. Credit chosen as ~half this partition's own largest observed clock network latency, expressed as a multiple of `clk_period` (`1.5x`) so the formula transfers directly to other partitions. The input_delay credit is applied post-CTS (`pre_grt.tcl`) so it's checked against the real propagated clock tree rather than CTS's ideal pre-tree clock; output_delay is set directly in `constraint.sdc`.
+- Hold repair at GRT (disabled via the `-setup`-only override) made steady progress but hadn't converged after ~18h when killed — may converge given more time.

@@ -49,3 +49,20 @@ filegroup(
         "sram/lib/fakeram_32x128_1r1w.lib",
     ],
 )
+
+# partition_c: 64x256, 11x128 (both stay as macros).
+filegroup(
+    name = "sram_lefs_c",
+    srcs = [
+        "sram/lef/fakeram_64x256_1r1w.lef",
+        "sram/lef/fakeram_11x128_1r1w.lef",
+    ],
+)
+
+filegroup(
+    name = "sram_libs_c",
+    srcs = [
+        "sram/lib/fakeram_64x256_1r1w.lib",
+        "sram/lib/fakeram_11x128_1r1w.lib",
+    ],
+)

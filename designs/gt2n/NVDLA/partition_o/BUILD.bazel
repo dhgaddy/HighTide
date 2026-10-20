@@ -10,6 +10,7 @@ hightide_design(
         "ADDITIONAL_LEFS": ["//designs/gt2n/NVDLA:sram_lefs_o"],
         "ADDITIONAL_LIBS": ["//designs/gt2n/NVDLA:sram_libs_o"],
         "PRE_CTS_TCL": [":pre_cts.tcl"],
+        "RCX_RULES": [":gt2n_combined.rcx.model"],
     },
     stage_data = {"synth": ["//designs/src/NVDLA:include"]},
     arguments = {

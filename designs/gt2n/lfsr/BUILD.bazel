@@ -5,7 +5,10 @@ hightide_design(
     top = "lfsr_prbs_gen",
     platform = "gt2n",
     verilog_files = ["//designs/src/lfsr:rtl"],
-    sources = {"SDC_FILE": [":constraint.sdc"]},
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "RCX_RULES": [":gt2n_combined.rcx.model"],
+    },
     arguments = {
         "CORE_UTILIZATION": "80",
         "PLACE_DENSITY": "0.85",

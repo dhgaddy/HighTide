@@ -12,6 +12,7 @@ hightide_design(
         "PRE_CTS_TCL": [":pre_cts.tcl"],
         "PRE_GLOBAL_ROUTE_TCL": [":pre_grt.tcl"],
         "MACRO_PLACEMENT_TCL": [":macro_placement.tcl"],
+        "RCX_RULES": [":gt2n_combined.rcx.model"],
     },
     stage_data = {"synth": ["//designs/src/NVDLA:include"]},
     arguments = {

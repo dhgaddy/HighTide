@@ -4,7 +4,10 @@ hightide_design(
     name = "sha3",
     platform = "gt2n",
     verilog_files = ["//designs/src/sha3:rtl"],
-    sources = {"SDC_FILE": [":constraint.sdc"]},
+    sources = {
+        "SDC_FILE": [":constraint.sdc"],
+        "RCX_RULES": [":gt2n_combined.rcx.model"],
+    },
     arguments = {
         "CORE_UTILIZATION": "75",
         "PLACE_DENSITY": "0.85",

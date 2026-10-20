@@ -9,6 +9,7 @@ hightide_design(
     sources = {
         "SDC_FILE": [":constraint.sdc"],
         "PRE_CTS_TCL": [":pre_cts.tcl"],
+        "RCX_RULES": [":gt2n_combined.rcx.model"],
     },
     stage_data = {"synth": ["//designs/src/NVDLA:include"]},
     arguments = {

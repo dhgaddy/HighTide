@@ -7,6 +7,7 @@ hightide_design(
     sources = {
         "SDC_FILE": [":constraint.sdc"],
         "FOOTPRINT_TCL": [":io.tcl"],
+        "RCX_RULES": [":gt2n_combined.rcx.model"],
     },
     arguments = {
         "CORE_UTILIZATION": "87",

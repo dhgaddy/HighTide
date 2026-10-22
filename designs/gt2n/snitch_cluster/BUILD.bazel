@@ -21,6 +21,7 @@ hightide_design(
         "FOOTPRINT_TCL": [":io.tcl"],
         "ADDITIONAL_LEFS": [":sram_lefs"],
         "ADDITIONAL_LIBS": [":sram_libs"],
+        "RCX_RULES": [":gt2n_combined.rcx.model"],
     },
     stage_data = {"synth": ["//designs/src/snitch_cluster:rtl_data"]},
     arguments = {

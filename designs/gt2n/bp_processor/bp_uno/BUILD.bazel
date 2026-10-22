@@ -27,6 +27,7 @@ hightide_design(
         "SDC_FILE": [":constraint.sdc"],
         "ADDITIONAL_LEFS": ["//designs/gt2n/bp_processor:sram_lefs"],
         "ADDITIONAL_LIBS": ["//designs/gt2n/bp_processor:sram_libs"],
+        "RCX_RULES": [":gt2n_combined.rcx.model"],
     },
     arguments = _ARGS,
     stage_data = {"synth": ["//designs/src/bp_processor:rtl_data"]},
